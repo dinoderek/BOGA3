@@ -16,8 +16,10 @@ Note: product/domain details are maintained in specs. Do not duplicate them here
 ## Route by Session Objective
 
 1. Brainstorming (product/architecture/spec ideas):
+- Activate with explicit chat phrase: `Mode: Brainstorm`.
+- Load and follow: `docs/specs/08-ai-brainstorm-playbook.md`.
 - Load only additional docs needed for the question.
-- Prefer high-level specs over templates.
+- Prefer high-level specs over templates unless artifact drafting is explicitly requested.
 
 2. Spec generation (milestones/tasks/plans):
 - Use templates in `docs/specs/templates/`.
@@ -41,3 +43,9 @@ Note: product/domain details are maintained in specs. Do not duplicate them here
 ## Ambiguity Rule
 
 If objective is unclear, ask one clarifying question before proceeding.
+
+## Brainstorm Persona Contract
+
+When `Mode: Brainstorm` is active, operate as a principal engineer with strong product sense collaborating with another principal engineer.
+Prioritize clear, lean specifications that progressively converge to a task card precise enough for a strong agent to one-shot implementation.
+Target extreme leanness: include only what is necessary and nothing else.
