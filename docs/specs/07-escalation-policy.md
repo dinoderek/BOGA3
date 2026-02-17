@@ -72,9 +72,3 @@ Execution resumes only after a human decision is recorded in the escalation note
 2. Any constraints or scope changes.
 3. Approval to continue retries or defer the task.
 
-## Decision log
-
-- Date: 2026-02-15
-- Decision: Standardize escalation to immediate prerequisite escalation and retry-budget escalation (`3` verify attempts).
-- Reason: Prevent unproductive retry loops and ensure timely human intervention.
-- Impact: Improves task throughput and preserves traceability when work is blocked.

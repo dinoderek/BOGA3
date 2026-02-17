@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260215-03`
 - Title: Add smoke test and implement quality gates in `apps/mobile`
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-15`
 - Session interaction mode: `interactive (default)`
@@ -28,8 +28,10 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 
 - Configure test runtime and setup files.
 - Add smoke UI test asserting `Milestone 0 foundation ready` is displayed.
-- Add package scripts: `lint`, `typecheck`, `test`, `quality`.
+- Add package scripts: `lint`, `typecheck`, `test`.
+- For each script verify that (1) You can run the script successfully, (2) You can parse the output of the script successfully, (3) the script does what it intends to do
 - Confirm gate scripts pass locally on clean state.
+- Update testing strategy and AI development strategy to enssure that quality gates are applied after each change.
 - Remove bootstrap verify exception in playbook once gates are operational.
 
 ### Out of scope
@@ -42,8 +44,8 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 
 1. Smoke UI test exists and passes.
 2. `npm run lint`, `npm run typecheck`, and `npm run test` run successfully in `apps/mobile`.
-3. `npm run quality` runs all three gates and fails if any gate fails.
-4. Execution policy is restored to strict verify enforcement after this task.
+3. You the AI can run those commands successfully and parse their output successfully.
+4. Update documentation so that execution policy is restored to strict verify enforcement after this task.
 
 ## Delivery split mode
 
@@ -68,12 +70,11 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
   - `npm run lint`
   - `npm run typecheck`
   - `npm run test`
-  - `npm run quality`
 - Pass criteria: All commands succeed on clean working tree.
 
 ### Evidence to capture
 
-- Command(s) run: `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`
+- Command(s) run: `npm run lint`, `npm run typecheck`, `npm run test`
 - Result summary: All local gates green; smoke test confirms message visibility.
 
 ## Implementation notes
@@ -89,7 +90,6 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test`
-- Additional gate(s), if any: `npm run quality`
 
 ## Escalation settings
 
@@ -99,7 +99,7 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 
 ## Automated review loop (before human review)
 
-- AI self-review completed: `no`
+- AI self-review completed: `yes`
 - Checks reviewed:
   - Acceptance criteria coverage
   - Test completeness
@@ -109,17 +109,11 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 
 ## Completion note (fill at end)
 
-- What changed:
-- Tests run and outcome:
-- Verify gate outcomes:
-- AI self-review findings/resolution:
-- CI result:
-- Follow-up tasks:
-- Escalation link (if blocked):
+- What changed: Added runnable gate scripts in `apps/mobile/package.json` (`typecheck`, `test`), added Jest runtime config (`apps/mobile/jest.config.js`) and setup (`apps/mobile/jest.setup.ts`), added smoke UI test `apps/mobile/app/__tests__/index.test.tsx` asserting exact text `Milestone 0 foundation ready`, installed/pinned compatible test deps (`@testing-library/react-native@13.2.0`, `react-test-renderer@19.1.0`), removed Milestone 0 bootstrap exception from `docs/specs/04-ai-development-playbook.md`, and updated `docs/specs/06-testing-strategy.md` to require targeted checks after each meaningful change plus full closeout gates.
+- Tests run and outcome: `npm run test -- --runInBand` passed with smoke test green (`1 passed`); intentional fail probe test (`app/__tests__/fail-probe.test.tsx`) failed as expected with assertion output, then removed and test returned green.
+- Verify gate outcomes: Clean-state verify passed for `npm run lint`, `npm run typecheck`, `npm run test`. Fail probes validated behavior/output parsing for each gate: lint parse error via temporary `app/lint-probe.tsx`, TS type error via temporary `typecheck-probe.ts`, and intentional test assertion failure via temporary failing test; all probes were removed and final verify rerun passed.
+- AI self-review findings/resolution: Acceptance criteria fully covered; dependency conflict during install resolved by pinning `react-test-renderer@19.1.0` to match app React `19.1.0`; no remaining functional gaps for task scope.
+- CI result: `pending` (local gate implementation task; CI status not validated in this session).
+- Follow-up tasks: none for Milestone 0 gate restoration; next work can proceed under strict verify enforcement.
+- Escalation link (if blocked): `n/a`
 
-## Decision log (if needed)
-
-- Date:
-- Decision:
-- Reason:
-- Impact:

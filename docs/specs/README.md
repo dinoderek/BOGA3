@@ -16,14 +16,6 @@ This folder is the source of truth for product and technical decisions.
 - `docs/specs/templates/task-card-template.md`: Template for per-session AI task execution.
 - `docs/specs/templates/escalation-note-template.md`: Template for blocked-task escalation handoff.
 
-## How to use in future AI sessions
-
-1. Share this file and `docs/specs/04-ai-development-playbook.md` first.
-2. For execution sessions, also share `docs/specs/07-escalation-policy.md`.
-3. Share active milestone spec and task card.
-4. Include only changed sections from other specs for focused context.
-5. Capture new decisions directly in these docs after each major session.
-
 ## Decision log convention
 
 When a major decision changes:

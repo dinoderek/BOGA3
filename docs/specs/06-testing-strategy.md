@@ -27,6 +27,7 @@ Reason: keeps AI-generated changes safe and predictable as code volume grows.
 ## Default testing practice
 
 - Every feature should include at least one success-path test and one offline/error-path test.
+- During execution sessions, run a targeted test or gate after each meaningful change, then run full `lint + typecheck + test` before task closeout.
 
 ## Planned next phase (UI quality and appearance)
 
@@ -45,9 +46,3 @@ Reason: ensure visual changes are intentional and reviewed, not silently accepte
 5. Use visual diff output as AI iteration input.
 Reason: helps AI make targeted UI fixes and faster design refinements.
 
-## Decision log
-
-- Date: 2026-02-13
-- Decision: Use Vitest, RN Testing Library/jest-expo, SQLite integration tests, backend contract tests, and Maestro smoke E2E.
-- Reason: Balances confidence and speed for an offline-first mobile MVP.
-- Impact: Provides coverage where regressions are most likely without slowing early delivery.

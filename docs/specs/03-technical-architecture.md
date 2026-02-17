@@ -23,10 +23,3 @@ Reason: guarantees logging works without internet while still supporting cloud s
 
 6. `Architecture prepared for groups later`.
 Reason: MVP-B ships tracker first, but schema/contracts should avoid rework for social features.
-
-## Decision log
-
-- Date: 2026-02-13
-- Decision: Adopt Expo/RN + local SQLite/Drizzle + Supabase, with offline-first sync design.
-- Reason: Aligns with phone-first, full offline tracking, free-tier efficiency, and future group support.
-- Impact: Enables fast MVP delivery while preserving a clean expansion path.

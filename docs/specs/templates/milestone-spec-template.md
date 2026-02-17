@@ -5,8 +5,6 @@
 - Milestone ID: `M#`
 - Title:
 - Status: `planned | in_progress | completed | blocked`
-- Owner:
-- Target window:
 
 ## Parent references
 
@@ -49,10 +47,3 @@ List planned task cards for this milestone.
 ## Risks / dependencies
 
 - 
-
-## Decision log
-
-- Date:
-- Decision:
-- Reason:
-- Impact:

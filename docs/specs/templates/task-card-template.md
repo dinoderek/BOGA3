@@ -2,10 +2,8 @@
 
 ## Task metadata
 
-- Task ID: `T-YYYYMMDD-##`
 - Title:
 - Status: `planned | in_progress | completed | blocked`
-- Owner:
 - Session date:
 - Session interaction mode: `interactive (default) | non_interactive`
 
@@ -107,10 +105,3 @@ If `split`, define cards:
 - CI result:
 - Follow-up tasks:
 - Escalation link (if blocked):
-
-## Decision log (if needed)
-
-- Date:
-- Decision:
-- Reason:
-- Impact:

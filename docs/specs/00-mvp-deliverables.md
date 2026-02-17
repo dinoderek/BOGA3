@@ -34,6 +34,7 @@ Exit check:
 Exit check:
 - Backend can create/authenticate users and store app-owned records.
 
+
 ## 3) FE auth integrated with backend
 
 - Add sign-up/sign-in/sign-out flows in app.
@@ -66,10 +67,3 @@ Exit check:
 - Advanced analytics and rich dashboards.
 - Complex social mechanics (badges/certifications/advanced notifications).
 - Full notification strategy and growth loops.
-
-## Decision log
-
-- Date: 2026-02-13
-- Decision: Ship MVP-B first with five phased deliverables (tracker first, social prototype last).
-- Reason: Maximize delivery speed while preserving architecture path to social features.
-- Impact: Prioritizes offline tracking reliability and a clean sync/auth foundation before group features.

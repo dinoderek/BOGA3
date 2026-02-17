@@ -71,36 +71,20 @@ Use this sequence for every task card:
    - Run targeted tests and confirm expected failures.
 3. Green:
    - Implement minimum code needed for tests to pass.
+   - After each meaningful change, run the smallest relevant check (targeted test or gate) before continuing.
 4. Refactor:
    - Improve structure without changing behavior.
    - Re-run targeted tests.
+   - Re-run the smallest relevant gate after each refactor batch.
 5. Verify:
    - Run mandatory quality gates:
      - `npm run lint`
      - `npm run typecheck`
      - `npm run test`
    - Run task-specific checks if defined.
+   - Rule: do not defer all verification to the end; apply targeted checks during development and full gates at closeout.
 6. Closeout:
    - Update task completion note with outcomes and remaining risks.
-
-## Milestone 0 bootstrap exception
-
-This exception is temporary and applies only to Milestone 0 bootstrap tasks while verify scripts are not yet implemented.
-
-Allowed temporary exemption condition:
-
-1. `npm run lint`, `npm run typecheck`, and `npm run test` are missing or not runnable because the app scaffold and gate scripts are not implemented yet.
-
-Required controls while exempt:
-
-1. Task-specific structural checks (for example `rg`, file existence, and cross-reference checks) must still run and pass.
-2. Acceptance criteria, red/green evidence, and closeout notes remain mandatory.
-3. This exception does not relax escalation triggers for other blockers.
-
-Expiry:
-
-1. Remove this section in `docs/tasks/T-20260215-03-m0-testing-and-quality-gates.md` once verify scripts exist and pass on a clean local state.
-2. After removal, strict verify enforcement returns to the default `lint + typecheck + test` gate requirement for all execution-mode tasks.
 
 ## Test and implementation session policy
 
@@ -184,22 +168,3 @@ Escalation artifact:
 
 1. If implementation changes architecture/testing behavior, update the relevant spec in the same session.
 2. Record major decisions using `Date / Decision / Reason / Impact`.
-
-## Decision log
-
-- Date: 2026-02-13
-- Decision: Manage AI delivery through a strict `Project -> MVP -> Milestone -> Task` reference chain.
-- Reason: Improve AI context quality, reduce drift, and make work traceable.
-- Impact: Every task becomes auditable and easier to continue across sessions.
-- Date: 2026-02-13
-- Decision: Execute every task with a mandatory `Plan -> Red -> Green -> Refactor -> Verify -> Closeout` protocol and pre-human automated feedback loops.
-- Reason: Make quality and test discipline non-optional in AI-assisted implementation.
-- Impact: Reduces regressions and increases reliability of delivered changes.
-- Date: 2026-02-15
-- Decision: Apply strict gatekeeper checks only in `execution mode`, with mandatory human-in-the-loop escalation for blocked tasks.
-- Reason: Preserve flexibility for discussion sessions while preventing wasted cycles during implementation.
-- Impact: Clear stop rules and handoff artifacts reduce thrash and improve unblock speed.
-- Date: 2026-02-17
-- Decision: Add a temporary Milestone 0 bootstrap exception for missing verify scripts, with mandatory removal in `T-20260215-03`.
-- Reason: Allow foundational setup to proceed before quality scripts exist without weakening long-term enforcement.
-- Impact: M0 bootstrap tasks can execute with bounded exceptions; strict verify gates are restored after gate implementation.
