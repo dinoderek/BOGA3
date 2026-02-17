@@ -23,7 +23,7 @@ Establish the minimum policy, app scaffold baseline, and quality gates required 
 
 - Temporary execution-policy bootstrap exception while verify scripts do not yet exist.
 - Expo Router smoke app scaffold at `apps/mobile`.
-- Local quality gates (`lint`, `typecheck`, `test`, `quality`) and smoke coverage.
+- Local quality gates (`lint`, `typecheck`, `test`) and smoke coverage.
 - Restoration of strict verify enforcement after gates are operational.
 
 ## Out of scope
@@ -43,7 +43,7 @@ Establish the minimum policy, app scaffold baseline, and quality gates required 
 1. Milestone and task documentation chain is valid (`Project -> MVP -> Milestone -> Task`).
 2. Temporary bootstrap verify exception is explicitly bounded and removed after gate implementation.
 3. `apps/mobile` scaffold and baseline root message are implemented.
-4. `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run quality` pass locally for `apps/mobile`.
+4. `npm run lint`, `npm run typecheck`, and `npm run test` pass locally for `apps/mobile`.
 
 ## Task breakdown
 
