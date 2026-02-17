@@ -6,8 +6,8 @@ Define the minimum scaffolding required before feature development, and standard
 
 ## Session modes
 
-1. `Discussion mode`: brainstorming/spec design only. No code edits, test runs, or merge readiness checks.
-2. `Execution mode`: any session that edits code/docs for delivery, runs tests, or validates merge readiness.
+1. `Discussion mode`: brainstorming/spec design only. No code edits, test runs, or merge readiness checks. Output will generally be MD product or technical or task files.
+2. `Execution mode`: buold session. Build code for delivery, runs tests, or validates merge readiness.
 
 Rule: strict gatekeeper checks, verify gates, and escalation rules apply only in `execution mode`.
 
@@ -82,6 +82,25 @@ Use this sequence for every task card:
    - Run task-specific checks if defined.
 6. Closeout:
    - Update task completion note with outcomes and remaining risks.
+
+## Milestone 0 bootstrap exception
+
+This exception is temporary and applies only to Milestone 0 bootstrap tasks while verify scripts are not yet implemented.
+
+Allowed temporary exemption condition:
+
+1. `npm run lint`, `npm run typecheck`, and `npm run test` are missing or not runnable because the app scaffold and gate scripts are not implemented yet.
+
+Required controls while exempt:
+
+1. Task-specific structural checks (for example `rg`, file existence, and cross-reference checks) must still run and pass.
+2. Acceptance criteria, red/green evidence, and closeout notes remain mandatory.
+3. This exception does not relax escalation triggers for other blockers.
+
+Expiry:
+
+1. Remove this section in `docs/tasks/T-20260215-03-m0-testing-and-quality-gates.md` once verify scripts exist and pass on a clean local state.
+2. After removal, strict verify enforcement returns to the default `lint + typecheck + test` gate requirement for all execution-mode tasks.
 
 ## Test and implementation session policy
 
@@ -180,3 +199,7 @@ Escalation artifact:
 - Decision: Apply strict gatekeeper checks only in `execution mode`, with mandatory human-in-the-loop escalation for blocked tasks.
 - Reason: Preserve flexibility for discussion sessions while preventing wasted cycles during implementation.
 - Impact: Clear stop rules and handoff artifacts reduce thrash and improve unblock speed.
+- Date: 2026-02-17
+- Decision: Add a temporary Milestone 0 bootstrap exception for missing verify scripts, with mandatory removal in `T-20260215-03`.
+- Reason: Allow foundational setup to proceed before quality scripts exist without weakening long-term enforcement.
+- Impact: M0 bootstrap tasks can execute with bounded exceptions; strict verify gates are restored after gate implementation.

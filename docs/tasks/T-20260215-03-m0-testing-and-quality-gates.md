@@ -30,7 +30,7 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 - Add smoke UI test asserting `Milestone 0 foundation ready` is displayed.
 - Add package scripts: `lint`, `typecheck`, `test`, `quality`.
 - Confirm gate scripts pass locally on clean state.
-- Remove or expire bootstrap verify exception in playbook once gates are operational.
+- Remove bootstrap verify exception in playbook once gates are operational.
 
 ### Out of scope
 
@@ -82,7 +82,7 @@ Implement Jest + `jest-expo` + React Native Testing Library smoke test coverage 
 - Constraints/assumptions:
   - Use `jest-expo` and React Native Testing Library for UI tests.
   - Keep smoke assertion stable via exact text contract.
-  - After gates are live, bootstrap exception must be removed or marked expired.
+  - After gates are live, bootstrap exception must be removed.
 
 ## Mandatory verify gates
 
