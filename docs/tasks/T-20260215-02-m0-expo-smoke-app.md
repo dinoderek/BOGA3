@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260215-02`
 - Title: Create Expo Router smoke app in `apps/mobile`
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-15`
 - Session interaction mode: `interactive (default)`
@@ -98,7 +98,7 @@ If `split`, define cards:
 
 ## Automated review loop (before human review)
 
-- AI self-review completed: `no`
+- AI self-review completed: `yes`
 - Checks reviewed:
   - Acceptance criteria coverage
   - Test completeness
@@ -108,17 +108,17 @@ If `split`, define cards:
 
 ## Completion note (fill at end)
 
-- What changed:
-- Tests run and outcome:
-- Verify gate outcomes:
-- AI self-review findings/resolution:
-- CI result:
-- Follow-up tasks:
-- Escalation link (if blocked):
+- What changed: Scaffolded Expo app in `apps/mobile` using `create-expo-app` default (Expo Router entry in `package.json`), added root route `apps/mobile/app/index.tsx` with exact text `Milestone 0 foundation ready`, updated `apps/mobile/app/_layout.tsx` to include `index` in stack, and replaced `apps/mobile/README.md` with minimal local startup instructions.
+- Tests run and outcome: Red check `test -d apps/mobile` failed before scaffold (`exit 1`); green static check `test -d apps/mobile && rg -n "Milestone 0 foundation ready" apps/mobile` passed; static route structure check for `apps/mobile/app/index.tsx` and `apps/mobile/app/_layout.tsx` passed; manual runtime smoke check passed via human confirmation that `npx expo start --offline` started successfully and displayed the required root message.
+- Verify gate outcomes: Attempted root-level `npm run lint` and it failed with `ENOENT` due missing `/home/dino/codex-tests/package.json`; `npm run typecheck` and `npm run test` are not implemented at repo root in this bootstrap stage. Per Milestone 0 bootstrap exception in `docs/specs/04-ai-development-playbook.md`, verify gates are temporarily exempt for this task while required scripts are not yet available.
+- AI self-review findings/resolution: Acceptance criteria fully met (scaffold exists, Expo Router root path present, exact message implemented, startup smoke evidence captured); no architecture or security impact beyond scaffold baseline.
+- CI result: `pending` (CI quality gates not configured in this bootstrap task).
+- Follow-up tasks: `docs/tasks/T-20260215-03-m0-testing-and-quality-gates.md`.
+- Escalation link (if blocked): `n/a`
 
 ## Decision log (if needed)
 
-- Date:
-- Decision:
-- Reason:
-- Impact:
+- Date: 2026-02-17
+- Decision: Complete `T-20260215-02` with a minimal Expo Router smoke implementation and defer strict verify-gate enforcement to `T-20260215-03`.
+- Reason: Milestone 0 explicitly allows temporary exemption until lint/typecheck/test gates are implemented.
+- Impact: `apps/mobile` scaffold and runtime smoke baseline are ready; next task restores strict quality-gate enforcement.
