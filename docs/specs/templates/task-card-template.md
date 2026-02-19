@@ -14,6 +14,7 @@
 - Milestone spec: `docs/specs/milestones/<milestone-id>.md`
 - Architecture (if relevant): `docs/specs/03-technical-architecture.md`
 - Testing strategy: `docs/specs/06-testing-strategy.md`
+- UX standard (UI/UX tasks only; remove for non-UX tasks): `docs/specs/08-ux-delivery-standard.md`
 
 ## Objective
 
@@ -29,43 +30,35 @@ What this session must accomplish.
 
 - 
 
+## UX Contract (UI/UX tasks only; remove this entire section for non-UX tasks)
+
+### Key user flows (minimal template)
+
+1. Flow name:
+   - Trigger:
+   - Steps:
+   - Success outcome:
+   - Failure/edge outcome:
+2. Flow name:
+   - Trigger:
+   - Steps:
+   - Success outcome:
+   - Failure/edge outcome:
+
+### Interaction + appearance notes (lightweight; prefer <= 5 bullets)
+
+- 
+
 ## Acceptance criteria
 
 1. 
 2. 
 3. 
 
-## Delivery split mode
+## Testing and verification approach (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
-- Mode: `combined (default) | split`
-- Rationale:
-
-If `split`, define cards:
-
-- Test-first card:
-- Implementation card:
-
-## Test plan
-
-### Required tests
-
-1. 
-2. 
-
-### Red phase (expected failing tests)
-
-- Target command(s):
-- Expected failure reason:
-
-### Green phase (expected passing tests)
-
-- Target command(s):
-- Pass criteria:
-
-### Evidence to capture
-
-- Command(s) run:
-- Result summary:
+- Planned checks/commands:
+- Notes:
 
 ## Implementation notes
 
@@ -79,22 +72,10 @@ If `split`, define cards:
 - `npm run test`
 - Additional gate(s), if any:
 
-## Automated review loop (before human review)
+## Evidence (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
-- AI self-review completed: `yes | no`
-- Checks reviewed:
-  - Acceptance criteria coverage
-  - Test completeness
-  - Offline/edge-case handling
-  - Security/data access impact
-- CI status: `pending | pass | fail`
+- 
 
-## Completion note (fill at end)
+## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- Tests run and outcome:
-- Verify gate outcomes:
-- AI self-review findings/resolution:
-- CI result:
-- Follow-up tasks:
-- Escalation link (if blocked):
+- 

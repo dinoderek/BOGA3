@@ -12,6 +12,7 @@ Define the minimum scaffolding required before feature development, and standard
    - `docs/specs/00-mvp-deliverables.md`
    - `docs/specs/03-technical-architecture.md`
    - `docs/specs/06-testing-strategy.md`
+   - `docs/specs/08-ux-delivery-standard.md` (required for UI tasks)
 2. This playbook exists and is followed.
 3. A milestone spec exists for the active milestone.
 4. A task card exists for the active coding session.
@@ -73,7 +74,7 @@ Default:
 
 1. Keep test creation and feature implementation in the same task/session using the protocol above.
 
-Split into separate sessions only when complexity/risk justifies it:
+If complexity/risk justifies it, create additional follow-up task cards:
 
 1. Complex domain logic with many edge cases.
 2. Large multi-screen UI flows.
@@ -87,6 +88,7 @@ Provide these references at execution start:
 2. Active milestone spec
 3. Active task card
 4. Any changed parent specs
+5. `docs/specs/08-ux-delivery-standard.md` (for UI tasks)
 
 ## Task card rules
 
@@ -96,8 +98,9 @@ Provide these references at execution start:
    - Milestone spec
 2. Task card must define:
    - In-scope / out-of-scope
+   - UX contract with key user flows (for UI tasks)
    - Acceptance criteria
-   - Required tests
+   - Testing and verification approach (commands/checks)
    - Allowed files/areas
 3. Task card must end with a completion note:
    - What changed

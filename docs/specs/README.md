@@ -11,6 +11,6 @@ This folder is the source of truth for product and technical decisions.
 - `docs/specs/04-ai-development-playbook.md`: AI-first workflow, task hierarchy, and context rules.
 - `docs/specs/05-delivery-plan.md`: Milestones and execution order. (planned)
 - `docs/specs/06-testing-strategy.md`: Top-level testing stack and practices.
+- `docs/specs/08-ux-delivery-standard.md`: Standard UX contract, iteration loop, and evidence requirements for UI work.
 - `docs/specs/templates/milestone-spec-template.md`: Template for milestone deep dives.
 - `docs/specs/templates/task-card-template.md`: Template for per-session AI task execution.
-
