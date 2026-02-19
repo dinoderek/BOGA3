@@ -101,3 +101,11 @@ npx expo start --dev-client
 ```
 
 3. Open the installed dev client and connect to Metro.
+
+## Local data lane-1 canary
+
+Run migration generation canary command:
+
+```bash
+npm run db:generate:canary
+```

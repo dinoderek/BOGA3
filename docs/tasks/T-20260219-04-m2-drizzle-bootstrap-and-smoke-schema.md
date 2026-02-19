@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260219-04`
 - Title: M2 Drizzle bootstrap and smoke schema setup
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-19`
 - Session interaction mode: `interactive (default)`
@@ -71,8 +71,15 @@ Create the minimum Drizzle + SQLite foundation in `apps/mobile` with one infrast
 
 ## Evidence (follow `docs/specs/04-ai-development-playbook.md`)
 
-- 
+- `npm run db:generate:canary` (from `apps/mobile`) -> pass; generated `apps/mobile/drizzle/0000_quiet_famine.sql` and `apps/mobile/drizzle/meta/*`
+- `npm run lint` (from `apps/mobile`) -> pass
+- `npm run typecheck` (from `apps/mobile`) -> pass
+- `npm run test` (from `apps/mobile`) -> pass (`2` suites, `6` tests)
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- 
+- Added Lane 1 local-data bootstrap: `drizzle-orm`, `drizzle-kit`, `expo-sqlite`, `drizzle.config.ts`, smoke-only schema, and lazy DB bootstrap module under `apps/mobile/src/data/**`.
+- Added migration-generation canary scripts in `apps/mobile/package.json` and documented local/CI usage in `apps/mobile/README.md`.
+- Generated initial smoke migration artifacts under `apps/mobile/drizzle/**` with one non-domain table (`smoke_records`) and no workout-domain schema.
+- Wired safe bootstrap import usage in `apps/mobile/app/_layout.tsx` via `bootstrapLocalDataLayer()` with no runtime migration execution added in this task.
+- Remaining work (intended for `T-20260219-05`): runtime migration execution behavior and smoke insert/read integration coverage.

@@ -1,0 +1,1 @@
+export { smokeRecords } from './smoke';
