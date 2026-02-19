@@ -4,7 +4,7 @@
 
 - Milestone ID: `M0`
 - Title: Technology foundations
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Target window: `2026-02 (bootstrap)`
 
