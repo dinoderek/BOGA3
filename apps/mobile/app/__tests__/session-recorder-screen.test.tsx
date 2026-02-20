@@ -6,16 +6,12 @@ describe('SessionRecorderScreen', () => {
   it('renders the baseline session recorder shell', () => {
     render(<SessionRecorderScreen />);
 
-    expect(screen.getByText('Session Recorder')).toBeTruthy();
     expect(screen.getByText('Date and Time')).toBeTruthy();
     expect(screen.getByText('Gym')).toBeTruthy();
     expect(screen.getByText('Choose gym')).toBeTruthy();
-    expect(screen.getByText('Exercises')).toBeTruthy();
-    expect(screen.getByText('Exercises: 0')).toBeTruthy();
-    expect(screen.getByText('Sets: 0')).toBeTruthy();
-    expect(screen.getByText('Barbell Squat')).toBeTruthy();
-    expect(screen.getByText('Add manual exercise')).toBeTruthy();
-    expect(screen.getByText('No exercises yet. Use quick add or add one manually.')).toBeTruthy();
+    expect(screen.getByText('Log new exercise')).toBeTruthy();
+    expect(screen.getByText('No exercises logged yet.')).toBeTruthy();
+    expect(screen.queryByText('Barbell Squat')).toBeNull();
     expect(screen.getByText('Submit Session (coming soon)')).toBeTruthy();
     expect(screen.queryByLabelText('Select gym Downtown Iron Temple')).toBeNull();
   });
@@ -23,7 +19,8 @@ describe('SessionRecorderScreen', () => {
   it('prefills date and time with the current value pattern', () => {
     render(<SessionRecorderScreen />);
 
-    expect(screen.getByDisplayValue(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.getByText(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.queryByPlaceholderText('YYYY-MM-DD HH:mm')).toBeNull();
   });
 
   it('supports picker selection and add new gym flow', () => {

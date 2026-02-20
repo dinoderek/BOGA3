@@ -5,6 +5,7 @@ import {
   SEEDED_EXERCISES,
   SEEDED_LOCATIONS,
   SessionExercise,
+  SessionExercisePreset,
   SessionLocation,
   SessionRecorderState,
   SessionSet,
@@ -35,6 +36,17 @@ function createInitialState(): SessionRecorderState {
     showArchivedInManager: false,
     editingLocationId: null,
     editingLocationName: '',
+    exercisePickerVisible: false,
+    exerciseModalMode: 'picker',
+    exerciseEditorReturnMode: 'picker',
+    exercisePresets: SEEDED_EXERCISES,
+    pendingExerciseName: '',
+    showArchivedExercisesInManager: false,
+    editingExerciseId: null,
+    editingExerciseName: '',
+    exerciseSelectionTargetId: null,
+    exerciseActionMenuVisible: false,
+    activeExerciseActionId: null,
   };
 }
 
@@ -44,6 +56,10 @@ function createLocationId(locationName: string): string {
 
 function createExerciseId(): string {
   return `exercise-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createExercisePresetId(exerciseName: string): string {
+  return `custom-exercise-${exerciseName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 }
 
 function createSetId(): string {
@@ -88,12 +104,18 @@ export default function SessionRecorderScreen() {
     [state.locations, state.showArchivedInManager]
   );
 
-  const handleSessionDateTimeChange = (dateTime: string) => {
-    setState((current) => ({
-      ...current,
-      session: { ...current.session, dateTime },
-    }));
-  };
+  const activeExercisePresets = useMemo(
+    () => state.exercisePresets.filter((exercisePreset) => !exercisePreset.archived),
+    [state.exercisePresets]
+  );
+
+  const managedExercisePresets = useMemo(
+    () =>
+      state.showArchivedExercisesInManager
+        ? state.exercisePresets
+        : state.exercisePresets.filter((exercisePreset) => !exercisePreset.archived),
+    [state.exercisePresets, state.showArchivedExercisesInManager]
+  );
 
   const openGymModal = () => {
     setState((current) => ({
@@ -256,40 +278,247 @@ export default function SessionRecorderScreen() {
     }));
   };
 
-  const addExercise = (exerciseName: string) => {
+  const openExerciseModal = (exerciseIdToChange: string | null = null) => {
     setState((current) => ({
       ...current,
-      session: {
-        ...current.session,
-        exercises: [...current.session.exercises, createExercise(exerciseName)],
-      },
+      exercisePickerVisible: true,
+      exerciseModalMode: 'picker',
+      exerciseEditorReturnMode: 'picker',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      showArchivedExercisesInManager: false,
+      exerciseSelectionTargetId: exerciseIdToChange,
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
     }));
   };
 
-  const updateExerciseField = (
-    exerciseId: string,
-    field: keyof Pick<SessionExercise, 'name' | 'machineName'>,
-    value: string
-  ) => {
+  const dismissExerciseModal = () => {
+    setState((current) => ({
+      ...current,
+      exercisePickerVisible: false,
+      exerciseModalMode: 'picker',
+      exerciseEditorReturnMode: 'picker',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      showArchivedExercisesInManager: false,
+      exerciseSelectionTargetId: null,
+    }));
+  };
+
+  const selectExercisePreset = (exercisePresetId: string) => {
+    const selectedExercisePreset = state.exercisePresets.find(
+      (exercisePreset) => exercisePreset.id === exercisePresetId
+    );
+    if (!selectedExercisePreset) {
+      return;
+    }
+
     setState((current) => ({
       ...current,
       session: {
         ...current.session,
-        exercises: current.session.exercises.map((exercise) =>
-          exercise.id === exerciseId ? { ...exercise, [field]: value } : exercise
+        exercises: current.exerciseSelectionTargetId
+          ? current.session.exercises.map((exercise) =>
+              exercise.id === current.exerciseSelectionTargetId
+                ? { ...exercise, name: selectedExercisePreset.name }
+                : exercise
+            )
+          : [...current.session.exercises, createExercise(selectedExercisePreset.name)],
+      },
+      exercisePickerVisible: false,
+      exerciseModalMode: 'picker',
+      exerciseEditorReturnMode: 'picker',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      showArchivedExercisesInManager: false,
+      exerciseSelectionTargetId: null,
+    }));
+  };
+
+  const openManageExercises = () => {
+    setState((current) => ({
+      ...current,
+      exerciseModalMode: 'manage',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
+    }));
+  };
+
+  const openAddExerciseEditor = () => {
+    setState((current) => ({
+      ...current,
+      exerciseModalMode: 'editor',
+      exerciseEditorReturnMode: 'picker',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
+    }));
+  };
+
+  const openEditExerciseEditor = (exercisePreset: SessionExercisePreset) => {
+    setState((current) => ({
+      ...current,
+      exerciseModalMode: 'editor',
+      exerciseEditorReturnMode: 'manage',
+      editingExerciseId: exercisePreset.id,
+      editingExerciseName: exercisePreset.name,
+      pendingExerciseName: '',
+    }));
+  };
+
+  const returnFromExerciseEditor = () => {
+    setState((current) => ({
+      ...current,
+      exerciseModalMode: current.exerciseEditorReturnMode,
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+    }));
+  };
+
+  const handlePendingExerciseNameChange = (pendingExerciseName: string) => {
+    setState((current) => ({
+      ...current,
+      pendingExerciseName,
+    }));
+  };
+
+  const handleEditingExerciseNameChange = (editingExerciseName: string) => {
+    setState((current) => ({
+      ...current,
+      editingExerciseName,
+    }));
+  };
+
+  const saveExerciseFromEditor = () => {
+    const draftName = (state.editingExerciseId ? state.editingExerciseName : state.pendingExerciseName).trim();
+    if (!draftName) {
+      return;
+    }
+
+    if (state.editingExerciseId) {
+      setState((current) => ({
+        ...current,
+        exercisePresets: current.exercisePresets.map((exercisePreset) =>
+          exercisePreset.id === current.editingExerciseId ? { ...exercisePreset, name: draftName } : exercisePreset
         ),
+        exerciseModalMode: 'manage',
+        editingExerciseId: null,
+        editingExerciseName: '',
+      }));
+      return;
+    }
+
+    const newExercisePreset: SessionExercisePreset = {
+      id: createExercisePresetId(draftName),
+      name: draftName,
+      archived: false,
+    };
+
+    setState((current) => ({
+      ...current,
+      exercisePresets: [...current.exercisePresets, newExercisePreset],
+      session: {
+        ...current.session,
+        exercises: current.exerciseSelectionTargetId
+          ? current.session.exercises.map((exercise) =>
+              exercise.id === current.exerciseSelectionTargetId
+                ? { ...exercise, name: newExercisePreset.name }
+                : exercise
+            )
+          : [...current.session.exercises, createExercise(newExercisePreset.name)],
       },
+      exercisePickerVisible: false,
+      exerciseModalMode: 'picker',
+      exerciseEditorReturnMode: 'picker',
+      pendingExerciseName: '',
+      editingExerciseId: null,
+      editingExerciseName: '',
+      showArchivedExercisesInManager: false,
+      exerciseSelectionTargetId: null,
     }));
   };
 
-  const removeExercise = (exerciseId: string) => {
+  const returnToPickerFromExerciseManage = () => {
     setState((current) => ({
       ...current,
-      session: {
-        ...current.session,
-        exercises: current.session.exercises.filter((exercise) => exercise.id !== exerciseId),
-      },
+      exerciseModalMode: 'picker',
+      showArchivedExercisesInManager: false,
+      editingExerciseId: null,
+      editingExerciseName: '',
     }));
+  };
+
+  const toggleExerciseArchivedVisibility = () => {
+    setState((current) => ({
+      ...current,
+      showArchivedExercisesInManager: !current.showArchivedExercisesInManager,
+    }));
+  };
+
+  const toggleExerciseArchive = (exercisePresetId: string, archived: boolean) => {
+    setState((current) => ({
+      ...current,
+      exercisePresets: current.exercisePresets.map((exercisePreset) =>
+        exercisePreset.id === exercisePresetId ? { ...exercisePreset, archived: !archived } : exercisePreset
+      ),
+    }));
+  };
+
+  const openExerciseActionMenu = (exerciseId: string) => {
+    setState((current) => ({
+      ...current,
+      exerciseActionMenuVisible: true,
+      activeExerciseActionId: exerciseId,
+    }));
+  };
+
+  const dismissExerciseActionMenu = () => {
+    setState((current) => ({
+      ...current,
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
+    }));
+  };
+
+  const removeActiveExerciseFromMenu = () => {
+    setState((current) => {
+      if (!current.activeExerciseActionId) {
+        return {
+          ...current,
+          exerciseActionMenuVisible: false,
+          activeExerciseActionId: null,
+        };
+      }
+
+      return {
+        ...current,
+        session: {
+          ...current.session,
+          exercises: current.session.exercises.filter((exercise) => exercise.id !== current.activeExerciseActionId),
+        },
+        exerciseActionMenuVisible: false,
+        activeExerciseActionId: null,
+      };
+    });
+  };
+
+  const changeActiveExerciseFromMenu = () => {
+    if (!state.activeExerciseActionId) {
+      dismissExerciseActionMenu();
+      return;
+    }
+
+    openExerciseModal(state.activeExerciseActionId);
   };
 
   const addSetToExercise = (exerciseId: string) => {
@@ -340,30 +569,22 @@ export default function SessionRecorderScreen() {
     }));
   };
 
-  const totalExercises = state.session.exercises.length;
-  const totalSets = state.session.exercises.reduce((count, exercise) => count + exercise.sets.length, 0);
-
-  const editorPrimaryLabel = state.editingLocationId ? 'Save' : 'Add';
-  const editorTitle = state.editingLocationId ? 'Edit Gym' : 'Add Gym';
-  const editorInputValue = state.editingLocationId ? state.editingLocationName : state.pendingLocationName;
+  const gymEditorPrimaryLabel = state.editingLocationId ? 'Save' : 'Add';
+  const gymEditorTitle = state.editingLocationId ? 'Edit Gym' : 'Add Gym';
+  const gymEditorInputValue = state.editingLocationId ? state.editingLocationName : state.pendingLocationName;
+  const exerciseEditorPrimaryLabel = state.editingExerciseId ? 'Save' : 'Add';
+  const exerciseEditorTitle = state.editingExerciseId ? 'Edit Exercise' : 'Add Exercise';
+  const exerciseEditorInputValue = state.editingExerciseId ? state.editingExerciseName : state.pendingExerciseName;
 
   return (
     <ScrollView contentContainerStyle={styles.content} testID="session-recorder-screen">
-      <Text accessibilityLabel="Session recorder title" style={styles.title} testID="session-recorder-title">
-        Session Recorder
-      </Text>
-
       <View style={styles.section}>
         <View style={styles.topRow}>
           <View style={styles.rowField}>
             <Text style={styles.label}>Date and Time</Text>
-            <TextInput
-              accessibilityLabel="Session date and time"
-              placeholder="YYYY-MM-DD HH:mm"
-              style={styles.input}
-              value={state.session.dateTime}
-              onChangeText={handleSessionDateTimeChange}
-            />
+            <View accessibilityLabel="Session date and time" style={styles.readOnlyInput}>
+              <Text style={styles.readOnlyInputText}>{state.session.dateTime}</Text>
+            </View>
           </View>
 
           <View style={styles.rowField}>
@@ -377,107 +598,68 @@ export default function SessionRecorderScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Exercises</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryText}>Exercises: {totalExercises}</Text>
-            <Text style={styles.summaryText}>Sets: {totalSets}</Text>
-          </View>
-        </View>
-
-        <View style={styles.presetGroup}>
-          <Text style={styles.label}>Quick add</Text>
-          <View style={styles.presetButtonsWrap}>
-            {SEEDED_EXERCISES.map((exerciseName) => (
+      <View style={styles.exerciseList}>
+        {state.session.exercises.map((exercise, exerciseIndex) => (
+          <View key={exercise.id} style={styles.exerciseCard}>
+            <View style={styles.exerciseCardHeader}>
+              <Text numberOfLines={1} style={styles.exerciseCardTitle}>
+                {exercise.name || `Exercise ${exerciseIndex + 1}`}
+              </Text>
               <Pressable
-                key={exerciseName}
-                accessibilityLabel={`Add preset exercise ${exerciseName}`}
-                style={styles.presetButton}
-                onPress={() => addExercise(exerciseName)}>
-                <Text style={styles.presetButtonText}>{exerciseName}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <Pressable style={styles.manualAddButton} onPress={() => addExercise('')}>
-          <Text style={styles.manualAddButtonText}>Add manual exercise</Text>
-        </Pressable>
-
-        <View style={styles.exerciseList}>
-          {state.session.exercises.map((exercise, exerciseIndex) => (
-            <View key={exercise.id} style={styles.exerciseCard}>
-              <View style={styles.exerciseCardHeader}>
-                <Text style={styles.exerciseCardTitle}>Exercise {exerciseIndex + 1}</Text>
-                <Pressable
-                  accessibilityLabel={`Remove exercise ${exerciseIndex + 1}`}
-                  style={styles.inlineDangerButton}
-                  onPress={() => removeExercise(exercise.id)}>
-                  <Text style={styles.inlineDangerButtonText}>Remove exercise</Text>
-                </Pressable>
-              </View>
-
-              <TextInput
-                accessibilityLabel={`Exercise name ${exerciseIndex + 1}`}
-                placeholder="Exercise name"
-                style={styles.input}
-                value={exercise.name}
-                onChangeText={(value) => updateExerciseField(exercise.id, 'name', value)}
-              />
-
-              <TextInput
-                accessibilityLabel={`Machine for exercise ${exerciseIndex + 1}`}
-                placeholder="Machine / station"
-                style={styles.input}
-                value={exercise.machineName}
-                onChangeText={(value) => updateExerciseField(exercise.id, 'machineName', value)}
-              />
-
-              <View style={styles.setList}>
-                {exercise.sets.map((set, setIndex) => (
-                  <View key={set.id} style={styles.setRow}>
-                    <Text style={styles.setLabel}>Set {setIndex + 1}</Text>
-                    <TextInput
-                      accessibilityLabel={`Reps for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
-                      keyboardType="number-pad"
-                      placeholder="Reps"
-                      style={[styles.input, styles.setInput]}
-                      value={set.reps}
-                      onChangeText={(value) => updateSetField(exercise.id, set.id, 'reps', value)}
-                    />
-                    <TextInput
-                      accessibilityLabel={`Weight for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
-                      keyboardType="decimal-pad"
-                      placeholder="Weight"
-                      style={[styles.input, styles.setInput]}
-                      value={set.weight}
-                      onChangeText={(value) => updateSetField(exercise.id, set.id, 'weight', value)}
-                    />
-                    <Pressable
-                      accessibilityLabel={`Remove set ${setIndex + 1} from exercise ${exerciseIndex + 1}`}
-                      style={styles.inlineDangerButton}
-                      onPress={() => removeSetFromExercise(exercise.id, set.id)}>
-                      <Text style={styles.inlineDangerButtonText}>Remove set</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-
-              <Pressable
-                accessibilityLabel={`Add set to exercise ${exerciseIndex + 1}`}
-                style={styles.addSetButton}
-                onPress={() => addSetToExercise(exercise.id)}>
-                <Text style={styles.primaryActionButtonText}>Add set</Text>
+                accessibilityLabel={`Exercise options ${exerciseIndex + 1}`}
+                style={styles.exerciseMenuButton}
+                onPress={() => openExerciseActionMenu(exercise.id)}>
+                <Text style={styles.exerciseMenuButtonText}>•••</Text>
               </Pressable>
             </View>
-          ))}
 
-          {state.session.exercises.length === 0 ? (
-            <Text style={styles.emptyText}>No exercises yet. Use quick add or add one manually.</Text>
-          ) : null}
-        </View>
+            <View style={styles.setList}>
+              {exercise.sets.map((set, setIndex) => (
+                <View key={set.id} style={styles.setRow}>
+                  <TextInput
+                    accessibilityLabel={`Weight for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+                    keyboardType="decimal-pad"
+                    placeholder="Weight"
+                    style={[styles.input, styles.setRowInput]}
+                    value={set.weight}
+                    onChangeText={(value) => updateSetField(exercise.id, set.id, 'weight', value)}
+                  />
+                  <TextInput
+                    accessibilityLabel={`Reps for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+                    keyboardType="number-pad"
+                    placeholder="Reps"
+                    style={[styles.input, styles.setRowInput]}
+                    value={set.reps}
+                    onChangeText={(value) => updateSetField(exercise.id, set.id, 'reps', value)}
+                  />
+                  <Pressable
+                    accessibilityLabel={`Remove set ${setIndex + 1} from exercise ${exerciseIndex + 1}`}
+                    style={styles.setDeleteButton}
+                    onPress={() => removeSetFromExercise(exercise.id, set.id)}>
+                    <Text style={styles.setDeleteButtonText}>X</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+
+            <Pressable
+              accessibilityLabel={`Add set to exercise ${exerciseIndex + 1}`}
+              style={styles.addSetButton}
+              onPress={() => addSetToExercise(exercise.id)}>
+              <Text style={styles.primaryActionButtonText}>Add set</Text>
+            </Pressable>
+          </View>
+        ))}
+
+        {state.session.exercises.length === 0 ? <Text style={styles.emptyText}>No exercises logged yet.</Text> : null}
       </View>
+
+      <Pressable
+        accessibilityLabel="Log new exercise"
+        style={styles.logExerciseButton}
+        onPress={() => openExerciseModal()}>
+        <Text style={styles.logExerciseButtonText}>Log new exercise</Text>
+      </Pressable>
 
       <Pressable style={styles.submitButton}>
         <Text style={styles.submitButtonText}>Submit Session (coming soon)</Text>
@@ -571,12 +753,12 @@ export default function SessionRecorderScreen() {
 
             {state.gymModalMode === 'editor' ? (
               <>
-                <Text style={styles.modalTitle}>{editorTitle}</Text>
+                <Text style={styles.modalTitle}>{gymEditorTitle}</Text>
                 <TextInput
                   autoFocus
                   placeholder="Gym name"
                   style={styles.input}
-                  value={editorInputValue}
+                  value={gymEditorInputValue}
                   onChangeText={state.editingLocationId ? handleEditingLocationNameChange : handlePendingLocationNameChange}
                 />
                 <View style={styles.equalButtonRow}>
@@ -584,11 +766,146 @@ export default function SessionRecorderScreen() {
                     <Text style={styles.secondaryActionButtonText}>Back</Text>
                   </Pressable>
                   <Pressable style={styles.primaryActionButton} onPress={saveGymFromEditor}>
-                    <Text style={styles.primaryActionButtonText}>{editorPrimaryLabel}</Text>
+                    <Text style={styles.primaryActionButtonText}>{gymEditorPrimaryLabel}</Text>
                   </Pressable>
                 </View>
               </>
             ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={state.exercisePickerVisible}
+        onRequestClose={dismissExerciseModal}>
+        <View style={styles.modalContainer}>
+          <Pressable
+            accessibilityLabel="Dismiss exercise modal overlay"
+            style={styles.modalBackdrop}
+            onPress={dismissExerciseModal}
+          />
+
+          <View style={styles.modalCard}>
+            {state.exerciseModalMode === 'picker' ? (
+              <>
+                <Text style={styles.modalTitle}>Select Exercise</Text>
+                <ScrollView contentContainerStyle={styles.modalList}>
+                  {activeExercisePresets.map((exercisePreset) => (
+                    <Pressable
+                      key={exercisePreset.id}
+                      accessibilityLabel={`Select exercise ${exercisePreset.name}`}
+                      style={styles.pickerOption}
+                      onPress={() => selectExercisePreset(exercisePreset.id)}>
+                      <Text style={styles.pickerOptionText}>{exercisePreset.name}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+
+                <View style={styles.equalButtonRow}>
+                  <Pressable style={styles.secondaryActionButton} onPress={openManageExercises}>
+                    <Text style={styles.secondaryActionButtonText}>Manage</Text>
+                  </Pressable>
+                  <Pressable style={styles.secondaryActionButton} onPress={openAddExerciseEditor}>
+                    <Text style={styles.secondaryActionButtonText}>Add new</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
+
+            {state.exerciseModalMode === 'manage' ? (
+              <>
+                <Text style={styles.modalTitle}>Manage Exercises</Text>
+
+                <View style={styles.equalButtonRow}>
+                  <Pressable style={styles.secondaryActionButton} onPress={returnToPickerFromExerciseManage}>
+                    <Text style={styles.secondaryActionButtonText}>Back to picker</Text>
+                  </Pressable>
+                  <Pressable style={styles.secondaryActionButton} onPress={toggleExerciseArchivedVisibility}>
+                    <Text style={styles.secondaryActionButtonText}>
+                      {state.showArchivedExercisesInManager ? 'Hide archived' : 'Show archived'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <ScrollView contentContainerStyle={styles.modalList}>
+                  {managedExercisePresets.map((exercisePreset) => (
+                    <View key={exercisePreset.id} style={styles.manageRow}>
+                      <Text numberOfLines={1} style={styles.manageRowTitle}>
+                        {exercisePreset.name}
+                      </Text>
+                      <Pressable
+                        accessibilityLabel={`Edit exercise ${exercisePreset.name}`}
+                        style={styles.inlineSecondaryButton}
+                        onPress={() => openEditExerciseEditor(exercisePreset)}>
+                        <Text style={styles.inlineSecondaryButtonText}>Edit</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={`${exercisePreset.archived ? 'Unarchive' : 'Archive'} exercise ${exercisePreset.name}`}
+                        style={[
+                          styles.inlineArchiveButton,
+                          exercisePreset.archived ? styles.unarchiveButton : styles.archiveDangerButton,
+                        ]}
+                        onPress={() => toggleExerciseArchive(exercisePreset.id, exercisePreset.archived)}>
+                        <Text style={styles.inlineArchiveButtonText}>
+                          {exercisePreset.archived ? 'Unarchive' : 'Archive'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  ))}
+                  {managedExercisePresets.length === 0 ? (
+                    <Text style={styles.emptyText}>No exercises for the current filter.</Text>
+                  ) : null}
+                </ScrollView>
+              </>
+            ) : null}
+
+            {state.exerciseModalMode === 'editor' ? (
+              <>
+                <Text style={styles.modalTitle}>{exerciseEditorTitle}</Text>
+                <TextInput
+                  autoFocus
+                  placeholder="Exercise name"
+                  style={styles.input}
+                  value={exerciseEditorInputValue}
+                  onChangeText={state.editingExerciseId ? handleEditingExerciseNameChange : handlePendingExerciseNameChange}
+                />
+                <View style={styles.equalButtonRow}>
+                  <Pressable style={styles.secondaryActionButton} onPress={returnFromExerciseEditor}>
+                    <Text style={styles.secondaryActionButtonText}>Back</Text>
+                  </Pressable>
+                  <Pressable style={styles.primaryActionButton} onPress={saveExerciseFromEditor}>
+                    <Text style={styles.primaryActionButtonText}>{exerciseEditorPrimaryLabel}</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={state.exerciseActionMenuVisible}
+        onRequestClose={dismissExerciseActionMenu}>
+        <View style={styles.modalContainer}>
+          <Pressable
+            accessibilityLabel="Dismiss exercise action menu overlay"
+            style={styles.modalBackdrop}
+            onPress={dismissExerciseActionMenu}
+          />
+          <View style={styles.actionMenuCard}>
+            <Pressable
+              accessibilityLabel="Change exercise"
+              style={styles.actionMenuSecondaryButton}
+              onPress={changeActiveExerciseFromMenu}>
+              <Text style={styles.actionMenuSecondaryButtonText}>Change exercise</Text>
+            </Pressable>
+            <Pressable style={styles.dangerActionButton} onPress={removeActiveExerciseFromMenu}>
+              <Text style={styles.dangerActionButtonText}>Remove exercise</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -600,10 +917,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
     gap: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
   },
   section: {
     padding: 12,
@@ -634,6 +947,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 9,
   },
+  readOnlyInput: {
+    borderWidth: 1,
+    borderColor: '#c3c3c3',
+    borderRadius: 8,
+    backgroundColor: '#f4f4f4',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  readOnlyInputText: {
+    color: '#2f2f2f',
+    fontWeight: '500',
+  },
   gymButton: {
     borderWidth: 1,
     borderColor: '#0f5cc0',
@@ -646,55 +971,15 @@ const styles = StyleSheet.create({
     color: '#0f5cc0',
     fontWeight: '600',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  sectionHeader: {
-    gap: 8,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: '#3a3a3a',
-    fontWeight: '600',
-    fontVariant: ['tabular-nums'],
-  },
-  presetGroup: {
-    gap: 8,
-  },
-  presetButtonsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  presetButton: {
-    borderWidth: 1,
-    borderColor: '#0f5cc0',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: '#ffffff',
-  },
-  presetButtonText: {
-    color: '#0f5cc0',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  manualAddButton: {
+  logExerciseButton: {
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#6f6f6f',
+    backgroundColor: '#0f5cc0',
     paddingVertical: 10,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
   },
-  manualAddButtonText: {
-    color: '#444444',
-    fontWeight: '600',
+  logExerciseButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
   exerciseList: {
     gap: 12,
@@ -716,11 +1001,30 @@ const styles = StyleSheet.create({
   exerciseCardTitle: {
     fontSize: 16,
     fontWeight: '700',
+    flex: 1,
+  },
+  exerciseMenuButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#bfbfbf',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  exerciseMenuButtonText: {
+    color: '#5a5a5a',
+    fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 16,
   },
   setList: {
     gap: 8,
   },
   setRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#d9d9d9',
     borderRadius: 8,
@@ -728,12 +1032,8 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: '#fafafa',
   },
-  setLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#3d3d3d',
-  },
-  setInput: {
+  setRowInput: {
+    flex: 1,
     paddingVertical: 8,
   },
   addSetButton: {
@@ -742,18 +1042,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#0f5cc0',
   },
-  inlineDangerButton: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  setDeleteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#b3261e',
-    alignSelf: 'flex-start',
   },
-  inlineDangerButtonText: {
+  setDeleteButtonText: {
     color: '#ffffff',
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
   },
   submitButton: {
     borderRadius: 10,
@@ -780,6 +1080,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 16,
     gap: 12,
+  },
+  actionMenuCard: {
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    gap: 10,
+  },
+  actionMenuSecondaryButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6f6f6f',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  actionMenuSecondaryButtonText: {
+    color: '#444444',
+    fontWeight: '600',
   },
   modalTitle: {
     fontSize: 22,
@@ -824,6 +1142,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f5cc0',
   },
   primaryActionButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  dangerActionButton: {
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#b3261e',
+  },
+  dangerActionButtonText: {
     color: '#ffffff',
     fontWeight: '700',
   },

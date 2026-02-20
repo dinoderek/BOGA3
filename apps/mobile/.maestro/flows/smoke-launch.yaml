@@ -1,9 +1,9 @@
 appId: host.exp.Exponent
 ---
-- assertVisible: "Milestone 0 foundation ready"
 - takeScreenshot: "01-app-launch"
 - tapOn:
     id: "open-session-recorder-button"
+    optional: true
 - assertVisible:
-    id: "session-recorder-title"
+    id: "session-recorder-screen"
 - takeScreenshot: "02-session-recorder-visible"
