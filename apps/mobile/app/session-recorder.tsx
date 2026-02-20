@@ -83,8 +83,56 @@ function createExercise(name: string): SessionExercise {
   };
 }
 
+type SessionValidationErrors = {
+  location?: string;
+  exercises?: string;
+  sets?: string;
+};
+
+type SessionSubmitSummary = {
+  dateTime: string;
+  gymName: string;
+  exerciseCount: number;
+  setCount: number;
+};
+
+function countLoggedSets(exercises: SessionExercise[]): number {
+  return exercises.reduce((totalSets, exercise) => totalSets + exercise.sets.length, 0);
+}
+
+function validateSessionForSubmit(state: SessionRecorderState): SessionValidationErrors {
+  const validationErrors: SessionValidationErrors = {};
+  const hasAnyExercises = state.session.exercises.length > 0;
+
+  if (!state.session.locationId) {
+    validationErrors.location = 'Select a gym before submitting.';
+  }
+
+  if (!hasAnyExercises) {
+    validationErrors.exercises = 'Log at least one exercise before submitting.';
+    return validationErrors;
+  }
+
+  const hasExerciseWithoutSets = state.session.exercises.some((exercise) => exercise.sets.length === 0);
+  if (hasExerciseWithoutSets) {
+    validationErrors.sets = 'Each exercise needs at least one set.';
+    return validationErrors;
+  }
+
+  const hasIncompleteSet = state.session.exercises.some((exercise) =>
+    exercise.sets.some((set) => set.reps.trim().length === 0 || set.weight.trim().length === 0)
+  );
+  if (hasIncompleteSet) {
+    validationErrors.sets = 'Enter weight and reps for every set before submitting.';
+  }
+
+  return validationErrors;
+}
+
 export default function SessionRecorderScreen() {
   const [state, setState] = useState<SessionRecorderState>(createInitialState);
+  const [validationErrors, setValidationErrors] = useState<SessionValidationErrors>({});
+  const [submitSummary, setSubmitSummary] = useState<SessionSubmitSummary | null>(null);
 
   const selectedGym = useMemo<SessionLocation | undefined>(
     () => state.locations.find((location) => location.id === state.session.locationId),
@@ -154,6 +202,7 @@ export default function SessionRecorderScreen() {
       editingLocationId: null,
       editingLocationName: '',
     }));
+    setSubmitSummary(null);
   };
 
   const openManageGyms = () => {
@@ -337,6 +386,7 @@ export default function SessionRecorderScreen() {
       showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
+    setSubmitSummary(null);
   };
 
   const openManageExercises = () => {
@@ -446,6 +496,7 @@ export default function SessionRecorderScreen() {
       showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
+    setSubmitSummary(null);
   };
 
   const returnToPickerFromExerciseManage = () => {
@@ -510,6 +561,7 @@ export default function SessionRecorderScreen() {
         activeExerciseActionId: null,
       };
     });
+    setSubmitSummary(null);
   };
 
   const changeActiveExerciseFromMenu = () => {
@@ -531,6 +583,7 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
+    setSubmitSummary(null);
   };
 
   const updateSetField = (
@@ -553,6 +606,7 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
+    setSubmitSummary(null);
   };
 
   const removeSetFromExercise = (exerciseId: string, setId: string) => {
@@ -567,6 +621,31 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
+    setSubmitSummary(null);
+  };
+
+  const startNewEntry = () => {
+    setState(createInitialState());
+    setValidationErrors({});
+    setSubmitSummary(null);
+  };
+
+  const handleSubmit = () => {
+    const nextValidationErrors = validateSessionForSubmit(state);
+    const hasValidationErrors = Object.values(nextValidationErrors).some(Boolean);
+    if (hasValidationErrors) {
+      setValidationErrors(nextValidationErrors);
+      setSubmitSummary(null);
+      return;
+    }
+
+    setValidationErrors({});
+    setSubmitSummary({
+      dateTime: state.session.dateTime,
+      gymName: selectedGym?.name ?? 'Unknown gym',
+      exerciseCount: state.session.exercises.length,
+      setCount: countLoggedSets(state.session.exercises),
+    });
   };
 
   const gymEditorPrimaryLabel = state.editingLocationId ? 'Save' : 'Add';
@@ -589,16 +668,28 @@ export default function SessionRecorderScreen() {
 
           <View style={styles.rowField}>
             <Text style={styles.label}>Gym</Text>
-            <Pressable style={styles.gymButton} onPress={openGymModal}>
+            <Pressable style={[styles.gymButton, validationErrors.location ? styles.fieldErrorBorder : null]} onPress={openGymModal}>
               <Text numberOfLines={1} style={styles.gymButtonText}>
                 {selectedGym ? selectedGym.name : 'Choose gym'}
               </Text>
             </Pressable>
+            {validationErrors.location ? (
+              <Text style={styles.fieldErrorText}>{validationErrors.location}</Text>
+            ) : null}
           </View>
         </View>
       </View>
 
       <View style={styles.exerciseList}>
+        {validationErrors.exercises || validationErrors.sets ? (
+          <View style={styles.validationCard}>
+            {validationErrors.exercises ? (
+              <Text style={styles.fieldErrorText}>{validationErrors.exercises}</Text>
+            ) : null}
+            {validationErrors.sets ? <Text style={styles.fieldErrorText}>{validationErrors.sets}</Text> : null}
+          </View>
+        ) : null}
+
         {state.session.exercises.map((exercise, exerciseIndex) => (
           <View key={exercise.id} style={styles.exerciseCard}>
             <View style={styles.exerciseCardHeader}>
@@ -661,8 +752,24 @@ export default function SessionRecorderScreen() {
         <Text style={styles.logExerciseButtonText}>Log new exercise</Text>
       </Pressable>
 
-      <Pressable style={styles.submitButton}>
-        <Text style={styles.submitButtonText}>Submit Session (coming soon)</Text>
+      {submitSummary ? (
+        <View style={styles.successCard}>
+          <Text style={styles.successTitle}>Session submitted (UI only)</Text>
+          <Text style={styles.successLine}>Date: {submitSummary.dateTime}</Text>
+          <Text style={styles.successLine}>Gym: {submitSummary.gymName}</Text>
+          <Text style={styles.successLine}>Exercises: {submitSummary.exerciseCount}</Text>
+          <Text style={styles.successLine}>Sets: {submitSummary.setCount}</Text>
+          <Text style={styles.nonPersistenceNotice}>
+            This session is not saved to local storage or backend yet.
+          </Text>
+          <Pressable style={styles.successResetButton} onPress={startNewEntry}>
+            <Text style={styles.successResetButtonText}>Start new entry</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <Pressable accessibilityLabel="Submit session" style={styles.submitButton} onPress={handleSubmit}>
+        <Text style={styles.submitButtonText}>Submit Session</Text>
       </Pressable>
 
       <Modal
@@ -971,6 +1078,22 @@ const styles = StyleSheet.create({
     color: '#0f5cc0',
     fontWeight: '600',
   },
+  fieldErrorBorder: {
+    borderColor: '#b3261e',
+  },
+  fieldErrorText: {
+    fontSize: 13,
+    color: '#b3261e',
+    fontWeight: '600',
+  },
+  validationCard: {
+    borderWidth: 1,
+    borderColor: '#f2c3bf',
+    borderRadius: 10,
+    backgroundColor: '#fff3f1',
+    padding: 10,
+    gap: 4,
+  },
   logExerciseButton: {
     borderRadius: 8,
     backgroundColor: '#0f5cc0',
@@ -1059,10 +1182,45 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#444444',
+    backgroundColor: '#0f5cc0',
   },
   submitButtonText: {
     color: '#ffffff',
+    fontWeight: '700',
+  },
+  successCard: {
+    borderWidth: 1,
+    borderColor: '#b9dfc3',
+    borderRadius: 10,
+    backgroundColor: '#effcf3',
+    padding: 12,
+    gap: 6,
+  },
+  successTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#125d2f',
+  },
+  successLine: {
+    fontSize: 14,
+    color: '#1a1a1a',
+  },
+  nonPersistenceNotice: {
+    fontSize: 13,
+    color: '#5a332a',
+    fontWeight: '600',
+  },
+  successResetButton: {
+    marginTop: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#125d2f',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  successResetButtonText: {
+    color: '#125d2f',
     fontWeight: '700',
   },
   modalContainer: {

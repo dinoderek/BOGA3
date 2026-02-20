@@ -12,7 +12,7 @@ describe('SessionRecorderScreen', () => {
     expect(screen.getByText('Log new exercise')).toBeTruthy();
     expect(screen.getByText('No exercises logged yet.')).toBeTruthy();
     expect(screen.queryByText('Barbell Squat')).toBeNull();
-    expect(screen.getByText('Submit Session (coming soon)')).toBeTruthy();
+    expect(screen.getByText('Submit Session')).toBeTruthy();
     expect(screen.queryByLabelText('Select gym Downtown Iron Temple')).toBeNull();
   });
 

@@ -4,9 +4,9 @@
 
 - Task ID: `T-20260219-03`
 - Title: M1 validation, submit UX, and closeout tests
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
-- Session date: `2026-02-19`
+- Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
 
 ## Parent references (required)
@@ -93,8 +93,37 @@ Finalize the UI-only session recorder by adding client-side validation, non-pers
 
 ## Evidence (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
-- 
+- Test evidence:
+  - Happy path: `app/__tests__/session-recorder-submit.test.tsx` verifies successful submit with seeded gym/exercise selection and summary rendering.
+  - Failure/edge path: same submit suite verifies blocked submit for missing gym/exercise and blocked submit for incomplete set values.
+  - Correction/resubmit path: same submit suite verifies validation clears after fixing set values and resubmitting.
+- Visual/interaction evidence:
+  - `apps/mobile/app/session-recorder.tsx` now shows field-tied validation styling/messages, a visually distinct success card, explicit non-persistence notice, and post-submit `Start new entry` reset action.
+  - iOS smoke flow passed with screenshots at `apps/mobile/artifacts/maestro/ad-hoc/20260220-142201-57300/`.
+- Contract traceability:
+  - Flow 1 (invalid submit and correction) mapped to `handleSubmit` validation branches in `apps/mobile/app/session-recorder.tsx` and assertions in `app/__tests__/session-recorder-submit.test.tsx`.
+  - Flow 2 (successful submit and new entry) mapped to submit summary + reset handlers in `apps/mobile/app/session-recorder.tsx` and assertions in `app/__tests__/session-recorder-submit.test.tsx`.
+- Verification commands run:
+  - `npm run test -- app/__tests__/session-recorder-submit.test.tsx`
+  - `npm run test -- app/__tests__/session-recorder-screen.test.tsx app/__tests__/session-recorder-interactions.test.tsx`
+  - `HOME=/tmp EXPO_NO_TELEMETRY=1 npm run lint`
+  - `npm run typecheck`
+  - `npm run test`
+  - `npm run test:e2e:ios:smoke`
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- 
+- What changed:
+  - Implemented submit validation for required gym, minimum exercise/set shape, and complete reps/weight fields.
+  - Replaced submit placeholder with actionable submit UX, including success summary and explicit non-persistence messaging.
+  - Added `Start new entry` reset flow to clear session form state after successful submit.
+  - Added dedicated submit test coverage and updated baseline screen assertion for the new submit CTA label.
+- What tests ran:
+  - `npm run test -- app/__tests__/session-recorder-submit.test.tsx`
+  - `npm run test -- app/__tests__/session-recorder-screen.test.tsx app/__tests__/session-recorder-interactions.test.tsx`
+  - `HOME=/tmp EXPO_NO_TELEMETRY=1 npm run lint`
+  - `npm run typecheck`
+  - `npm run test`
+  - `npm run test:e2e:ios:smoke`
+- What remains:
+  - No additional scope remains for `T-20260219-03`; milestone M1 UI submit/validation closeout criteria are implemented and verified.
