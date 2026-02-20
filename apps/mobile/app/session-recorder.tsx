@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import {
   SEEDED_EXERCISES,
   SEEDED_LOCATIONS,
+  Session,
   SessionExercise,
   SessionExercisePreset,
   SessionLocation,
@@ -83,12 +84,6 @@ function createExercise(name: string): SessionExercise {
   };
 }
 
-type SessionValidationErrors = {
-  location?: string;
-  exercises?: string;
-  sets?: string;
-};
-
 type SessionSubmitSummary = {
   dateTime: string;
   gymName: string;
@@ -96,43 +91,66 @@ type SessionSubmitSummary = {
   setCount: number;
 };
 
+type SubmitCleanupPrompt = {
+  step: 'incomplete-sets' | 'empty-exercises';
+  affectedCount: number;
+  nextSession: Session;
+};
+
 function countLoggedSets(exercises: SessionExercise[]): number {
   return exercises.reduce((totalSets, exercise) => totalSets + exercise.sets.length, 0);
 }
 
-function validateSessionForSubmit(state: SessionRecorderState): SessionValidationErrors {
-  const validationErrors: SessionValidationErrors = {};
-  const hasAnyExercises = state.session.exercises.length > 0;
+function removeIncompleteSets(session: Session): { session: Session; removedSets: number } {
+  let removedSets = 0;
 
-  if (!state.session.locationId) {
-    validationErrors.location = 'Select a gym before submitting.';
-  }
+  const exercises = session.exercises.map((exercise) => {
+    const sets = exercise.sets.filter((set) => {
+      const isComplete = set.reps.trim().length > 0 && set.weight.trim().length > 0;
+      if (!isComplete) {
+        removedSets += 1;
+      }
+      return isComplete;
+    });
 
-  if (!hasAnyExercises) {
-    validationErrors.exercises = 'Log at least one exercise before submitting.';
-    return validationErrors;
-  }
+    return {
+      ...exercise,
+      sets,
+    };
+  });
 
-  const hasExerciseWithoutSets = state.session.exercises.some((exercise) => exercise.sets.length === 0);
-  if (hasExerciseWithoutSets) {
-    validationErrors.sets = 'Each exercise needs at least one set.';
-    return validationErrors;
-  }
+  return {
+    session: {
+      ...session,
+      exercises,
+    },
+    removedSets,
+  };
+}
 
-  const hasIncompleteSet = state.session.exercises.some((exercise) =>
-    exercise.sets.some((set) => set.reps.trim().length === 0 || set.weight.trim().length === 0)
-  );
-  if (hasIncompleteSet) {
-    validationErrors.sets = 'Enter weight and reps for every set before submitting.';
-  }
+function removeExercisesWithNoSets(session: Session): { session: Session; removedExercises: number } {
+  let removedExercises = 0;
+  const exercises = session.exercises.filter((exercise) => {
+    const hasSets = exercise.sets.length > 0;
+    if (!hasSets) {
+      removedExercises += 1;
+    }
+    return hasSets;
+  });
 
-  return validationErrors;
+  return {
+    session: {
+      ...session,
+      exercises,
+    },
+    removedExercises,
+  };
 }
 
 export default function SessionRecorderScreen() {
   const [state, setState] = useState<SessionRecorderState>(createInitialState);
-  const [validationErrors, setValidationErrors] = useState<SessionValidationErrors>({});
   const [submitSummary, setSubmitSummary] = useState<SessionSubmitSummary | null>(null);
+  const [submitCleanupPrompt, setSubmitCleanupPrompt] = useState<SubmitCleanupPrompt | null>(null);
 
   const selectedGym = useMemo<SessionLocation | undefined>(
     () => state.locations.find((location) => location.id === state.session.locationId),
@@ -164,6 +182,11 @@ export default function SessionRecorderScreen() {
         : state.exercisePresets.filter((exercisePreset) => !exercisePreset.archived),
     [state.exercisePresets, state.showArchivedExercisesInManager]
   );
+
+  const clearSubmitFeedback = () => {
+    setSubmitSummary(null);
+    setSubmitCleanupPrompt(null);
+  };
 
   const openGymModal = () => {
     setState((current) => ({
@@ -202,7 +225,7 @@ export default function SessionRecorderScreen() {
       editingLocationId: null,
       editingLocationName: '',
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const openManageGyms = () => {
@@ -386,7 +409,7 @@ export default function SessionRecorderScreen() {
       showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const openManageExercises = () => {
@@ -496,7 +519,7 @@ export default function SessionRecorderScreen() {
       showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const returnToPickerFromExerciseManage = () => {
@@ -561,7 +584,7 @@ export default function SessionRecorderScreen() {
         activeExerciseActionId: null,
       };
     });
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const changeActiveExerciseFromMenu = () => {
@@ -583,7 +606,7 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const updateSetField = (
@@ -606,7 +629,7 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const removeSetFromExercise = (exerciseId: string, setId: string) => {
@@ -621,31 +644,71 @@ export default function SessionRecorderScreen() {
         ),
       },
     }));
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
   const startNewEntry = () => {
     setState(createInitialState());
-    setValidationErrors({});
-    setSubmitSummary(null);
+    clearSubmitFeedback();
   };
 
-  const handleSubmit = () => {
-    const nextValidationErrors = validateSessionForSubmit(state);
-    const hasValidationErrors = Object.values(nextValidationErrors).some(Boolean);
-    if (hasValidationErrors) {
-      setValidationErrors(nextValidationErrors);
+  const finalizeSubmit = (submittedSession: Session) => {
+    const submittedGymName =
+      state.locations.find((location) => location.id === submittedSession.locationId)?.name ?? 'Not set';
+
+    setState((current) => ({
+      ...current,
+      session: submittedSession,
+    }));
+    setSubmitSummary({
+      dateTime: submittedSession.dateTime,
+      gymName: submittedGymName,
+      exerciseCount: submittedSession.exercises.length,
+      setCount: countLoggedSets(submittedSession.exercises),
+    });
+  };
+
+  const beginSubmitFlow = (sessionCandidate: Session) => {
+    const { session: withoutIncompleteSets, removedSets } = removeIncompleteSets(sessionCandidate);
+    if (removedSets > 0) {
       setSubmitSummary(null);
+      setSubmitCleanupPrompt({
+        step: 'incomplete-sets',
+        affectedCount: removedSets,
+        nextSession: withoutIncompleteSets,
+      });
       return;
     }
 
-    setValidationErrors({});
-    setSubmitSummary({
-      dateTime: state.session.dateTime,
-      gymName: selectedGym?.name ?? 'Unknown gym',
-      exerciseCount: state.session.exercises.length,
-      setCount: countLoggedSets(state.session.exercises),
-    });
+    const { session: withoutEmptyExercises, removedExercises } = removeExercisesWithNoSets(sessionCandidate);
+    if (removedExercises > 0) {
+      setSubmitSummary(null);
+      setSubmitCleanupPrompt({
+        step: 'empty-exercises',
+        affectedCount: removedExercises,
+        nextSession: withoutEmptyExercises,
+      });
+      return;
+    }
+
+    setSubmitCleanupPrompt(null);
+    finalizeSubmit(sessionCandidate);
+  };
+
+  const handleSubmit = () => {
+    beginSubmitFlow(state.session);
+  };
+
+  const confirmSubmitCleanup = () => {
+    if (!submitCleanupPrompt) {
+      return;
+    }
+
+    beginSubmitFlow(submitCleanupPrompt.nextSession);
+  };
+
+  const cancelSubmitCleanup = () => {
+    setSubmitCleanupPrompt(null);
   };
 
   const gymEditorPrimaryLabel = state.editingLocationId ? 'Save' : 'Add';
@@ -654,6 +717,22 @@ export default function SessionRecorderScreen() {
   const exerciseEditorPrimaryLabel = state.editingExerciseId ? 'Save' : 'Add';
   const exerciseEditorTitle = state.editingExerciseId ? 'Edit Exercise' : 'Add Exercise';
   const exerciseEditorInputValue = state.editingExerciseId ? state.editingExerciseName : state.pendingExerciseName;
+  const cleanupModalTitle =
+    submitCleanupPrompt?.step === 'incomplete-sets'
+      ? 'Remove incomplete sets and submit?'
+      : 'Remove exercises with no sets and submit?';
+  const cleanupModalMessage =
+    submitCleanupPrompt?.step === 'incomplete-sets'
+      ? `${submitCleanupPrompt.affectedCount} incomplete set${
+          submitCleanupPrompt.affectedCount === 1 ? '' : 's'
+        } missing reps or weight will be removed.`
+      : `${submitCleanupPrompt?.affectedCount ?? 0} exercise${
+          submitCleanupPrompt?.affectedCount === 1 ? '' : 's'
+        } with no sets will be removed.`;
+  const cleanupModalConfirmLabel =
+    submitCleanupPrompt?.step === 'incomplete-sets'
+      ? 'Remove incomplete sets and submit'
+      : 'Remove empty exercises and submit';
 
   return (
     <ScrollView contentContainerStyle={styles.content} testID="session-recorder-screen">
@@ -668,28 +747,16 @@ export default function SessionRecorderScreen() {
 
           <View style={styles.rowField}>
             <Text style={styles.label}>Gym</Text>
-            <Pressable style={[styles.gymButton, validationErrors.location ? styles.fieldErrorBorder : null]} onPress={openGymModal}>
+            <Pressable style={styles.gymButton} onPress={openGymModal}>
               <Text numberOfLines={1} style={styles.gymButtonText}>
                 {selectedGym ? selectedGym.name : 'Choose gym'}
               </Text>
             </Pressable>
-            {validationErrors.location ? (
-              <Text style={styles.fieldErrorText}>{validationErrors.location}</Text>
-            ) : null}
           </View>
         </View>
       </View>
 
       <View style={styles.exerciseList}>
-        {validationErrors.exercises || validationErrors.sets ? (
-          <View style={styles.validationCard}>
-            {validationErrors.exercises ? (
-              <Text style={styles.fieldErrorText}>{validationErrors.exercises}</Text>
-            ) : null}
-            {validationErrors.sets ? <Text style={styles.fieldErrorText}>{validationErrors.sets}</Text> : null}
-          </View>
-        ) : null}
-
         {state.session.exercises.map((exercise, exerciseIndex) => (
           <View key={exercise.id} style={styles.exerciseCard}>
             <View style={styles.exerciseCardHeader}>
@@ -771,6 +838,32 @@ export default function SessionRecorderScreen() {
       <Pressable accessibilityLabel="Submit session" style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit Session</Text>
       </Pressable>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={Boolean(submitCleanupPrompt)}
+        onRequestClose={cancelSubmitCleanup}>
+        <View style={styles.modalContainer}>
+          <Pressable
+            accessibilityLabel="Dismiss submit cleanup modal overlay"
+            style={styles.modalBackdrop}
+            onPress={cancelSubmitCleanup}
+          />
+          <View style={styles.confirmationModalCard}>
+            <Text style={styles.confirmationTitle}>{cleanupModalTitle}</Text>
+            <Text style={styles.confirmationBody}>{cleanupModalMessage}</Text>
+            <View style={styles.confirmationButtonStack}>
+              <Pressable style={styles.confirmationPrimaryButton} onPress={confirmSubmitCleanup}>
+                <Text style={styles.confirmationPrimaryButtonText}>{cleanupModalConfirmLabel}</Text>
+              </Pressable>
+              <Pressable style={styles.confirmationSecondaryButton} onPress={cancelSubmitCleanup}>
+                <Text style={styles.confirmationSecondaryButtonText}>Go back to edit session</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         animationType="slide"
@@ -1078,22 +1171,6 @@ const styles = StyleSheet.create({
     color: '#0f5cc0',
     fontWeight: '600',
   },
-  fieldErrorBorder: {
-    borderColor: '#b3261e',
-  },
-  fieldErrorText: {
-    fontSize: 13,
-    color: '#b3261e',
-    fontWeight: '600',
-  },
-  validationCard: {
-    borderWidth: 1,
-    borderColor: '#f2c3bf',
-    borderRadius: 10,
-    backgroundColor: '#fff3f1',
-    padding: 10,
-    gap: 4,
-  },
   logExerciseButton: {
     borderRadius: 8,
     backgroundColor: '#0f5cc0',
@@ -1238,6 +1315,46 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 16,
     gap: 12,
+  },
+  confirmationModalCard: {
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    gap: 12,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  confirmationBody: {
+    fontSize: 14,
+    color: '#3f3f3f',
+  },
+  confirmationButtonStack: {
+    gap: 8,
+  },
+  confirmationPrimaryButton: {
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#0f5cc0',
+  },
+  confirmationPrimaryButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  confirmationSecondaryButton: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#6f6f6f',
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  confirmationSecondaryButtonText: {
+    color: '#444444',
+    fontWeight: '600',
   },
   actionMenuCard: {
     borderRadius: 12,
