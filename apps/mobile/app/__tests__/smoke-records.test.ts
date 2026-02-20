@@ -7,7 +7,7 @@ jest.mock('@/src/data/bootstrap', () => ({
 }));
 
 import { listSmokeRecords, insertSmokeRecord } from '@/src/data/smoke-records';
-import { smokeRecords } from '@/src/data/schema';
+import { smokeRecords } from '@/src/data/schema/smoke';
 
 describe('smoke records repository', () => {
   beforeEach(() => {

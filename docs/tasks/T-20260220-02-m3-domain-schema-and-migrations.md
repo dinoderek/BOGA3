@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260220-02`
 - Title: M3 domain schema and migration foundation
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
@@ -90,4 +90,36 @@ Introduce the first domain-local Drizzle schema and migrations for session recor
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- 
+- What changed:
+  - Added first domain schema tables under `apps/mobile/src/data/schema/`:
+    - `gyms` (`apps/mobile/src/data/schema/gyms.ts`)
+    - `sessions` (`apps/mobile/src/data/schema/sessions.ts`)
+    - `session_exercises` (`apps/mobile/src/data/schema/session-exercises.ts`)
+    - `exercise_sets` (`apps/mobile/src/data/schema/exercise-sets.ts`)
+  - Added lifecycle and provenance columns:
+    - `sessions.status`, `sessions.started_at`, `sessions.completed_at`, `sessions.duration_sec`
+    - `gyms.origin_scope_id`, `gyms.origin_source_id`
+    - `session_exercises.origin_scope_id`, `session_exercises.origin_source_id`
+  - Added deterministic ordering constraints and relational integrity:
+    - unique ordering indexes on `(session_id, order_index)` and `(session_exercise_id, order_index)`
+    - FK chain with cascade from `sessions -> session_exercises -> exercise_sets`
+  - Replaced schema-index smoke export with domain exports in `apps/mobile/src/data/schema/index.ts`.
+  - Updated Drizzle generation input to the schema folder (`apps/mobile/drizzle.config.ts`) so legacy smoke table metadata remains diff-visible without being exported from schema index.
+  - Generated migration artifacts:
+    - `apps/mobile/drizzle/0001_wet_moondragon.sql`
+    - `apps/mobile/drizzle/meta/0001_snapshot.json`
+    - `apps/mobile/drizzle/meta/_journal.json` update
+  - Synced runtime migration bundle in `apps/mobile/src/data/migrations/index.ts` with new journal entry and `m0001` SQL.
+  - Added schema/migration contract coverage:
+    - `apps/mobile/app/__tests__/domain-schema-migrations.test.ts`
+  - Updated smoke repository/table test imports to direct legacy table path:
+    - `apps/mobile/src/data/smoke-records.ts`
+    - `apps/mobile/app/__tests__/smoke-records.test.ts`
+- Tests run and outcome:
+  - `npm run test -- domain-schema-migrations.test.ts smoke-records.test.ts` -> pass.
+  - `npm run db:generate:canary` -> pass (`No schema changes, nothing to migrate` after artifact generation).
+  - `npm run lint` -> pass.
+  - `npm run typecheck` -> pass.
+  - `npm run test` -> pass (`7` suites, `19` tests).
+- Remaining risks:
+  - Lane 2 native runtime data smoke was not run in this task; run `npm run test:e2e:ios:data-smoke` if fresh native-runtime migration evidence is required for milestone closeout.

@@ -1,7 +1,7 @@
 import { asc, desc } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer } from './bootstrap';
-import { smokeRecords } from './schema';
+import { smokeRecords } from './schema/smoke';
 
 export type SmokeRecord = typeof smokeRecords.$inferSelect;
 
