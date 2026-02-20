@@ -11,7 +11,11 @@ describe('SessionRecorderScreen', () => {
     expect(screen.getByText('Gym')).toBeTruthy();
     expect(screen.getByText('Choose gym')).toBeTruthy();
     expect(screen.getByText('Exercises')).toBeTruthy();
-    expect(screen.getByText('No exercises added yet. Add exercises in the next milestone task.')).toBeTruthy();
+    expect(screen.getByText('Exercises: 0')).toBeTruthy();
+    expect(screen.getByText('Sets: 0')).toBeTruthy();
+    expect(screen.getByText('Barbell Squat')).toBeTruthy();
+    expect(screen.getByText('Add manual exercise')).toBeTruthy();
+    expect(screen.getByText('No exercises yet. Use quick add or add one manually.')).toBeTruthy();
     expect(screen.getByText('Submit Session (coming soon)')).toBeTruthy();
     expect(screen.queryByLabelText('Select gym Downtown Iron Temple')).toBeNull();
   });

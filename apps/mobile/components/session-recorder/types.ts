@@ -43,3 +43,12 @@ export const SEEDED_LOCATIONS: SessionLocation[] = [
   { id: 'westside-barbell-club', name: 'Westside Barbell Club', archived: false },
   { id: 'north-end-strength-lab', name: 'North End Strength Lab', archived: false },
 ];
+
+export const SEEDED_EXERCISES: string[] = [
+  'Barbell Squat',
+  'Bench Press',
+  'Deadlift',
+  'Overhead Press',
+  'Lat Pulldown',
+  'Leg Press',
+];
