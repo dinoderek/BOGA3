@@ -1,111 +1,30 @@
-# Mobile App Development Guide
+# Mobile App File Index
 
-This guide is optimized for fast human validation on a physical phone.
+This file is a quick index for where code and config live in `apps/mobile`.
 
-## Prerequisites
+Human testing workflows and on-device validation steps are documented in:
+- `README_HUMAN_TESTING.md`
 
-Run all commands from `/Users/dinohughes/Projects/scaffolding/apps/mobile`.
+## Directory index
 
-1. Install dependencies:
+- `app/`: Expo Router routes, layouts, and route-level UI tests.
+- `app/__tests__/`: Screen/route integration tests.
+- `assets/images/`: App icons, splash, and web favicon assets.
+- `components/`: Shared or feature-level component/types modules.
+- `components/session-recorder/`: Session recorder feature types and seed constants.
+- `src/data/`: Local data bootstrap and data-layer exports.
+- `src/data/schema/`: Drizzle schema definitions for local SQLite.
+- `drizzle/`: Generated SQL migrations and Drizzle metadata.
 
-```bash
-npm install
-```
+## Root file index
 
-2. Authenticate with Expo Application Services:
-
-```bash
-npx eas-cli@latest login
-```
-
-## Workflow A: Instant Local Loop (fastest while coding)
-
-Use this when you want immediate UI feedback while both laptop and phone are on the same network.
-
-1. Start Metro:
-
-```bash
-npx expo start
-```
-
-2. Open the app on your phone:
-   - Expo Go for standard managed Expo features.
-   - Development build (dev client) if you introduce custom native modules.
-3. Keep the app open while coding; changes hot reload in seconds.
-
-## Workflow B: Preview Publish Loop (shareable on-device checkpoint)
-
-Use this when you want a stable, installable preview build and fast remote updates.
-
-### One-time setup
-
-1. Link this app to an EAS project:
-
-```bash
-npx eas-cli@latest init
-```
-
-2. Configure EAS Update for this app/runtime:
-
-```bash
-npx eas-cli@latest update:configure
-```
-
-3. Ensure `preview` channel points to `preview` branch:
-
-```bash
-npx eas-cli@latest channel:create preview --branch preview
-# if the channel already exists, use:
-npx eas-cli@latest channel:edit preview --branch preview
-```
-
-4. Build and install a preview app on device:
-
-```bash
-npx eas-cli@latest build -p ios --profile preview
-# or
-npx eas-cli@latest build -p android --profile preview
-```
-
-### Day-to-day preview loop
-
-1. Make UI changes locally.
-2. Publish an update to the preview branch:
-
-```bash
-npx eas-cli@latest update --branch preview --message "ui: <short note>"
-```
-
-3. Open/reload the installed preview app on device and validate.
-
-Notes:
-- Native dependency/config changes require a new preview build.
-- JS/TS/UI changes usually ship via update without rebuilding the binary.
-
-## Workflow C: Dev Client Loop (native modules + fast iteration)
-
-Use this if Expo Go is not enough.
-
-1. Build and install development client once:
-
-```bash
-npx eas-cli@latest build -p ios --profile development
-# or
-npx eas-cli@latest build -p android --profile development
-```
-
-2. Start Metro for the dev client:
-
-```bash
-npx expo start --dev-client
-```
-
-3. Open the installed dev client and connect to Metro.
-
-## Local data lane-1 canary
-
-Run migration generation canary command:
-
-```bash
-npm run db:generate:canary
-```
+- `app.json`: Expo app configuration.
+- `eas.json`: EAS build profile configuration.
+- `package.json`: Scripts and dependencies.
+- `tsconfig.json`: TypeScript compiler config and path aliases.
+- `eslint.config.js`: Lint configuration.
+- `jest.config.js`: Jest configuration.
+- `jest.setup.ts`: Jest test setup hooks.
+- `drizzle.config.ts`: Drizzle migration generation config.
+- `.gitignore`: Git ignore rules for generated/local files.
+- `README_HUMAN_TESTING.md`: Human testing guide and development loops.
