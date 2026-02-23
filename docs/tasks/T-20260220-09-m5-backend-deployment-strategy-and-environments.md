@@ -20,7 +20,7 @@
 
 ## Objective
 
-Define and document the backend deployment path from free tier to paid scale with explicit environment boundaries and operational safeguards.
+Define and document the `Supabase` deployment path from free tier to paid scale with explicit environment boundaries and operational safeguards, while preserving the documented contingency fallback posture.
 
 ## Scope
 
@@ -30,13 +30,16 @@ Define and document the backend deployment path from free tier to paid scale wit
   - `local`
   - `preview/staging`
   - `production`
-- Document deployment approach for selected stack/provider(s).
+- Document deployment approach for `Supabase` primary, including how local Supabase development maps to hosted projects/environments.
+- Decide and document preview strategy for MVP (`separate staging project`, `ephemeral/manual preview`, or `deferred preview`) with spend-control rationale.
 - Define cost/safety guardrails for hosting and managed services:
   - zero-spend default where possible
   - predefined spend limit/budget threshold when paid usage is enabled
   - avoid uncapped auto-spend exposure
+- Document `Supabase`-specific billing/spend caveats and operator guardrails (including any limits of platform spend caps and what must be enforced operationally).
 - Define secrets management and rotation baseline.
-- Define backup/restore and rollback expectations.
+- Define secrets handling for Supabase project settings and runtime functions (for example `anon` vs `service role` key usage boundaries).
+- Define backup/restore and rollback expectations for hosted Supabase environments, including free-tier limitations and manual backup/restore procedures if managed backups are unavailable.
 - Define scale-up triggers and migration plan from free tier to paid tier.
 - Add deployment checklist suitable for repeatable release execution.
 
@@ -47,11 +50,11 @@ Define and document the backend deployment path from free tier to paid scale wit
 
 ## Acceptance criteria
 
-1. A deployment strategy doc exists and maps each environment to purpose and controls.
-2. Secrets handling, rotation expectations, and non-commit rules are explicitly documented.
-3. Rollback and backup/restore expectations are documented and testable.
+1. A `Supabase` deployment strategy doc exists and maps each environment to purpose, project topology, and controls.
+2. Secrets handling, rotation expectations, key-scope boundaries (`anon`/`service role`/function secrets), and non-commit rules are explicitly documented.
+3. Rollback and backup/restore expectations are documented and testable, including what is manual vs managed on the selected plan tier.
 4. Free-tier limits, paid-upgrade trigger conditions, and spend guardrails are explicit.
-5. Strategy documents how spending is constrained (zero-spend mode or predefined capped spend path) without relying on uncapped auto-spend.
+5. Strategy documents how spending is constrained (zero-spend mode or predefined capped spend path) without relying on uncapped auto-spend, and includes Supabase-specific caveats/operator controls.
 6. The strategy is referenced by milestone docs and is usable by follow-up implementation tasks.
 
 ## Testing and verification approach
@@ -70,8 +73,9 @@ Define and document the backend deployment path from free tier to paid scale wit
   - `docs/tasks/T-20260220-09-m5-backend-deployment-strategy-and-environments.md`
   - deployment/runbook docs under `docs/` (exact path to be chosen in-session)
 - Constraints/assumptions:
-  - Must align with selected stack/provider from `T-20260220-07`.
+  - Must implement the `Supabase` primary path selected in `T-20260220-07`; fallback stack remains contingency-only documentation unless a blocker is declared.
   - Keep MVP operations simple; avoid over-engineering.
+  - Local runtime requirement from `T-20260220-07` remains in force; deployment strategy must not assume cloud-only debugging.
 
 ## Mandatory verify gates
 
@@ -82,6 +86,7 @@ Define and document the backend deployment path from free tier to paid scale wit
 - Environment model summary.
 - Free-tier-to-paid transition summary.
 - Spend guardrail summary.
+- Supabase-specific operator controls summary (including billing/spend-cap caveats and manual guardrails).
 - Rollback and backup policy summary.
 
 ## Completion note

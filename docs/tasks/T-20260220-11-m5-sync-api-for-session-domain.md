@@ -19,25 +19,28 @@
 
 ## Objective
 
-Implement backend API methods to read/write user-scoped gym and session-tracking state (`gyms`, `sessions`, `session_exercises`, `exercise_sets`) with authentication and authorization enforced.
+Implement `Supabase`-backed API methods to read/write user-scoped gym and session-tracking state (`gyms`, `sessions`, `session_exercises`, `exercise_sets`) with authentication and authorization enforced.
 
 ## Scope
 
 ### In scope
 
-- Implement authenticated endpoints for sync domain entities:
+- Choose and implement one explicit Supabase API surface for the sync contract (documented in-task):
+  - `Supabase Edge Functions` endpoints (preferred when needed for provider-neutral contract shaping, orchestration, or validation)
+  - `Supabase PostgREST/RPC` surface with documented contract mapping (acceptable if contract remains explicit and stable for FE integration)
+- Implement authenticated endpoints/methods for sync domain entities:
   - `gyms`
   - `sessions`
   - `session_exercises`
   - `exercise_sets`
-- Implement ownership-aware read/write behavior.
-- Define API payload/response contracts for later FE integration.
+- Implement ownership-aware read/write behavior using backend-enforced controls (`RLS` and/or server-side checks); FE-only enforcement is not acceptable.
+- Define provider-neutral API payload/response contracts for later FE integration (even if implemented on Supabase-specific primitives).
 - Add contract tests for:
   - success paths
   - validation failures
   - unauthorized requests
   - cross-user access denial
-- Document endpoint catalog and example payloads.
+- Document endpoint catalog and example payloads, including mapping from provider-neutral contract to Supabase implementation artifacts (Edge Function names, RPC names, or table routes).
 
 ### Out of scope
 
@@ -48,45 +51,53 @@ Implement backend API methods to read/write user-scoped gym and session-tracking
 ## Acceptance criteria
 
 1. Authenticated API read/write methods exist for all required session domain entities.
-2. Every endpoint enforces user ownership semantics.
-3. Unauthorized requests are rejected with deterministic error responses.
-4. Cross-user access attempts are rejected and test-covered.
-5. Endpoint contracts are documented and stable enough for a dedicated FE integration milestone.
-6. Backend quality gates and contract tests pass.
+2. API surface choice (`Edge Functions` vs `PostgREST/RPC` mix) is documented with rationale and contract mapping.
+3. Every endpoint/method enforces user ownership semantics via backend-enforced controls (`RLS` and/or server-side checks).
+4. Unauthorized requests are rejected with deterministic error responses.
+5. Cross-user access attempts are rejected and test-covered.
+6. Endpoint contracts are documented and stable enough for a dedicated FE integration milestone.
+7. Backend quality gates and contract tests pass.
 
 ## Testing and verification approach
 
-- Planned checks/commands (from backend workspace):
+- Planned checks/commands (from applicable backend/function workspace):
   - `npm run lint`
   - `npm run typecheck`
   - `npm run test`
+  - `supabase db reset` (or selected local migration/bootstrap command path) when schema/API contract fixtures change
   - targeted API contract test suite command(s) (to be finalized during implementation)
 - Notes:
   - Include at least one end-to-end API flow per entity family and one negative ownership test per family.
+  - Tests must run primarily against local Supabase runtime to preserve the local-fidelity requirement from `T-20260220-07`.
 
 ## Implementation notes
 
 - Planned files/areas allowed to change:
-  - `apps/backend/**`
+  - `supabase/**`
+  - `apps/backend/**` (if auxiliary backend/test harness workspace exists)
   - `docs/specs/03-technical-architecture.md` (if API-layer architecture decisions need codification)
   - `docs/specs/milestones/M5-backend-foundation-authz-and-sync-api.md`
   - `docs/tasks/T-20260220-11-m5-sync-api-for-session-domain.md`
 - Constraints/assumptions:
   - Must build on auth/authz baseline from `T-20260220-10`.
+  - Must keep the external sync contract provider-neutral even if implemented with Supabase-specific primitives.
+  - Must preserve `Supabase` as the primary implementation path unless a documented blocker triggers contingency escalation.
   - Keep API contracts MVP-minimal and explicit.
 
 ## Mandatory verify gates
 
-- `npm run lint` (from `apps/backend`)
-- `npm run typecheck` (from `apps/backend`)
-- `npm run test` (from `apps/backend`)
-- API contract test suite command(s) (from `apps/backend`)
+- `npm run lint` (from applicable backend/function workspace)
+- `npm run typecheck` (from applicable backend/function workspace)
+- `npm run test` (from applicable backend/function workspace)
+- `supabase db reset` (or selected local migration/bootstrap command path) when schema/API fixtures changed
+- API contract test suite command(s) (from applicable backend/function workspace)
 
 ## Evidence
 
 - Endpoint catalog summary.
 - API contract test results summary.
 - Unauthorized/cross-user denial evidence summary.
+- Contract-to-Supabase implementation mapping summary (`Edge Functions` / `RPC` / table routes).
 - Lint/typecheck/test summary.
 
 ## Completion note
