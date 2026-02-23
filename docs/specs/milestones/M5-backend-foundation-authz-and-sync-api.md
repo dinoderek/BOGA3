@@ -4,7 +4,7 @@
 
 - Milestone ID: `M5`
 - Title: Backend stack decision, secure auth foundation, and sync API baseline
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-02`
 
@@ -77,9 +77,28 @@ Decide and lock the backend platform for MVP, stand up a minimal backend that ru
 10. FE integration is explicitly deferred, but API contract documentation is sufficient for a later integration task.
 11. Backend quality gates and contract tests defined by the milestone task cards pass before milestone closeout.
 
+## Backend platform decision (from `T-20260220-07`)
+
+- Date locked: `2026-02-23`
+- Primary stack for MVP/M5 execution: `Supabase (Postgres + Auth + RLS)` with local Supabase stack for high-fidelity local development/testing.
+- Documented fallback (contingency only): `Cloudflare Workers + D1`, requiring a separate auth/authz primitive selection and more app-layer ownership enforcement work.
+- Why `Supabase` won for M5:
+  - fastest path to secure auth/authz + SQL-backed sync API baseline in one milestone,
+  - better SQL/data portability for future provider moves,
+  - stronger local-test fidelity for auth/data policy work, which aligns with the project’s local-first verification bias.
+- Spend-control posture:
+  - default `zero spend` on free tier,
+  - no paid enablement without explicit task-level approval and written guardrails,
+  - if paid path is enabled later, define thresholds + alerts/caps + downgrade actions first.
+- Implementation assumptions (carry into remaining M5 tasks):
+  - provider choice is locked unless a blocking issue is found,
+  - sync API contract remains provider-neutral,
+  - ownership enforcement must be backend-enforced (not FE-only).
+- Full comparison and rationale: `docs/tasks/T-20260220-07-m5-backend-stack-decision-and-architecture-update.md`
+
 ## Task breakdown
 
-1. `docs/tasks/T-20260220-07-m5-backend-stack-decision-and-architecture-update.md` - evaluate backend options and finalize architecture decision. (`planned`)
+1. `docs/tasks/T-20260220-07-m5-backend-stack-decision-and-architecture-update.md` - evaluate backend options and finalize architecture decision. (`completed`)
 2. `docs/tasks/T-20260220-08-m5-minimal-backend-local-runtime.md` - scaffold minimal backend runtime and local migration/health flow. (`planned`)
 3. `docs/tasks/T-20260220-09-m5-backend-deployment-strategy-and-environments.md` - define deployment strategy, environments, and operational safeguards. (`planned`)
 4. `docs/tasks/T-20260220-10-m5-user-auth-authz-and-security-baseline.md` - implement user model, auth/authz rules, and backend hardening baseline. (`planned`)
@@ -98,6 +117,11 @@ Decide and lock the backend platform for MVP, stand up a minimal backend that ru
 - Decision: Plan M5 to combine backend foundation + secure auth + backend-side sync API contract in one milestone while keeping FE integration out of scope.
 - Reason: This creates a complete backend-ready surface for the next FE integration milestone without mixing FE concerns into platform/security setup.
 - Impact: M5 completion should enable a focused FE integration milestone with lower platform uncertainty.
+
+- Date: 2026-02-23
+- Decision: Lock M5 primary backend stack to `Supabase (Postgres + Auth + RLS)` and document `Cloudflare Workers + D1` as contingency fallback.
+- Reason: `Supabase` best satisfies the combined M5 constraints of local runtime requirement, auth/authz delivery speed, SQL/data portability, and high-fidelity local testing.
+- Impact: Remaining M5 tasks can proceed without reopening provider selection; fallback only activates if a concrete blocking issue is found during implementation.
 
 ## Completion note
 
