@@ -4,7 +4,7 @@
 
 - Milestone ID: `M6`
 - Title: Exercise taxonomy and muscle-target weighting foundation
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `post-MVP (TBD)`
 
@@ -129,13 +129,14 @@ This illustrates the intended `non-normalized` interpretation: contributions are
   - `recompute using latest mapping`
 - Whether to lock a standard preset ladder for weights (for example, `1.0`, `0.66`, `0.5`, `0.33`, `0.15`) vs free-form decimals only.
 - Whether to include additional v1 muscle groups such as `tibialis_anterior`, `hip_flexors`, `serratus_anterior`, or `rotator_cuff`.
-- How to distinguish `system` vs `user` exercises in the exercise-definition model (field shape and constraints).
+- Exercise origin/source model (for example `system`, `user`, imported providers) and whether it needs explicit local schema fields in M6 vs a later milestone.
+- Whether exercise editability needs an explicit flag in the local schema vs assuming all exercises are editable until system catalog behavior is implemented.
 
 ## Task breakdown
 
 Planned task cards for M6 are listed below.
 
-1. `docs/tasks/T-20260224-01-m6-local-schema-for-muscle-taxonomy-and-exercise-mappings.md` - design local schema for exercise definitions, muscle groups, and weighted associations. (`planned`)
+1. `docs/tasks/T-20260224-01-m6-local-schema-for-muscle-taxonomy-and-exercise-mappings.md` - design local schema for exercise definitions, muscle groups, and weighted associations. (`completed`)
 2. `docs/tasks/T-20260224-02-m6-seed-muscle-taxonomy-and-system-exercises.md` - define and seed the non-editable muscle taxonomy plus the initial system exercise mapping set. (`planned`)
 3. `docs/tasks/T-20260224-03-m6-exercise-editing-muscle-linking-ui.md` - implement exercise editing support for linking muscle groups and weights on user-editable exercises. (`planned`)
 4. `docs/tasks/T-20260224-04-m6-historical-mapping-behavior-options.md` - define follow-on decision/options for historical mapping behavior before analytics implementation. (`planned`)
@@ -172,8 +173,12 @@ Planned task cards for M6 are listed below.
 ## Completion note
 
 - What changed:
+  - Completed `T-20260224-01` with the local schema foundation for muscle taxonomy, exercise definitions, and exercise-to-muscle weighted mappings.
+  - Deferred exercise origin/source modeling and explicit exercise editability flags to a later M6 follow-on decision; current schema assumes exercises are editable.
 - Verification summary:
+  - `apps/mobile` lint/typecheck/test passed, including targeted schema/migration coverage and the previously failing session-list test after timer assertion fix.
 - What remains:
+  - Continue with taxonomy/system exercise seeding (`T-20260224-02`) and editor UI work (`T-20260224-03`).
 
 ## Status update checklist (mandatory during task closeout)
 

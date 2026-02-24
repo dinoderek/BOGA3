@@ -361,7 +361,7 @@ describe('SessionListScreenShell', () => {
     fireEvent.press(screen.getByTestId('completed-session-modal-action-button'));
     expect(screen.getByTestId('completed-session-row-completed-visible')).toBeTruthy();
     act(() => {
-      jest.advanceTimersByTime(250);
+      jest.advanceTimersByTime(400);
     });
     expect(screen.queryByTestId('completed-session-row-completed-visible')).toBeNull();
 

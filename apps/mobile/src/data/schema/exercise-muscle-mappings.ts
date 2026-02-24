@@ -1,0 +1,53 @@
+import { sql } from 'drizzle-orm';
+import {
+  check,
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
+
+import { exerciseDefinitions } from './exercise-definitions';
+import { muscleGroups } from './muscle-groups';
+
+export const exerciseMuscleMappings = sqliteTable(
+  'exercise_muscle_mappings',
+  {
+    id: text('id')
+      .primaryKey()
+      .notNull()
+      .default(sql`(lower(hex(randomblob(16))))`),
+    exerciseDefinitionId: text('exercise_definition_id')
+      .notNull()
+      .references(() => exerciseDefinitions.id, { onDelete: 'cascade' }),
+    muscleGroupId: text('muscle_group_id')
+      .notNull()
+      .references(() => muscleGroups.id),
+    weight: real('weight').notNull(),
+    role: text('role', { enum: ['primary', 'secondary', 'stabilizer'] }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => ({
+    exerciseDefinitionIdx: index('exercise_muscle_mappings_exercise_definition_id_idx').on(table.exerciseDefinitionId),
+    muscleGroupIdx: index('exercise_muscle_mappings_muscle_group_id_idx').on(table.muscleGroupId),
+    exerciseMuscleUnique: uniqueIndex('exercise_muscle_mappings_exercise_id_muscle_group_id_unique').on(
+      table.exerciseDefinitionId,
+      table.muscleGroupId
+    ),
+    weightPositiveGuard: check('exercise_muscle_mappings_weight_positive', sql`${table.weight} > 0`),
+    roleGuard: check(
+      'exercise_muscle_mappings_role_guard',
+      sql`${table.role} is null or ${table.role} in ('primary', 'secondary', 'stabilizer')`
+    ),
+  })
+);
+
+export type ExerciseMuscleMapping = typeof exerciseMuscleMappings.$inferSelect;
+export type NewExerciseMuscleMapping = typeof exerciseMuscleMappings.$inferInsert;
