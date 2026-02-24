@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   SEEDED_EXERCISES,
@@ -11,6 +11,15 @@ import {
   SessionRecorderState,
   SessionSet,
 } from '@/components/session-recorder/types';
+import {
+  completeSessionDraft,
+  loadLatestSessionDraftSnapshot,
+  persistSessionDraftSnapshot,
+  upsertLocalGym,
+  type SessionDraftSnapshot,
+} from '@/src/data';
+import { createDraftAutosaveController, type DraftAutosaveController } from '@/src/session-recorder/draft-autosave';
+import { createSessionRecorderLifecycleHelpers } from '@/src/session-recorder/lifecycle-helpers';
 
 function formatCurrentDateTime(date: Date): string {
   const year = date.getFullYear();
@@ -21,6 +30,61 @@ function formatCurrentDateTime(date: Date): string {
 
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
+
+function parseSessionDateTime(dateTime: string): Date | null {
+  const [datePart, timePart] = dateTime.trim().split(' ');
+  if (!datePart || !timePart) {
+    return null;
+  }
+
+  const [yearText, monthText, dayText] = datePart.split('-');
+  const [hourText, minuteText] = timePart.split(':');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if ([year, month, day, hour, minute].some((value) => Number.isNaN(value))) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function mapDraftSnapshotToSession(snapshot: SessionDraftSnapshot): Session {
+  return {
+    dateTime: formatCurrentDateTime(snapshot.startedAt),
+    locationId: snapshot.gymId,
+    exercises: snapshot.exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.name,
+      machineName: exercise.machineName ?? '',
+      sets: exercise.sets.map((set) => ({
+        id: set.id,
+        reps: set.repsValue,
+        weight: set.weightValue,
+      })),
+    })),
+  };
+}
+
+function hasPersistableSessionContent(session: Session): boolean {
+  return session.locationId !== null || session.exercises.length > 0;
+}
+
+const toPersistDraftExercises = (session: Session) =>
+  session.exercises.map((exercise) => ({
+    id: exercise.id,
+    name: exercise.name,
+    machineName: exercise.machineName || null,
+    sets: exercise.sets.map((set) => ({
+      id: set.id,
+      repsValue: set.reps,
+      weightValue: set.weight,
+    })),
+  }));
 
 function createInitialState(): SessionRecorderState {
   return {
@@ -151,6 +215,116 @@ export default function SessionRecorderScreen() {
   const [state, setState] = useState<SessionRecorderState>(createInitialState);
   const [submitSummary, setSubmitSummary] = useState<SessionSubmitSummary | null>(null);
   const [submitCleanupPrompt, setSubmitCleanupPrompt] = useState<SubmitCleanupPrompt | null>(null);
+  const stateRef = useRef(state);
+  const persistedSessionIdRef = useRef<string | null>(null);
+  const persistenceHydratedRef = useRef(false);
+  const autosaveRef = useRef<DraftAutosaveController | null>(null);
+  const hasSessionMutationRef = useRef(false);
+
+  stateRef.current = state;
+
+  if (!autosaveRef.current) {
+    autosaveRef.current = createDraftAutosaveController({
+      persistDraft: async () => {
+        const currentState = stateRef.current;
+        const parsedStartedAt = parseSessionDateTime(currentState.session.dateTime) ?? new Date();
+        const selectedGym =
+          currentState.session.locationId === null
+            ? null
+            : currentState.locations.find((location) => location.id === currentState.session.locationId) ?? null;
+        const canCreateNewRecord =
+          persistedSessionIdRef.current !== null || hasPersistableSessionContent(currentState.session);
+        if (!canCreateNewRecord) {
+          return;
+        }
+
+        if (selectedGym) {
+          await upsertLocalGym({
+            id: selectedGym.id,
+            name: selectedGym.name,
+          });
+        }
+
+        const persisted = await persistSessionDraftSnapshot({
+          sessionId: persistedSessionIdRef.current ?? undefined,
+          gymId: selectedGym?.id ?? null,
+          startedAt: parsedStartedAt,
+          status: 'active',
+          exercises: toPersistDraftExercises(currentState.session),
+        });
+
+        persistedSessionIdRef.current = persisted.sessionId;
+      },
+    });
+  }
+
+  const autosaveController = autosaveRef.current;
+  const lifecycleHelpers = useMemo(() => createSessionRecorderLifecycleHelpers(autosaveController), [autosaveController]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void loadLatestSessionDraftSnapshot()
+      .then((snapshot) => {
+        if (cancelled || !snapshot || hasSessionMutationRef.current) {
+          return;
+        }
+
+        persistedSessionIdRef.current = snapshot.sessionId;
+        setState((current) => ({
+          ...current,
+          session: mapDraftSnapshotToSession(snapshot),
+        }));
+      })
+      .catch(() => {
+        // Keep the recorder usable even if local restore fails; autosave writes can still recreate state.
+      })
+      .finally(() => {
+        if (!cancelled) {
+          persistenceHydratedRef.current = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      void lifecycleHelpers.onAppStateChange(nextState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [lifecycleHelpers]);
+
+  useEffect(() => {
+    return () => {
+      void lifecycleHelpers.onScreenBlur();
+      void lifecycleHelpers.onRouteChange();
+      void autosaveController.dispose({ flushDirty: true });
+    };
+  }, [autosaveController, lifecycleHelpers]);
+
+  const markSessionStructuralMutation = () => {
+    hasSessionMutationRef.current = true;
+    if (!persistenceHydratedRef.current) {
+      return;
+    }
+
+    void autosaveController.markStructuralMutation();
+  };
+
+  const markSessionTextMutation = () => {
+    hasSessionMutationRef.current = true;
+    if (!persistenceHydratedRef.current) {
+      return;
+    }
+
+    autosaveController.markTextMutation();
+  };
 
   const selectedGym = useMemo<SessionLocation | undefined>(
     () => state.locations.find((location) => location.id === state.session.locationId),
@@ -226,6 +400,7 @@ export default function SessionRecorderScreen() {
       editingLocationName: '',
     }));
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const openManageGyms = () => {
@@ -258,6 +433,7 @@ export default function SessionRecorderScreen() {
       editingLocationName: location.name,
       pendingLocationName: '',
     }));
+    markSessionStructuralMutation();
   };
 
   const returnFromEditor = () => {
@@ -348,6 +524,7 @@ export default function SessionRecorderScreen() {
           ? { ...current.session, locationId: null }
           : current.session,
     }));
+    markSessionStructuralMutation();
   };
 
   const openExerciseModal = (exerciseIdToChange: string | null = null) => {
@@ -410,6 +587,7 @@ export default function SessionRecorderScreen() {
       exerciseSelectionTargetId: null,
     }));
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const openManageExercises = () => {
@@ -520,6 +698,7 @@ export default function SessionRecorderScreen() {
       exerciseSelectionTargetId: null,
     }));
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const returnToPickerFromExerciseManage = () => {
@@ -585,6 +764,7 @@ export default function SessionRecorderScreen() {
       };
     });
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const changeActiveExerciseFromMenu = () => {
@@ -607,6 +787,7 @@ export default function SessionRecorderScreen() {
       },
     }));
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const updateSetField = (
@@ -630,6 +811,7 @@ export default function SessionRecorderScreen() {
       },
     }));
     clearSubmitFeedback();
+    markSessionTextMutation();
   };
 
   const removeSetFromExercise = (exerciseId: string, setId: string) => {
@@ -645,10 +827,13 @@ export default function SessionRecorderScreen() {
       },
     }));
     clearSubmitFeedback();
+    markSessionStructuralMutation();
   };
 
   const startNewEntry = () => {
     setState(createInitialState());
+    persistedSessionIdRef.current = null;
+    hasSessionMutationRef.current = false;
     clearSubmitFeedback();
   };
 
@@ -665,6 +850,35 @@ export default function SessionRecorderScreen() {
       gymName: submittedGymName,
       exerciseCount: submittedSession.exercises.length,
       setCount: countLoggedSets(submittedSession.exercises),
+    });
+
+    void (async () => {
+      const parsedStartedAt = parseSessionDateTime(submittedSession.dateTime) ?? new Date();
+      const submittedGym =
+        submittedSession.locationId === null
+          ? null
+          : stateRef.current.locations.find((location) => location.id === submittedSession.locationId) ?? null;
+      await autosaveController.flushNow();
+
+      if (submittedGym) {
+        await upsertLocalGym({
+          id: submittedGym.id,
+          name: submittedGym.name,
+        });
+      }
+
+      const persisted = await persistSessionDraftSnapshot({
+        sessionId: persistedSessionIdRef.current ?? undefined,
+        gymId: submittedGym?.id ?? null,
+        startedAt: parsedStartedAt,
+        status: 'active',
+        exercises: toPersistDraftExercises(submittedSession),
+      });
+
+      await completeSessionDraft(persisted.sessionId);
+      persistedSessionIdRef.current = null;
+    })().catch(() => {
+      // Keep existing UI-only submit experience stable if persistence completion fails.
     });
   };
 

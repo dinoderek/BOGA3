@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import {
   default as SessionListRoute,
@@ -38,17 +38,25 @@ jest.mock('@/src/data', () => ({
 
 jest.mock('expo-router', () => {
   const mockPush = jest.fn();
+  let latestFocusCallback: (() => void) | null = null;
 
   return {
     useRouter: () => ({
       push: mockPush,
     }),
+    useFocusEffect: (callback: () => void) => {
+      latestFocusCallback = callback;
+    },
     __mockPush: mockPush,
+    __triggerFocus: () => {
+      latestFocusCallback?.();
+    },
   };
 });
 
-const { __mockPush: mockPush } = jest.requireMock('expo-router') as {
+const { __mockPush: mockPush, __triggerFocus: triggerFocus } = jest.requireMock('expo-router') as {
   __mockPush: jest.Mock;
+  __triggerFocus: () => void;
 };
 
 const {
@@ -146,6 +154,66 @@ describe('SessionListScreenShell', () => {
     expect(screen.getByTestId('session-summary-db-completed-1-duration').props.children).toBe('42m');
     expect(screen.getByTestId('session-summary-db-completed-1-exercises').props.children).toBe('2 exercises');
     expect(screen.getByTestId('session-summary-db-completed-1-gym').props.children).toBe('Garage Gym');
+  });
+
+  it('reloads DB-backed route data when the list screen regains focus', async () => {
+    let phase: 'initial' | 'updated' = 'initial';
+
+    mockListSessionListBuckets.mockImplementation(async () => {
+      if (phase === 'initial') {
+        return {
+          active: {
+            id: 'active-stale',
+            status: 'active',
+            startedAt: new Date('2026-02-24T10:00:00.000Z'),
+            completedAt: null,
+            durationSec: null,
+            compactDuration: '0m',
+            deletedAt: null,
+            gymName: null,
+            exerciseCount: 0,
+            setCount: 0,
+          },
+          completed: [],
+        };
+      }
+
+      return {
+        active: {
+          id: 'active-stale',
+          status: 'active',
+          startedAt: new Date('2026-02-24T10:00:00.000Z'),
+          completedAt: null,
+          durationSec: null,
+          compactDuration: '0m',
+          deletedAt: null,
+          gymName: 'Westside Barbell Club',
+          exerciseCount: 1,
+          setCount: 1,
+        },
+        completed: [],
+      };
+    });
+
+    render(<SessionListRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-session-row-active-stale')).toBeTruthy();
+    });
+    expect(screen.getByTestId('session-summary-active-stale-sets').props.children).toBe('0 sets');
+    expect(screen.getByTestId('session-summary-active-stale-exercises').props.children).toBe('0 exercises');
+    expect(screen.getByTestId('session-summary-active-stale-gym').props.children).toBe('No gym');
+
+    phase = 'updated';
+    act(() => {
+      triggerFocus();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-summary-active-stale-sets').props.children).toBe('1 sets');
+    });
+    expect(screen.getByTestId('session-summary-active-stale-exercises').props.children).toBe('1 exercise');
+    expect(screen.getByTestId('session-summary-active-stale-gym').props.children).toBe('Westside Barbell Club');
   });
 
   it('creates an active local session on Start Session so returning to the list shows the active row', async () => {

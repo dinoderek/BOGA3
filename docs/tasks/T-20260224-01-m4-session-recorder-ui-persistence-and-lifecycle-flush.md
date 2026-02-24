@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260224-01`
 - Title: M4 session recorder UI persistence wiring with M3 autosave SLA and lifecycle flush integration
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-24`
 - Session interaction mode: `interactive (default)`

@@ -2,6 +2,18 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import SessionRecorderScreen from '../session-recorder';
 
+jest.mock('@/src/data', () => ({
+  loadLatestSessionDraftSnapshot: jest.fn().mockResolvedValue(null),
+  persistSessionDraftSnapshot: jest.fn().mockResolvedValue({ sessionId: 'test-session' }),
+  upsertLocalGym: jest.fn().mockResolvedValue(undefined),
+  completeSessionDraft: jest.fn().mockResolvedValue({
+    sessionId: 'test-session',
+    completedAt: new Date('2026-02-24T00:00:00.000Z'),
+    durationSec: 0,
+    wasAlreadyCompleted: false,
+  }),
+}));
+
 describe('SessionRecorderScreen submit cleanup flow', () => {
   it('allows submit without gym selection', () => {
     render(<SessionRecorderScreen />);

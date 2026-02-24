@@ -17,6 +17,7 @@ export {
   type SessionListSummary,
   type SetSessionDeletedStateOptions,
 } from './session-list';
+export { upsertLocalGym, type UpsertLocalGymInput } from './local-gyms';
 export {
   calculateSessionDurationSec,
   completeSessionDraft,

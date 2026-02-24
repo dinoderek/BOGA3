@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -69,6 +69,7 @@ export const DEFAULT_SESSION_LIST_ITEMS: SessionListItem[] = [
 export type SessionListScreenShellProps = {
   initialSessions?: SessionListItem[];
   dataClient?: SessionListDataClient;
+  reloadToken?: number;
 };
 
 type CompletedSessionMenuState = {
@@ -163,10 +164,19 @@ export const DEFAULT_SESSION_LIST_DATA_CLIENT: SessionListDataClient = {
 function SessionSummaryLine({
   session,
   testIdPrefix,
+  nowMs = Date.now(),
 }: {
   session: SessionListItem;
   testIdPrefix: string;
+  nowMs?: number;
 }) {
+  const durationLabel =
+    session.status === 'active'
+      ? formatCompactDuration(
+          Math.max(0, Math.floor((nowMs - new Date(session.startedAt).getTime()) / 1000))
+        )
+      : session.durationDisplay || formatCompactDuration(session.durationSec);
+
   return (
     <View style={styles.summaryLine}>
       <Text selectable numberOfLines={1} style={[styles.summaryToken, styles.summaryTokenPrimary]} testID={`${testIdPrefix}-start`}>
@@ -176,7 +186,7 @@ function SessionSummaryLine({
         •
       </Text>
       <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-duration`}>
-        {session.durationDisplay || formatCompactDuration(session.durationSec)}
+        {durationLabel}
       </Text>
       <Text selectable style={styles.summarySeparator}>
         •
@@ -203,10 +213,12 @@ function SessionSummaryLine({
 export function SessionListScreenShell({
   initialSessions = DEFAULT_SESSION_LIST_ITEMS,
   dataClient,
+  reloadToken = 0,
 }: SessionListScreenShellProps) {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionListItem[]>(dataClient ? [] : initialSessions);
   const [showDeletedSessions, setShowDeletedSessions] = useState(false);
+  const [activeDurationNowMs, setActiveDurationNowMs] = useState(() => Date.now());
   const [isLoadingSessions, setIsLoadingSessions] = useState(Boolean(dataClient));
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const [activeSessionMenuVisible, setActiveSessionMenuVisible] = useState(false);
@@ -252,7 +264,7 @@ export function SessionListScreenShell({
     return () => {
       isCancelled = true;
     };
-  }, [dataClient, showDeletedSessions]);
+  }, [dataClient, showDeletedSessions, reloadToken]);
 
   const reloadSessions = async () => {
     if (!dataClient) {
@@ -283,6 +295,20 @@ export function SessionListScreenShell({
     });
 
   const showEmptyState = !isLoadingSessions && !loadErrorMessage && !activeSession && completedSessions.length === 0;
+
+  useEffect(() => {
+    if (!activeSession) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setActiveDurationNowMs(Date.now());
+    }, 30_000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [activeSession]);
 
   const navigateToSessionRecorder = () => {
     if (dataClient && !activeSession) {
@@ -415,7 +441,11 @@ export function SessionListScreenShell({
                 }}
                 style={styles.sessionRowMainPressable}
                 testID="resume-active-session-button">
-                <SessionSummaryLine session={activeSession} testIdPrefix={`session-summary-${activeSession.id}`} />
+                <SessionSummaryLine
+                  session={activeSession}
+                  testIdPrefix={`session-summary-${activeSession.id}`}
+                  nowMs={activeDurationNowMs}
+                />
               </Pressable>
 
               <View style={styles.sessionRowActions}>
@@ -611,7 +641,15 @@ export function SessionListScreenShell({
 }
 
 export default function SessionListRoute() {
-  return <SessionListScreenShell dataClient={DEFAULT_SESSION_LIST_DATA_CLIENT} />;
+  const [reloadToken, setReloadToken] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      setReloadToken((current) => current + 1);
+    }, [])
+  );
+
+  return <SessionListScreenShell dataClient={DEFAULT_SESSION_LIST_DATA_CLIENT} reloadToken={reloadToken} />;
 }
 
 const styles = StyleSheet.create({
