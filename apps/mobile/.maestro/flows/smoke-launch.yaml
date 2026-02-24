@@ -27,5 +27,6 @@ appId: host.exp.Exponent
 - tapOn:
     text: "Remove empty exercises and submit"
     optional: true
-- assertVisible: "Session submitted (UI only)"
+- assertVisible:
+    id: "session-list-screen"
 - takeScreenshot: "02-session-recorder-visible"

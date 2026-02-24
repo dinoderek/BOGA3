@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
@@ -148,22 +149,11 @@ function createExercise(name: string): SessionExercise {
   };
 }
 
-type SessionSubmitSummary = {
-  dateTime: string;
-  gymName: string;
-  exerciseCount: number;
-  setCount: number;
-};
-
 type SubmitCleanupPrompt = {
   step: 'incomplete-sets' | 'empty-exercises';
   affectedCount: number;
   nextSession: Session;
 };
-
-function countLoggedSets(exercises: SessionExercise[]): number {
-  return exercises.reduce((totalSets, exercise) => totalSets + exercise.sets.length, 0);
-}
 
 function removeIncompleteSets(session: Session): { session: Session; removedSets: number } {
   let removedSets = 0;
@@ -212,8 +202,8 @@ function removeExercisesWithNoSets(session: Session): { session: Session; remove
 }
 
 export default function SessionRecorderScreen() {
+  const router = useRouter();
   const [state, setState] = useState<SessionRecorderState>(createInitialState);
-  const [submitSummary, setSubmitSummary] = useState<SessionSubmitSummary | null>(null);
   const [submitCleanupPrompt, setSubmitCleanupPrompt] = useState<SubmitCleanupPrompt | null>(null);
   const stateRef = useRef(state);
   const persistedSessionIdRef = useRef<string | null>(null);
@@ -358,7 +348,6 @@ export default function SessionRecorderScreen() {
   );
 
   const clearSubmitFeedback = () => {
-    setSubmitSummary(null);
     setSubmitCleanupPrompt(null);
   };
 
@@ -830,27 +819,11 @@ export default function SessionRecorderScreen() {
     markSessionStructuralMutation();
   };
 
-  const startNewEntry = () => {
-    setState(createInitialState());
-    persistedSessionIdRef.current = null;
-    hasSessionMutationRef.current = false;
-    clearSubmitFeedback();
-  };
-
   const finalizeSubmit = (submittedSession: Session) => {
-    const submittedGymName =
-      state.locations.find((location) => location.id === submittedSession.locationId)?.name ?? 'Not set';
-
     setState((current) => ({
       ...current,
       session: submittedSession,
     }));
-    setSubmitSummary({
-      dateTime: submittedSession.dateTime,
-      gymName: submittedGymName,
-      exerciseCount: submittedSession.exercises.length,
-      setCount: countLoggedSets(submittedSession.exercises),
-    });
 
     void (async () => {
       const parsedStartedAt = parseSessionDateTime(submittedSession.dateTime) ?? new Date();
@@ -877,15 +850,16 @@ export default function SessionRecorderScreen() {
 
       await completeSessionDraft(persisted.sessionId);
       persistedSessionIdRef.current = null;
+      hasSessionMutationRef.current = false;
+      router.replace('/session-list');
     })().catch(() => {
-      // Keep existing UI-only submit experience stable if persistence completion fails.
+      // Keep recorder screen state available for retry if persistence/complete/navigation fails.
     });
   };
 
   const beginSubmitFlow = (sessionCandidate: Session) => {
     const { session: withoutIncompleteSets, removedSets } = removeIncompleteSets(sessionCandidate);
     if (removedSets > 0) {
-      setSubmitSummary(null);
       setSubmitCleanupPrompt({
         step: 'incomplete-sets',
         affectedCount: removedSets,
@@ -896,7 +870,6 @@ export default function SessionRecorderScreen() {
 
     const { session: withoutEmptyExercises, removedExercises } = removeExercisesWithNoSets(sessionCandidate);
     if (removedExercises > 0) {
-      setSubmitSummary(null);
       setSubmitCleanupPrompt({
         step: 'empty-exercises',
         affectedCount: removedExercises,
@@ -1032,22 +1005,6 @@ export default function SessionRecorderScreen() {
         onPress={() => openExerciseModal()}>
         <Text style={styles.logExerciseButtonText}>Log new exercise</Text>
       </Pressable>
-
-      {submitSummary ? (
-        <View style={styles.successCard}>
-          <Text style={styles.successTitle}>Session submitted (UI only)</Text>
-          <Text style={styles.successLine}>Date: {submitSummary.dateTime}</Text>
-          <Text style={styles.successLine}>Gym: {submitSummary.gymName}</Text>
-          <Text style={styles.successLine}>Exercises: {submitSummary.exerciseCount}</Text>
-          <Text style={styles.successLine}>Sets: {submitSummary.setCount}</Text>
-          <Text style={styles.nonPersistenceNotice}>
-            This session is not saved to local storage or backend yet.
-          </Text>
-          <Pressable style={styles.successResetButton} onPress={startNewEntry}>
-            <Text style={styles.successResetButtonText}>Start new entry</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       <Pressable accessibilityLabel="Submit session" style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit Session</Text>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import SessionRecorderScreen from '../session-recorder';
 
@@ -14,8 +14,34 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('expo-router', () => {
+  const mockReplace = jest.fn();
+  return {
+    useRouter: () => ({ replace: mockReplace, push: jest.fn() }),
+    __mockReplace: mockReplace,
+  };
+});
+
+const {
+  persistSessionDraftSnapshot: mockPersistSessionDraftSnapshot,
+  completeSessionDraft: mockCompleteSessionDraft,
+} = jest.requireMock('@/src/data') as {
+  persistSessionDraftSnapshot: jest.Mock;
+  completeSessionDraft: jest.Mock;
+};
+
+const { __mockReplace: mockReplace } = jest.requireMock('expo-router') as {
+  __mockReplace: jest.Mock;
+};
+
 describe('SessionRecorderScreen submit cleanup flow', () => {
-  it('allows submit without gym selection', () => {
+  beforeEach(() => {
+    mockPersistSessionDraftSnapshot.mockClear();
+    mockCompleteSessionDraft.mockClear();
+    mockReplace.mockClear();
+  });
+
+  it('allows submit without gym selection', async () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
@@ -24,11 +50,15 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
     fireEvent.press(screen.getByText('Submit Session'));
 
-    expect(screen.getByText('Session submitted (UI only)')).toBeTruthy();
-    expect(screen.getByText('Gym: Not set')).toBeTruthy();
+    expect(screen.queryByText('Session submitted (UI only)')).toBeNull();
+    await waitFor(() => {
+      expect(mockPersistSessionDraftSnapshot).toHaveBeenCalled();
+      expect(mockCompleteSessionDraft).toHaveBeenCalledWith('test-session');
+      expect(mockReplace).toHaveBeenCalledWith('/session-list');
+    });
   });
 
-  it('shows incomplete-set modal with go-back and remove-and-submit actions', () => {
+  it('shows incomplete-set modal with go-back and remove-and-submit actions', async () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Choose gym'));
@@ -50,12 +80,15 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     fireEvent.press(screen.getByText('Submit Session'));
     fireEvent.press(screen.getByText('Remove incomplete sets and submit'));
 
-    expect(screen.getByText('Session submitted (UI only)')).toBeTruthy();
-    expect(screen.getByText('Exercises: 1')).toBeTruthy();
-    expect(screen.getByText('Sets: 1')).toBeTruthy();
+    expect(screen.queryByText('Session submitted (UI only)')).toBeNull();
+    await waitFor(() => {
+      expect(mockPersistSessionDraftSnapshot).toHaveBeenCalled();
+      expect(mockCompleteSessionDraft).toHaveBeenCalledWith('test-session');
+      expect(mockReplace).toHaveBeenCalledWith('/session-list');
+    });
   });
 
-  it('shows empty-exercise modal and can submit with empty exercises removed', () => {
+  it('shows empty-exercise modal and can submit with empty exercises removed', async () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
@@ -66,14 +99,11 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     expect(screen.getByText('Remove exercises with no sets and submit?')).toBeTruthy();
     fireEvent.press(screen.getByText('Remove empty exercises and submit'));
 
-    expect(screen.getByText('Session submitted (UI only)')).toBeTruthy();
-    expect(screen.getByText('Exercises: 0')).toBeTruthy();
-    expect(screen.getByText('Sets: 0')).toBeTruthy();
-
-    fireEvent.press(screen.getByText('Start new entry'));
-
     expect(screen.queryByText('Session submitted (UI only)')).toBeNull();
-    expect(screen.getByText('Choose gym')).toBeTruthy();
-    expect(screen.getByText('No exercises logged yet.')).toBeTruthy();
+    await waitFor(() => {
+      expect(mockPersistSessionDraftSnapshot).toHaveBeenCalled();
+      expect(mockCompleteSessionDraft).toHaveBeenCalledWith('test-session');
+      expect(mockReplace).toHaveBeenCalledWith('/session-list');
+    });
   });
 });

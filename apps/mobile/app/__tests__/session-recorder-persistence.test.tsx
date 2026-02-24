@@ -14,6 +14,10 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
+}));
+
 const {
   loadLatestSessionDraftSnapshot: mockLoadLatestSessionDraftSnapshot,
   persistSessionDraftSnapshot: mockPersistSessionDraftSnapshot,

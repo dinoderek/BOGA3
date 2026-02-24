@@ -14,6 +14,10 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
+}));
+
 describe('SessionRecorderScreen', () => {
   it('renders the baseline session recorder shell', () => {
     render(<SessionRecorderScreen />);

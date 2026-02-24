@@ -113,7 +113,7 @@ jest.mock('@/src/data', () => ({
 jest.mock('expo-router', () => {
   const mockPush = jest.fn();
   return {
-    useRouter: () => ({ push: mockPush }),
+    useRouter: () => ({ push: mockPush, replace: jest.fn() }),
     useFocusEffect: () => {},
     __mockPush: mockPush,
   };
