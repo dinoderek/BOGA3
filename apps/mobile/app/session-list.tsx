@@ -1,13 +1,24 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import {
+  completeSessionDraft,
+  formatSessionListCompactDuration,
+  listSessionListBuckets,
+  persistSessionDraftSnapshot,
+  setSessionDeletedState,
+} from '@/src/data';
 
 export type SessionListItem = {
   id: string;
   startedAt: string;
   status: 'active' | 'completed';
   completedAt: string | null;
-  durationSec: number;
+  durationSec: number | null;
+  durationDisplay: string;
+  gymName: string | null;
+  exerciseCount: number;
   setCount: number;
   totalWeight: number;
   deletedAt: string | null;
@@ -20,6 +31,9 @@ export const DEFAULT_SESSION_LIST_ITEMS: SessionListItem[] = [
     status: 'active',
     completedAt: null,
     durationSec: 2700,
+    durationDisplay: '45m',
+    gymName: 'Westside Barbell Club',
+    exerciseCount: 4,
     setCount: 14,
     totalWeight: 6125,
     deletedAt: null,
@@ -30,6 +44,9 @@ export const DEFAULT_SESSION_LIST_ITEMS: SessionListItem[] = [
     status: 'completed',
     completedAt: '2026-02-19T16:58:00.000Z',
     durationSec: 3480,
+    durationDisplay: '58m',
+    gymName: 'Westside Barbell Club',
+    exerciseCount: 5,
     setCount: 18,
     totalWeight: 9420,
     deletedAt: null,
@@ -40,6 +57,9 @@ export const DEFAULT_SESSION_LIST_ITEMS: SessionListItem[] = [
     status: 'completed',
     completedAt: '2026-02-17T19:15:00.000Z',
     durationSec: 3900,
+    durationDisplay: '1h 5m',
+    gymName: 'Downtown Fitness',
+    exerciseCount: 4,
     setCount: 16,
     totalWeight: 7840,
     deletedAt: '2026-02-18T08:00:00.000Z',
@@ -48,11 +68,20 @@ export const DEFAULT_SESSION_LIST_ITEMS: SessionListItem[] = [
 
 export type SessionListScreenShellProps = {
   initialSessions?: SessionListItem[];
+  dataClient?: SessionListDataClient;
 };
 
 type CompletedSessionMenuState = {
   action: 'delete' | 'undelete';
   sessionId: string;
+};
+
+export type SessionListDataClient = {
+  loadSessions(input: { showDeletedSessions: boolean }): Promise<SessionListItem[]>;
+  startSession(): Promise<void>;
+  completeActiveSession(sessionId: string): Promise<void>;
+  discardActiveSession(sessionId: string): Promise<void>;
+  setCompletedSessionDeletedState(sessionId: string, isDeleted: boolean): Promise<void>;
 };
 
 function formatDateTimeStamp(isoTimestamp: string): string {
@@ -63,29 +92,73 @@ function formatDateTimeStamp(isoTimestamp: string): string {
   return `${Number(month)}/${Number(day)} ${timePart}`;
 }
 
-export function formatCompactDuration(durationSec: number | null): string {
-  if (!durationSec || durationSec <= 0) {
-    return '0m';
-  }
-
-  const totalMinutes = Math.floor(durationSec / 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours <= 0) {
-    return `${totalMinutes}m`;
-  }
-
-  if (minutes <= 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${minutes}m`;
-}
+export const formatCompactDuration = formatSessionListCompactDuration;
 
 function formatSetCount(setCount: number): string {
   return `${setCount} sets`;
 }
+
+function formatExerciseCount(exerciseCount: number): string {
+  return `${exerciseCount} ${exerciseCount === 1 ? 'exercise' : 'exercises'}`;
+}
+
+function formatGymToken(gymName: string | null): string {
+  return gymName?.trim() ? gymName : 'No gym';
+}
+
+const mapRepositorySummaryToListItem = (
+  summary: Awaited<ReturnType<typeof listSessionListBuckets>>['completed'][number] | Awaited<ReturnType<typeof listSessionListBuckets>>['active']
+): SessionListItem | null => {
+  if (!summary) {
+    return null;
+  }
+
+  return {
+    id: summary.id,
+    startedAt: summary.startedAt.toISOString(),
+    status: summary.status,
+    completedAt: summary.completedAt ? summary.completedAt.toISOString() : null,
+    durationSec: summary.durationSec,
+    durationDisplay: summary.compactDuration,
+    gymName: summary.gymName,
+    exerciseCount: summary.exerciseCount,
+    setCount: summary.setCount,
+    totalWeight: 0,
+    deletedAt: summary.deletedAt ? summary.deletedAt.toISOString() : null,
+  };
+};
+
+export const DEFAULT_SESSION_LIST_DATA_CLIENT: SessionListDataClient = {
+  async loadSessions({ showDeletedSessions }) {
+    const buckets = await listSessionListBuckets({
+      includeDeleted: showDeletedSessions,
+    });
+
+    const active = mapRepositorySummaryToListItem(buckets.active);
+    const completed = buckets.completed
+      .map((summary) => mapRepositorySummaryToListItem(summary))
+      .filter((summary): summary is SessionListItem => summary !== null);
+
+    return active ? [active, ...completed] : completed;
+  },
+  async startSession() {
+    await persistSessionDraftSnapshot({
+      gymId: null,
+      startedAt: new Date(),
+      status: 'active',
+      exercises: [],
+    });
+  },
+  async completeActiveSession(sessionId) {
+    await completeSessionDraft(sessionId);
+  },
+  async discardActiveSession(sessionId) {
+    await setSessionDeletedState(sessionId, true);
+  },
+  async setCompletedSessionDeletedState(sessionId, isDeleted) {
+    await setSessionDeletedState(sessionId, isDeleted);
+  },
+};
 
 function SessionSummaryLine({
   session,
@@ -103,7 +176,7 @@ function SessionSummaryLine({
         •
       </Text>
       <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-duration`}>
-        {formatCompactDuration(session.durationSec)}
+        {session.durationDisplay || formatCompactDuration(session.durationSec)}
       </Text>
       <Text selectable style={styles.summarySeparator}>
         •
@@ -111,21 +184,93 @@ function SessionSummaryLine({
       <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-sets`}>
         {formatSetCount(session.setCount)}
       </Text>
+      <Text selectable style={styles.summarySeparator}>
+        •
+      </Text>
+      <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-exercises`}>
+        {formatExerciseCount(session.exerciseCount)}
+      </Text>
+      <Text selectable style={styles.summarySeparator}>
+        •
+      </Text>
+      <Text selectable numberOfLines={1} style={styles.summaryToken} testID={`${testIdPrefix}-gym`}>
+        {formatGymToken(session.gymName)}
+      </Text>
     </View>
   );
 }
 
 export function SessionListScreenShell({
   initialSessions = DEFAULT_SESSION_LIST_ITEMS,
+  dataClient,
 }: SessionListScreenShellProps) {
   const router = useRouter();
-  const [sessions, setSessions] = useState<SessionListItem[]>(initialSessions);
+  const [sessions, setSessions] = useState<SessionListItem[]>(dataClient ? [] : initialSessions);
   const [showDeletedSessions, setShowDeletedSessions] = useState(false);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(Boolean(dataClient));
+  const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null);
   const [activeSessionMenuVisible, setActiveSessionMenuVisible] = useState(false);
   const [completedSessionMenuVisible, setCompletedSessionMenuVisible] = useState(false);
   const [completedSessionMenuState, setCompletedSessionMenuState] = useState<CompletedSessionMenuState | null>(
     null
   );
+
+  useEffect(() => {
+    if (!dataClient) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    setIsLoadingSessions(true);
+    setLoadErrorMessage(null);
+
+    dataClient
+      .loadSessions({ showDeletedSessions })
+      .then((loadedSessions) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setSessions(loadedSessions);
+      })
+      .catch((error) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setLoadErrorMessage(error instanceof Error ? error.message : 'Unable to load sessions');
+      })
+      .finally(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        setIsLoadingSessions(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [dataClient, showDeletedSessions]);
+
+  const reloadSessions = async () => {
+    if (!dataClient) {
+      return;
+    }
+
+    setIsLoadingSessions(true);
+    setLoadErrorMessage(null);
+
+    try {
+      const loadedSessions = await dataClient.loadSessions({ showDeletedSessions });
+      setSessions(loadedSessions);
+    } catch (error) {
+      setLoadErrorMessage(error instanceof Error ? error.message : 'Unable to load sessions');
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
 
   const activeSession = sessions.find((session) => session.status === 'active' && session.deletedAt === null);
   const completedSessions = sessions
@@ -137,13 +282,28 @@ export function SessionListScreenShell({
       return rightTime - leftTime;
     });
 
-  const showEmptyState = !activeSession && completedSessions.length === 0;
+  const showEmptyState = !isLoadingSessions && !loadErrorMessage && !activeSession && completedSessions.length === 0;
 
   const navigateToSessionRecorder = () => {
+    if (dataClient && !activeSession) {
+      return (async () => {
+        await dataClient.startSession();
+        await reloadSessions();
+        router.push('/session-recorder');
+      })();
+    }
+
     router.push('/session-recorder');
   };
 
   const completeActiveSession = () => {
+    if (dataClient && activeSession) {
+      return (async () => {
+        await dataClient.completeActiveSession(activeSession.id);
+        await reloadSessions();
+      })();
+    }
+
     setSessions((currentSessions) =>
       currentSessions.map((session) => {
         if (session.status !== 'active' || session.deletedAt !== null) {
@@ -154,17 +314,34 @@ export function SessionListScreenShell({
           ...session,
           status: 'completed',
           completedAt: '2026-02-20T18:15:00.000Z',
+          durationDisplay: session.durationDisplay || formatCompactDuration(session.durationSec),
         };
       })
     );
   };
 
   const discardActiveSession = () => {
+    if (dataClient && activeSession) {
+      return (async () => {
+        await dataClient.discardActiveSession(activeSession.id);
+        await reloadSessions();
+        setActiveSessionMenuVisible(false);
+      })();
+    }
+
     setSessions((currentSessions) => currentSessions.filter((session) => session.status !== 'active'));
     setActiveSessionMenuVisible(false);
   };
 
   const toggleDeletedState = (sessionId: string) => {
+    if (dataClient) {
+      const targetSession = sessions.find((session) => session.id === sessionId);
+      return (async () => {
+        await dataClient.setCompletedSessionDeletedState(sessionId, !targetSession?.deletedAt);
+        await reloadSessions();
+      })();
+    }
+
     setSessions((currentSessions) =>
       currentSessions.map((session) => {
         if (session.id !== sessionId) {
@@ -196,7 +373,14 @@ export function SessionListScreenShell({
       return;
     }
 
-    toggleDeletedState(completedSessionMenuState.sessionId);
+    const pendingAction = toggleDeletedState(completedSessionMenuState.sessionId);
+    if (pendingAction) {
+      void pendingAction.finally(() => {
+        setCompletedSessionMenuVisible(false);
+      });
+      return;
+    }
+
     setCompletedSessionMenuVisible(false);
   };
 
@@ -210,7 +394,9 @@ export function SessionListScreenShell({
           <Pressable
             accessibilityLabel="Start session"
             accessibilityRole="button"
-            onPress={navigateToSessionRecorder}
+            onPress={() => {
+              void navigateToSessionRecorder();
+            }}
             style={[styles.actionButton, styles.primaryButton]}
             testID="start-session-button">
             <Text style={styles.primaryButtonText}>Start Session</Text>
@@ -224,7 +410,9 @@ export function SessionListScreenShell({
               <Pressable
                 accessibilityLabel="Resume active session"
                 accessibilityRole="button"
-                onPress={navigateToSessionRecorder}
+                onPress={() => {
+                  void navigateToSessionRecorder();
+                }}
                 style={styles.sessionRowMainPressable}
                 testID="resume-active-session-button">
                 <SessionSummaryLine session={activeSession} testIdPrefix={`session-summary-${activeSession.id}`} />
@@ -234,7 +422,9 @@ export function SessionListScreenShell({
                 <Pressable
                   accessibilityLabel="Complete active session"
                   accessibilityRole="button"
-                  onPress={completeActiveSession}
+                  onPress={() => {
+                    void completeActiveSession();
+                  }}
                   style={[styles.iconActionButton, styles.completeButton]}
                   testID="complete-active-session-button">
                   <Text style={[styles.iconGlyphText, styles.completeGlyphText]}>✓</Text>
@@ -270,7 +460,19 @@ export function SessionListScreenShell({
             </Pressable>
           </View>
 
-          {completedSessions.length === 0 ? (
+          {isLoadingSessions ? (
+            <View style={styles.emptyPanel} testID="session-list-loading-state">
+              <Text selectable style={styles.metaText}>
+                Loading sessions...
+              </Text>
+            </View>
+          ) : loadErrorMessage ? (
+            <View style={styles.emptyPanel} testID="session-list-load-error">
+              <Text selectable style={styles.metaText}>
+                {loadErrorMessage}
+              </Text>
+            </View>
+          ) : completedSessions.length === 0 ? (
             <View style={styles.emptyPanel}>
               <Text selectable style={styles.metaText}>
                 No completed sessions
@@ -336,7 +538,9 @@ export function SessionListScreenShell({
             <Pressable
               accessibilityLabel="Discard active session"
               accessibilityRole="button"
-              onPress={discardActiveSession}
+              onPress={() => {
+                void discardActiveSession();
+              }}
               style={[styles.modalActionButton, styles.modalDangerButton]}
               testID="discard-active-session-button">
               <Text style={styles.modalDangerButtonText}>Discard session</Text>
@@ -370,7 +574,9 @@ export function SessionListScreenShell({
               <Pressable
                 accessibilityLabel="Delete completed session"
                 accessibilityRole="button"
-                onPress={applyCompletedSessionMenuAction}
+                onPress={() => {
+                  void applyCompletedSessionMenuAction();
+                }}
                 style={[styles.modalActionButton, styles.modalDangerButton]}
                 testID="completed-session-modal-action-button">
                 <Text style={styles.modalDangerButtonText}>Delete session</Text>
@@ -389,7 +595,9 @@ export function SessionListScreenShell({
               <Pressable
                 accessibilityLabel="Undelete completed session"
                 accessibilityRole="button"
-                onPress={applyCompletedSessionMenuAction}
+                onPress={() => {
+                  void applyCompletedSessionMenuAction();
+                }}
                 style={[styles.modalActionButton, styles.modalNeutralButton]}
                 testID="completed-session-modal-action-button">
                 <Text style={styles.modalNeutralButtonText}>Undelete session</Text>
@@ -403,7 +611,7 @@ export function SessionListScreenShell({
 }
 
 export default function SessionListRoute() {
-  return <SessionListScreenShell />;
+  return <SessionListScreenShell dataClient={DEFAULT_SESSION_LIST_DATA_CLIENT} />;
 }
 
 const styles = StyleSheet.create({

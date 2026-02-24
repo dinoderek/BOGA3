@@ -15,6 +15,13 @@
       "when": 1771597303513,
       "tag": "0001_wet_moondragon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1771865922639,
+      "tag": "0002_pink_justice",
+      "breakpoints": true
     }
   ]
 }

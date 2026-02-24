@@ -18,6 +18,12 @@ export const localRuntimeMigrations: RuntimeMigrationConfig = {
         tag: '0001_wet_moondragon',
         breakpoints: true,
       },
+      {
+        idx: 2,
+        when: 1771865922639,
+        tag: '0002_pink_justice',
+        breakpoints: true,
+      },
     ],
   },
   migrations: {
@@ -86,5 +92,7 @@ CREATE TABLE \`sessions\` (
 CREATE INDEX \`sessions_status_idx\` ON \`sessions\` (\`status\`);--> statement-breakpoint
 CREATE INDEX \`sessions_completed_at_idx\` ON \`sessions\` (\`completed_at\`);
 `,
+    m0002: `ALTER TABLE \`sessions\` ADD \`deleted_at\` integer;--> statement-breakpoint
+CREATE INDEX \`sessions_deleted_at_idx\` ON \`sessions\` (\`deleted_at\`);`,
   },
 };

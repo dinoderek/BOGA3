@@ -20,6 +20,7 @@ const buildSessionRecord = (overrides: Partial<SessionPersistenceRecord> = {}): 
   startedAt: new Date('2026-02-20T10:00:00.000Z'),
   completedAt: null,
   durationSec: null,
+  deletedAt: null,
   createdAt: new Date('2026-02-20T10:00:00.000Z'),
   updatedAt: new Date('2026-02-20T10:00:00.000Z'),
   ...overrides,

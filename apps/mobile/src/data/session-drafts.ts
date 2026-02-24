@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
 import { exerciseSets, sessionExercises, sessions } from './schema';
@@ -94,6 +94,7 @@ export type SessionPersistenceRecord = {
   startedAt: Date;
   completedAt: Date | null;
   durationSec: number | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -199,6 +200,7 @@ const mapSessionRow = (row: typeof sessions.$inferSelect): SessionPersistenceRec
     startedAt,
     completedAt: toDate(row.completedAt),
     durationSec: row.durationSec,
+    deletedAt: toDate(row.deletedAt),
     createdAt,
     updatedAt,
   };
@@ -368,7 +370,7 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
     const latestDraft = database
       .select()
       .from(sessions)
-      .where(inArray(sessions.status, DRAFT_STATUSES))
+      .where(and(inArray(sessions.status, DRAFT_STATUSES), isNull(sessions.deletedAt)))
       .orderBy(desc(sessions.updatedAt), desc(sessions.createdAt))
       .get();
     if (!latestDraft) {
@@ -398,7 +400,8 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
   async listCompletedSessions() {
     const database = await bootstrapLocalDataLayer();
     const rows = database.select().from(sessions).where(eq(sessions.status, 'completed')).all();
-    return rows.map(mapSessionRow);
+    const nonDeletedRows = rows.filter((row) => row.deletedAt === null);
+    return nonDeletedRows.map(mapSessionRow);
   },
 });
 

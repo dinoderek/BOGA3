@@ -17,6 +17,7 @@ export const sessions = sqliteTable(
     startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
     durationSec: integer('duration_sec'),
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -27,6 +28,7 @@ export const sessions = sqliteTable(
   (table) => ({
     statusIdx: index('sessions_status_idx').on(table.status),
     completedAtIdx: index('sessions_completed_at_idx').on(table.completedAt),
+    deletedAtIdx: index('sessions_deleted_at_idx').on(table.deletedAt),
     statusGuard: check(
       'sessions_status_guard',
       sql`${table.status} in ('draft', 'active', 'completed')`

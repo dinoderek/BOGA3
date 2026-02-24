@@ -11,4 +11,21 @@ appId: host.exp.Exponent
     optional: true
 - assertVisible:
     id: "session-recorder-screen"
+- tapOn: "Log new exercise"
+- tapOn: "Select exercise Barbell Squat"
+- tapOn: "Weight for exercise 1 set 1"
+- inputText: "225"
+- tapOn: "Reps for exercise 1 set 1"
+- inputText: "5"
+- tapOn: "Submit Session"
+- tapOn:
+    text: "Submit Session"
+    optional: true
+- tapOn:
+    text: "Remove incomplete sets and submit"
+    optional: true
+- tapOn:
+    text: "Remove empty exercises and submit"
+    optional: true
+- assertVisible: "Session submitted (UI only)"
 - takeScreenshot: "02-session-recorder-visible"

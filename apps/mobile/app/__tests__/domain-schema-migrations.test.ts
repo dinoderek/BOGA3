@@ -24,6 +24,7 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain('`started_at` integer NOT NULL');
     expect(migrationSql).toContain('`completed_at` integer');
     expect(migrationSql).toContain('`duration_sec` integer');
+    expect(migrationSql).toContain('`deleted_at` integer');
 
     expect(migrationSql).toContain('`origin_scope_id` text DEFAULT \'private\' NOT NULL');
     expect(migrationSql).toContain('`origin_source_id` text DEFAULT \'local\' NOT NULL');
@@ -34,6 +35,7 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain(
       'CREATE UNIQUE INDEX `exercise_sets_session_exercise_id_order_index_unique` ON `exercise_sets` (`session_exercise_id`,`order_index`)'
     );
+    expect(migrationSql).toContain('CREATE INDEX `sessions_deleted_at_idx` ON `sessions` (`deleted_at`)');
 
     expect(migrationSql).not.toContain('`name` text NOT NULL UNIQUE');
   });

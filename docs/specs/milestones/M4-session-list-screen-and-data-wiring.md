@@ -66,13 +66,14 @@ Ship a session list home screen that presents active and completed sessions from
 ## Task breakdown
 
 1. `docs/tasks/T-20260220-05-m4-session-list-screen-shell.md` - `in_progress` (implementation + verify gates complete; pending empty-state screenshot evidence and final task closeout).
-2. `docs/tasks/T-20260220-06-m4-session-list-data-wiring-and-soft-delete.md` - `planned`.
+2. `docs/tasks/T-20260220-06-m4-session-list-data-wiring-and-soft-delete.md` - `completed`.
 
 ## Risks / dependencies
 
 - Depends on M3 active/completed persistence behavior to provide meaningful session-list data.
 - If one-active enforcement requires schema constraints, migration compatibility for existing local data must be handled explicitly.
 - Soft-delete policy must remain consistent across future session-detail and sync milestones.
+- `apps/mobile/.maestro/flows/data-runtime-smoke.yaml` is stale after the M4 home-route change (still asserts `home-foundation-ready`), so native runtime data-smoke evidence needs a flow update before reuse.
 
 ## Decision log
 

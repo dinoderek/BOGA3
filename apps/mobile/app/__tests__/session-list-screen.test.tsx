@@ -1,10 +1,40 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import {
+  default as SessionListRoute,
   SessionListItem,
   SessionListScreenShell,
   formatCompactDuration,
 } from '../session-list';
+
+jest.mock('@/src/data', () => ({
+  completeSessionDraft: jest.fn(),
+  formatSessionListCompactDuration: (durationSec: number | null) => {
+    if (!durationSec || durationSec <= 0) {
+      return '0m';
+    }
+
+    const totalMinutes = Math.floor(durationSec / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours <= 0) {
+      return `${totalMinutes}m`;
+    }
+
+    if (minutes <= 0) {
+      return `${hours}h`;
+    }
+
+    return `${hours}h ${minutes}m`;
+  },
+  listSessionListBuckets: jest.fn().mockResolvedValue({
+    active: null,
+    completed: [],
+  }),
+  persistSessionDraftSnapshot: jest.fn(),
+  setSessionDeletedState: jest.fn(),
+}));
 
 jest.mock('expo-router', () => {
   const mockPush = jest.fn();
@@ -21,6 +51,14 @@ const { __mockPush: mockPush } = jest.requireMock('expo-router') as {
   __mockPush: jest.Mock;
 };
 
+const {
+  listSessionListBuckets: mockListSessionListBuckets,
+  persistSessionDraftSnapshot: mockPersistSessionDraftSnapshot,
+} = jest.requireMock('@/src/data') as {
+  listSessionListBuckets: jest.Mock;
+  persistSessionDraftSnapshot: jest.Mock;
+};
+
 const NO_ACTIVE_SESSIONS: SessionListItem[] = [
   {
     id: 'completed-visible',
@@ -28,6 +66,9 @@ const NO_ACTIVE_SESSIONS: SessionListItem[] = [
     status: 'completed',
     completedAt: '2026-02-20T16:58:00.000Z',
     durationSec: 3480,
+    durationDisplay: '58m',
+    gymName: 'Westside',
+    exerciseCount: 3,
     setCount: 12,
     totalWeight: 4230,
     deletedAt: null,
@@ -38,6 +79,9 @@ const NO_ACTIVE_SESSIONS: SessionListItem[] = [
     status: 'completed',
     completedAt: '2026-02-19T17:05:00.000Z',
     durationSec: 3900,
+    durationDisplay: '1h 5m',
+    gymName: 'Westside',
+    exerciseCount: 2,
     setCount: 9,
     totalWeight: 2780,
     deletedAt: '2026-02-20T12:00:00.000Z',
@@ -51,6 +95,9 @@ const ACTIVE_ONLY_SESSIONS: SessionListItem[] = [
     status: 'active',
     completedAt: null,
     durationSec: 1200,
+    durationDisplay: '20m',
+    gymName: 'Garage Gym',
+    exerciseCount: 1,
     setCount: 5,
     totalWeight: 1800,
     deletedAt: null,
@@ -60,6 +107,109 @@ const ACTIVE_ONLY_SESSIONS: SessionListItem[] = [
 describe('SessionListScreenShell', () => {
   beforeEach(() => {
     mockPush.mockReset();
+    mockListSessionListBuckets.mockReset();
+    mockPersistSessionDraftSnapshot.mockReset();
+    mockListSessionListBuckets.mockResolvedValue({
+      active: null,
+      completed: [],
+    });
+    mockPersistSessionDraftSnapshot.mockResolvedValue({ sessionId: 'created-session-id' });
+  });
+
+  it('hydrates DB-backed summaries through the route data client', async () => {
+    mockListSessionListBuckets.mockResolvedValueOnce({
+      active: null,
+      completed: [
+        {
+          id: 'db-completed-1',
+          status: 'completed',
+          startedAt: new Date('2026-02-20T16:00:00.000Z'),
+          completedAt: new Date('2026-02-20T16:42:00.000Z'),
+          durationSec: 2520,
+          compactDuration: '42m',
+          deletedAt: null,
+          gymName: 'Garage Gym',
+          exerciseCount: 2,
+          setCount: 6,
+        },
+      ],
+    });
+
+    render(<SessionListRoute />);
+
+    expect(screen.getByTestId('session-list-loading-state')).toBeTruthy();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('completed-session-row-db-completed-1')).toBeTruthy();
+    });
+
+    expect(screen.getByTestId('session-summary-db-completed-1-duration').props.children).toBe('42m');
+    expect(screen.getByTestId('session-summary-db-completed-1-exercises').props.children).toBe('2 exercises');
+    expect(screen.getByTestId('session-summary-db-completed-1-gym').props.children).toBe('Garage Gym');
+  });
+
+  it('creates an active local session on Start Session so returning to the list shows the active row', async () => {
+    let hasActiveSession = false;
+
+    mockPersistSessionDraftSnapshot.mockImplementationOnce(async () => {
+      hasActiveSession = true;
+      return { sessionId: 'db-active-session-1' };
+    });
+
+    mockListSessionListBuckets.mockImplementation(async () => {
+      if (!hasActiveSession) {
+        return {
+          active: null,
+          completed: [],
+        };
+      }
+
+      return {
+        active: {
+          id: 'db-active-session-1',
+          status: 'active',
+          startedAt: new Date('2026-02-23T18:00:00.000Z'),
+          completedAt: null,
+          durationSec: null,
+          compactDuration: '0m',
+          deletedAt: null,
+          gymName: null,
+          exerciseCount: 0,
+          setCount: 0,
+        },
+        completed: [],
+      };
+    });
+
+    const route = render(<SessionListRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('start-session-button')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('start-session-button'));
+
+    await waitFor(() => {
+      expect(mockPersistSessionDraftSnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          gymId: null,
+          status: 'active',
+          exercises: [],
+        })
+      );
+    });
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/session-recorder');
+    });
+
+    route.unmount();
+    render(<SessionListRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-session-row-db-active-session-1')).toBeTruthy();
+    });
+    expect(screen.getByTestId('resume-active-session-button')).toBeTruthy();
+    expect(screen.queryByTestId('start-session-button')).toBeNull();
   });
 
   it('shows Start Session when no active session exists and navigates to the recorder', () => {

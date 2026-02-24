@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260220-06`
 - Title: M4 session list local DB wiring with single-active and soft-delete visibility contract
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
@@ -128,10 +128,54 @@ Wire session-list UI to local SQLite/Drizzle data and implement query behavior t
 ## Evidence (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
 - Lane 1 command output summary.
+  - Targeted tests passed:
+    - `npm test -- app/__tests__/session-list-repository.test.ts --runInBand`
+    - `npm test -- app/__tests__/session-list-screen.test.tsx app/__tests__/index.test.tsx --runInBand`
+    - `npm test -- app/__tests__/session-list-repository.test.ts app/__tests__/session-list-screen.test.tsx app/__tests__/index.test.tsx app/__tests__/domain-schema-migrations.test.ts app/__tests__/session-drafts-repository.test.ts --runInBand`
+  - Verify gates passed:
+    - `HOME=/tmp EXPO_NO_TELEMETRY=1 npm run lint`
+    - `npm run typecheck`
+    - `npm run test -- --runInBand`
+    - `npm run db:generate:canary`
+    - `TASK_ID=T-20260220-06 npm run test:e2e:ios:smoke`
 - Schema/migration artifact summary if changed.
+  - Added soft-delete column/index to `sessions` schema (`deleted_at`, `sessions_deleted_at_idx`).
+  - Generated Drizzle artifacts:
+    - `apps/mobile/drizzle/0002_pink_justice.sql`
+    - `apps/mobile/drizzle/meta/0002_snapshot.json`
+    - updated `apps/mobile/drizzle/meta/_journal.json`
+  - Synced runtime migration bundle in `apps/mobile/src/data/migrations/index.ts`.
 - Session-list bucket contract assertion summary.
+  - `apps/mobile/app/__tests__/session-list-repository.test.ts` verifies:
+    - single-active surface (deterministic fallback from inconsistent multi-active/draft data)
+    - completed ordering by `completedAt DESC`
+    - soft-deleted sessions hidden by default / visible with toggle
+    - compact duration mapping (`30m`, `1h 5m`)
+    - soft-delete mutation writes deterministic timestamps
+  - `apps/mobile/app/__tests__/session-list-screen.test.tsx` adds DB-backed route hydration assertion via mocked repository summaries.
 - Screenshot paths for DB-backed session-list states.
+  - Session-list launch (DB-backed route path): `/Users/dinohughes/Projects/scaffolding2/apps/mobile/artifacts/maestro/T-20260220-06/20260223-170517-2585/maestro-output/screenshots/01-app-launch.png`
+  - Recorder visible after session-list action (same E2E smoke run): `/Users/dinohughes/Projects/scaffolding2/apps/mobile/artifacts/maestro/T-20260220-06/20260223-170517-2585/maestro-output/screenshots/02-session-recorder-visible.png`
+  - Additional note: `TASK_ID=T-20260220-06 npm run test:e2e:ios:data-smoke` currently fails due stale Maestro flow assertion (`home-foundation-ready`) after M4 home-route changes, not due SQLite migration/runtime failure signal.
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- 
+- What changed:
+  - Added a local session-list repository/store in `apps/mobile/src/data/session-list.ts` that reads local SQLite/Drizzle data, joins gym/exercise/set aggregates, returns bucketed summaries (`active` + `completed`), enforces a deterministic single-active surface, and supports soft-delete state updates.
+  - Wired `apps/mobile/app/session-list.tsx` route to the repository through an async data client while preserving the shell component test mode (`initialSessions`) for UI tests.
+  - Extended session row summary rendering to include DB-backed projection fields (`gymName`, `exerciseCount`) while keeping compact duration and disabled completed-row behavior.
+  - Added `deletedAt` soft-delete support to `sessions` schema plus migration/runtime migration updates.
+  - Added/updated tests for repository contract, DB-backed route hydration, schema migration SQL expectations, and `SessionPersistenceRecord` fixture shape changes.
+  - Updated `apps/mobile/.maestro/flows/smoke-launch.yaml` to cover the required flow: `session list -> start/resume session -> add exercise -> log set -> submit`.
+- What tests ran:
+  - `npm test -- app/__tests__/session-list-repository.test.ts --runInBand`
+  - `npm test -- app/__tests__/session-list-screen.test.tsx app/__tests__/index.test.tsx --runInBand`
+  - `npm test -- app/__tests__/session-list-repository.test.ts app/__tests__/session-list-screen.test.tsx app/__tests__/index.test.tsx app/__tests__/domain-schema-migrations.test.ts app/__tests__/session-drafts-repository.test.ts --runInBand`
+  - `HOME=/tmp EXPO_NO_TELEMETRY=1 npm run lint`
+  - `npm run typecheck`
+  - `npm run test -- --runInBand`
+  - `npm run db:generate:canary`
+  - `TASK_ID=T-20260220-06 npm run test:e2e:ios:smoke`
+  - Attempted (non-task gate, migration-risk follow-up): `TASK_ID=T-20260220-06 npm run test:e2e:ios:data-smoke` -> failed due stale Maestro flow selector (`home-foundation-ready`) after M4 home-route update.
+- What remains:
+  - Update `apps/mobile/.maestro/flows/data-runtime-smoke.yaml` to the M4 home-route/session-list entrypoint (it still targets removed foundation screen controls).
