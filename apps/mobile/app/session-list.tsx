@@ -1,6 +1,17 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  UIManager,
+  View,
+} from 'react-native';
 
 import {
   completeSessionDraft,
@@ -84,6 +95,8 @@ export type SessionListDataClient = {
   discardActiveSession(sessionId: string): Promise<void>;
   setCompletedSessionDeletedState(sessionId: string, isDeleted: boolean): Promise<void>;
 };
+
+const COMPLETED_ROW_DELETE_EXIT_MS = 350;
 
 function formatDateTimeStamp(isoTimestamp: string): string {
   const [datePart, timePartWithZone = '00:00:00'] = isoTimestamp.split('T');
@@ -226,6 +239,15 @@ export function SessionListScreenShell({
   const [completedSessionMenuState, setCompletedSessionMenuState] = useState<CompletedSessionMenuState | null>(
     null
   );
+  const [deletingCompletedSessionId, setDeletingCompletedSessionId] = useState<string | null>(null);
+  const [optimisticallyHiddenCompletedSessionIds, setOptimisticallyHiddenCompletedSessionIds] = useState<string[]>([]);
+  const deletingCompletedRowOpacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      UIManager.setLayoutAnimationEnabledExperimental?.(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!dataClient) {
@@ -293,8 +315,11 @@ export function SessionListScreenShell({
       const rightTime = right.completedAt ? new Date(right.completedAt).getTime() : 0;
       return rightTime - leftTime;
     });
+  const visibleCompletedSessions = completedSessions.filter(
+    (session) => !optimisticallyHiddenCompletedSessionIds.includes(session.id)
+  );
 
-  const showEmptyState = !isLoadingSessions && !loadErrorMessage && !activeSession && completedSessions.length === 0;
+  const showEmptyState = !isLoadingSessions && !loadErrorMessage && !activeSession && visibleCompletedSessions.length === 0;
 
   useEffect(() => {
     if (!activeSession) {
@@ -309,6 +334,12 @@ export function SessionListScreenShell({
       clearInterval(intervalId);
     };
   }, [activeSession]);
+
+  useEffect(() => {
+    if (showDeletedSessions) {
+      setOptimisticallyHiddenCompletedSessionIds([]);
+    }
+  }, [showDeletedSessions]);
 
   const navigateToSessionRecorder = () => {
     if (dataClient && !activeSession) {
@@ -399,6 +430,38 @@ export function SessionListScreenShell({
       return;
     }
 
+    const shouldAnimateHiddenDelete =
+      completedSessionMenuState.action === 'delete' && !showDeletedSessions && deletingCompletedSessionId === null;
+    if (shouldAnimateHiddenDelete) {
+      const { sessionId } = completedSessionMenuState;
+      setCompletedSessionMenuVisible(false);
+      setDeletingCompletedSessionId(sessionId);
+      deletingCompletedRowOpacity.setValue(1);
+
+      Animated.timing(deletingCompletedRowOpacity, {
+        toValue: 0,
+        duration: COMPLETED_ROW_DELETE_EXIT_MS,
+        useNativeDriver: false,
+      }).start(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setDeletingCompletedSessionId((current) => (current === sessionId ? null : current));
+        setOptimisticallyHiddenCompletedSessionIds((current) =>
+          current.includes(sessionId) ? current : [...current, sessionId]
+        );
+
+        const pendingAction = toggleDeletedState(sessionId);
+        if (!pendingAction) {
+          return;
+        }
+
+        void pendingAction.catch(() => {
+          LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          setOptimisticallyHiddenCompletedSessionIds((current) => current.filter((id) => id !== sessionId));
+        });
+      });
+      return;
+    }
+
     const pendingAction = toggleDeletedState(completedSessionMenuState.sessionId);
     if (pendingAction) {
       void pendingAction.finally(() => {
@@ -412,68 +475,67 @@ export function SessionListScreenShell({
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        contentInsetAdjustmentBehavior="automatic"
-        testID="session-list-screen">
-        {!activeSession ? (
-          <Pressable
-            accessibilityLabel="Start session"
-            accessibilityRole="button"
-            onPress={() => {
-              void navigateToSessionRecorder();
-            }}
-            style={[styles.actionButton, styles.primaryButton]}
-            testID="start-session-button">
-            <Text style={styles.primaryButtonText}>Start Session</Text>
-          </Pressable>
-        ) : (
-          <View style={styles.sectionBlock}>
-            <Text selectable style={styles.sectionTitle}>
-              Active Session
-            </Text>
-            <View style={[styles.sessionRow, styles.activeSessionRow]} testID={`active-session-row-${activeSession.id}`}>
-              <Pressable
-                accessibilityLabel="Resume active session"
-                accessibilityRole="button"
-                onPress={() => {
-                  void navigateToSessionRecorder();
-                }}
-                style={styles.sessionRowMainPressable}
-                testID="resume-active-session-button">
-                <SessionSummaryLine
-                  session={activeSession}
-                  testIdPrefix={`session-summary-${activeSession.id}`}
-                  nowMs={activeDurationNowMs}
-                />
-              </Pressable>
-
-              <View style={styles.sessionRowActions}>
+      <View style={styles.screen} testID="session-list-screen">
+        <View style={styles.pinnedTopRegion} testID="session-list-pinned-top-region">
+          {!activeSession ? (
+            <Pressable
+              accessibilityLabel="Start session"
+              accessibilityRole="button"
+              onPress={() => {
+                void navigateToSessionRecorder();
+              }}
+              style={[styles.actionButton, styles.primaryButton]}
+              testID="start-session-button">
+              <Text style={styles.primaryButtonText}>Start Session</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.sectionBlock}>
+              <Text selectable style={styles.sectionTitle}>
+                Active Session
+              </Text>
+              <View style={[styles.sessionRow, styles.activeSessionRow]} testID={`active-session-row-${activeSession.id}`}>
                 <Pressable
-                  accessibilityLabel="Complete active session"
+                  accessibilityLabel="Resume active session"
                   accessibilityRole="button"
                   onPress={() => {
-                    void completeActiveSession();
+                    void navigateToSessionRecorder();
                   }}
-                  style={[styles.iconActionButton, styles.completeButton]}
-                  testID="complete-active-session-button">
-                  <Text style={[styles.iconGlyphText, styles.completeGlyphText]}>✓</Text>
+                  style={styles.sessionRowMainPressable}
+                  testID="resume-active-session-button">
+                  <SessionSummaryLine
+                    session={activeSession}
+                    testIdPrefix={`session-summary-${activeSession.id}`}
+                    nowMs={activeDurationNowMs}
+                  />
                 </Pressable>
 
-                <Pressable
-                  accessibilityLabel="Open active session actions"
-                  accessibilityRole="button"
-                  onPress={() => setActiveSessionMenuVisible(true)}
-                  style={[styles.iconActionButton, styles.menuButton]}
-                  testID="active-session-menu-button">
-                  <Text style={styles.iconGlyphText}>⋮</Text>
-                </Pressable>
+                <View style={styles.sessionRowActions}>
+                  <Pressable
+                    accessibilityLabel="Complete active session"
+                    accessibilityRole="button"
+                    onPress={() => {
+                      void completeActiveSession();
+                    }}
+                    style={[styles.iconActionButton, styles.completeButton]}
+                    testID="complete-active-session-button">
+                    <Text style={[styles.iconGlyphText, styles.completeGlyphText]}>✓</Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityLabel="Open active session actions"
+                    accessibilityRole="button"
+                    onPress={() => setActiveSessionMenuVisible(true)}
+                    style={[styles.iconActionButton, styles.menuButton]}
+                    testID="active-session-menu-button">
+                    <Text style={styles.iconGlyphText}>⋮</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
-        <View style={styles.sectionBlock}>
+        <View style={styles.historyRegion}>
           <View style={styles.sectionHeaderRow}>
             <Text selectable style={styles.sectionTitle}>
               Completed History
@@ -490,60 +552,71 @@ export function SessionListScreenShell({
             </Pressable>
           </View>
 
-          {isLoadingSessions ? (
-            <View style={styles.emptyPanel} testID="session-list-loading-state">
-              <Text selectable style={styles.metaText}>
-                Loading sessions...
-              </Text>
-            </View>
-          ) : loadErrorMessage ? (
-            <View style={styles.emptyPanel} testID="session-list-load-error">
-              <Text selectable style={styles.metaText}>
-                {loadErrorMessage}
-              </Text>
-            </View>
-          ) : completedSessions.length === 0 ? (
-            <View style={styles.emptyPanel}>
-              <Text selectable style={styles.metaText}>
-                No completed sessions
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.completedList}>
-              {completedSessions.map((session) => (
-                <View
-                  key={session.id}
-                  style={[styles.sessionRow, session.deletedAt ? styles.deletedCompletedRow : null]}
-                  testID={`completed-session-row-${session.id}`}>
-                  <View style={styles.sessionRowMain}>
-                    <SessionSummaryLine session={session} testIdPrefix={`session-summary-${session.id}`} />
-                  </View>
+          <ScrollView
+            style={styles.historyScroll}
+            contentContainerStyle={styles.historyScrollContent}
+            contentInsetAdjustmentBehavior="automatic"
+            keyboardShouldPersistTaps="handled"
+            testID="completed-history-scroll">
+            {isLoadingSessions ? (
+              <View style={styles.emptyPanel} testID="session-list-loading-state">
+                <Text selectable style={styles.metaText}>
+                  Loading sessions...
+                </Text>
+              </View>
+            ) : loadErrorMessage ? (
+              <View style={styles.emptyPanel} testID="session-list-load-error">
+                <Text selectable style={styles.metaText}>
+                  {loadErrorMessage}
+                </Text>
+              </View>
+            ) : visibleCompletedSessions.length === 0 ? (
+              <View style={styles.emptyPanel}>
+                <Text selectable style={styles.metaText}>
+                  No completed sessions
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.completedList}>
+                {visibleCompletedSessions.map((session) => (
+                  <Animated.View
+                    key={session.id}
+                    style={[
+                      styles.sessionRow,
+                      session.deletedAt ? styles.deletedCompletedRow : null,
+                      deletingCompletedSessionId === session.id ? { opacity: deletingCompletedRowOpacity } : null,
+                    ]}
+                    testID={`completed-session-row-${session.id}`}>
+                    <View style={styles.sessionRowMain}>
+                      <SessionSummaryLine session={session} testIdPrefix={`session-summary-${session.id}`} />
+                    </View>
 
-                  <Pressable
-                    accessibilityLabel={`Open completed session actions ${session.id}`}
-                    accessibilityRole="button"
-                    onPress={() => openCompletedSessionMenu(session)}
-                    style={[styles.iconActionButton, styles.menuButton]}
-                    testID={`completed-session-menu-button-${session.id}`}>
-                    <Text style={styles.iconGlyphText}>⋮</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          )}
+                    <Pressable
+                      accessibilityLabel={`Open completed session actions ${session.id}`}
+                      accessibilityRole="button"
+                      onPress={() => openCompletedSessionMenu(session)}
+                      style={[styles.iconActionButton, styles.menuButton]}
+                      testID={`completed-session-menu-button-${session.id}`}>
+                      <Text style={styles.iconGlyphText}>⋮</Text>
+                    </Pressable>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
+
+            {showEmptyState ? (
+              <View style={styles.globalEmptyState} testID="session-list-empty-state">
+                <Text selectable style={styles.globalEmptyTitle}>
+                  No sessions yet
+                </Text>
+                <Text selectable style={styles.metaText}>
+                  Start your first workout session to see it here.
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
         </View>
-
-        {showEmptyState ? (
-          <View style={styles.globalEmptyState} testID="session-list-empty-state">
-            <Text selectable style={styles.globalEmptyTitle}>
-              No sessions yet
-            </Text>
-            <Text selectable style={styles.metaText}>
-              Start your first workout session to see it here.
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
+      </View>
 
       <Modal
         animationType="fade"
@@ -653,10 +726,28 @@ export default function SessionListRoute() {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  screen: {
+    flex: 1,
+    backgroundColor: '#f4f7fb',
     padding: 16,
     gap: 16,
-    backgroundColor: '#f4f7fb',
+  },
+  pinnedTopRegion: {
+    gap: 8,
+    flexShrink: 0,
+  },
+  historyRegion: {
+    flex: 1,
+    minHeight: 0,
+    gap: 8,
+  },
+  historyScroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  historyScrollContent: {
+    gap: 12,
+    paddingBottom: 16,
   },
   sectionBlock: {
     gap: 8,

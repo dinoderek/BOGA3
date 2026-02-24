@@ -283,6 +283,8 @@ describe('SessionListScreenShell', () => {
   it('shows Start Session when no active session exists and navigates to the recorder', () => {
     render(<SessionListScreenShell initialSessions={NO_ACTIVE_SESSIONS} />);
 
+    expect(screen.getByTestId('session-list-pinned-top-region')).toBeTruthy();
+    expect(screen.getByTestId('completed-history-scroll')).toBeTruthy();
     expect(screen.queryByText('Active Session')).toBeNull();
     expect(screen.getByText('Start Session')).toBeTruthy();
     expect(screen.queryByText('Resume Active')).toBeNull();
@@ -339,6 +341,7 @@ describe('SessionListScreenShell', () => {
   });
 
   it('toggles deleted-session visibility, shows compact metrics, and supports delete/undelete', () => {
+    jest.useFakeTimers();
     render(<SessionListScreenShell initialSessions={NO_ACTIVE_SESSIONS} />);
 
     expect(screen.getByTestId('session-summary-completed-visible-duration').props.children).toBe('58m');
@@ -356,6 +359,10 @@ describe('SessionListScreenShell', () => {
 
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
     fireEvent.press(screen.getByTestId('completed-session-modal-action-button'));
+    expect(screen.getByTestId('completed-session-row-completed-visible')).toBeTruthy();
+    act(() => {
+      jest.advanceTimersByTime(250);
+    });
     expect(screen.queryByTestId('completed-session-row-completed-visible')).toBeNull();
 
     fireEvent.press(screen.getByTestId('toggle-deleted-sessions-button'));
@@ -374,6 +381,8 @@ describe('SessionListScreenShell', () => {
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-deleted'));
     fireEvent.press(screen.getByTestId('completed-session-modal-action-button'));
     expect(screen.getByLabelText('Open completed session actions completed-deleted')).toBeTruthy();
+
+    jest.useRealTimers();
   });
 
   it('shows the empty state when there are no active or completed sessions', () => {
