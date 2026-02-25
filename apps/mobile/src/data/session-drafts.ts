@@ -57,6 +57,19 @@ export type SessionDraftSnapshot = {
   exercises: SessionDraftExerciseSnapshot[];
 };
 
+export type SessionGraphSnapshot = {
+  sessionId: string;
+  gymId: string | null;
+  status: SessionPersistenceRecord['status'];
+  startedAt: Date;
+  completedAt: Date | null;
+  durationSec: number | null;
+  deletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  exercises: SessionDraftExerciseSnapshot[];
+};
+
 export type CompletedSessionAnalysisRecord = {
   sessionId: string;
   gymId: string | null;
@@ -136,6 +149,7 @@ type SaveDraftGraphInput = {
 export type SessionDraftStore = {
   saveDraftGraph(input: SaveDraftGraphInput): Promise<PersistSessionDraftResult>;
   loadLatestDraftGraph(): Promise<StoredDraftGraph | null>;
+  loadSessionGraphById(sessionId: string): Promise<StoredDraftGraph | null>;
   loadSessionById(sessionId: string): Promise<SessionPersistenceRecord | null>;
   completeSession(input: {
     sessionId: string;
@@ -211,6 +225,30 @@ const mapDraftSnapshot = (graph: StoredDraftGraph): SessionDraftSnapshot => ({
   gymId: graph.session.gymId,
   status: graph.session.status as SessionDraftStatus,
   startedAt: graph.session.startedAt,
+  createdAt: graph.session.createdAt,
+  updatedAt: graph.session.updatedAt,
+  exercises: graph.exercises.map((exercise) => ({
+    id: exercise.id,
+    name: exercise.name,
+    machineName: exercise.machineName,
+    originScopeId: exercise.originScopeId,
+    originSourceId: exercise.originSourceId,
+    sets: exercise.sets.map((set) => ({
+      id: set.id,
+      repsValue: set.repsValue,
+      weightValue: set.weightValue,
+    })),
+  })),
+});
+
+const mapSessionGraphSnapshot = (graph: StoredDraftGraph): SessionGraphSnapshot => ({
+  sessionId: graph.session.id,
+  gymId: graph.session.gymId,
+  status: graph.session.status,
+  startedAt: graph.session.startedAt,
+  completedAt: graph.session.completedAt,
+  durationSec: graph.session.durationSec,
+  deletedAt: graph.session.deletedAt,
   createdAt: graph.session.createdAt,
   updatedAt: graph.session.updatedAt,
   exercises: graph.exercises.map((exercise) => ({
@@ -379,6 +417,10 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
 
     return loadDraftGraphBySessionId(database, latestDraft.id);
   },
+  async loadSessionGraphById(sessionId) {
+    const database = await bootstrapLocalDataLayer();
+    return loadDraftGraphBySessionId(database, sessionId);
+  },
   async loadSessionById(sessionId) {
     const database = await bootstrapLocalDataLayer();
     const row = database.select().from(sessions).where(eq(sessions.id, sessionId)).get();
@@ -433,6 +475,14 @@ export const createSessionDraftRepository = (store: SessionDraftStore = createDr
     }
 
     return mapDraftSnapshot(graph);
+  },
+  async loadSessionSnapshotById(sessionId: string): Promise<SessionGraphSnapshot | null> {
+    const graph = await store.loadSessionGraphById(sessionId);
+    if (!graph) {
+      return null;
+    }
+
+    return mapSessionGraphSnapshot(graph);
   },
   async completeSession(sessionId: string, options: CompleteSessionOptions = {}): Promise<CompleteSessionResult> {
     const existingSession = await store.loadSessionById(sessionId);
@@ -534,5 +584,6 @@ const defaultSessionDraftRepository = createSessionDraftRepository();
 
 export const persistSessionDraftSnapshot = defaultSessionDraftRepository.persistDraftSnapshot;
 export const loadLatestSessionDraftSnapshot = defaultSessionDraftRepository.loadLatestDraftSnapshot;
+export const loadSessionSnapshotById = defaultSessionDraftRepository.loadSessionSnapshotById;
 export const completeSessionDraft = defaultSessionDraftRepository.completeSession;
 export const listCompletedSessionsForAnalysis = defaultSessionDraftRepository.listCompletedSessionsForAnalysis;

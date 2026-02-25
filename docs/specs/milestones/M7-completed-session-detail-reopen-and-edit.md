@@ -4,7 +4,7 @@
 
 - Milestone ID: `M7`
 - Title: Completed session detail, reopen, and edit
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-02` / `2026-03`
 
@@ -70,7 +70,7 @@ Ship a completed-session detail flow that lets a user open a completed session f
 
 - Completed history rows become two-action surfaces:
   - row body tap opens detail
-  - kebab menu remains delete/undelete only
+  - kebab menu contains secondary actions (`Edit`, `Reopen`, `Delete`/`Undelete`)
 - Completed-session detail screen should visually reuse the recorder information hierarchy:
   - session metadata at top
   - exercise cards and set rows beneath
@@ -108,7 +108,7 @@ Ship a completed-session detail flow that lets a user open a completed session f
 
 ## Task breakdown
 
-1. `docs/tasks/T-20260225-01-m7-completed-session-detail-route-and-read-only-ui.md` - add completed-row navigation, detail route shell, recorder-like read-only rendering, and UX contract. (`planned`)
+1. `docs/tasks/T-20260225-01-m7-completed-session-detail-route-and-read-only-ui.md` - add completed-row navigation, detail route shell, recorder-like read-only rendering, and UX contract. (`completed`)
 2. `docs/tasks/T-20260225-02-m7-completed-session-data-contracts-edit-and-reopen.md` - implement load-by-id session graph, completed-session edit persistence, reopen mutation, and single-active invariant tests. (`planned`)
 3. `docs/tasks/T-20260225-03-m7-mode-aware-recorder-completed-edit-flow.md` - add recorder/detail mode support, completed edit autosave, start/end time editing, validation, and save-return-to-list UX. (`planned`)
 4. `docs/tasks/T-20260225-04-m7-integration-tests-and-ux-evidence.md` - end-to-end/integration flow tests, regressions, and UX evidence closeout. (`planned`)

@@ -354,6 +354,10 @@ export function SessionListScreenShell({
     router.push('/session-recorder');
   };
 
+  const navigateToCompletedSessionDetail = (sessionId: string) => {
+    router.push(`/completed-session/${sessionId}`);
+  };
+
   const completeActiveSession = () => {
     if (dataClient && activeSession) {
       return (async () => {
@@ -424,6 +428,20 @@ export function SessionListScreenShell({
 
   const closeCompletedSessionMenu = () => {
     setCompletedSessionMenuVisible(false);
+  };
+
+  const openCompletedSessionEdit = () => {
+    if (!completedSessionMenuState) {
+      return;
+    }
+
+    const sessionId = completedSessionMenuState.sessionId;
+    closeCompletedSessionMenu();
+    router.push(`/completed-session/${sessionId}?intent=edit`);
+  };
+
+  const attemptCompletedSessionReopen = () => {
+    closeCompletedSessionMenu();
   };
 
   const applyCompletedSessionMenuAction = () => {
@@ -588,9 +606,14 @@ export function SessionListScreenShell({
                       deletingCompletedSessionId === session.id ? { opacity: deletingCompletedRowOpacity } : null,
                     ]}
                     testID={`completed-session-row-${session.id}`}>
-                    <View style={styles.sessionRowMain}>
+                    <Pressable
+                      accessibilityLabel={`Open completed session ${session.id}`}
+                      accessibilityRole="button"
+                      onPress={() => navigateToCompletedSessionDetail(session.id)}
+                      style={styles.sessionRowMainPressable}
+                      testID={`completed-session-open-button-${session.id}`}>
                       <SessionSummaryLine session={session} testIdPrefix={`session-summary-${session.id}`} />
-                    </View>
+                    </Pressable>
 
                     <Pressable
                       accessibilityLabel={`Open completed session actions ${session.id}`}
@@ -682,6 +705,24 @@ export function SessionListScreenShell({
               </Text>
 
               <Pressable
+                accessibilityLabel="Edit completed session"
+                accessibilityRole="button"
+                onPress={openCompletedSessionEdit}
+                style={[styles.modalActionButton, styles.modalNeutralButton]}
+                testID="completed-session-edit-menu-action-button">
+                <Text style={styles.modalNeutralButtonText}>Edit session</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityLabel="Reopen completed session"
+                accessibilityRole="button"
+                onPress={attemptCompletedSessionReopen}
+                style={[styles.modalActionButton, styles.modalNeutralButton]}
+                testID="completed-session-reopen-menu-action-button">
+                <Text style={styles.modalNeutralButtonText}>Reopen session</Text>
+              </Pressable>
+
+              <Pressable
                 accessibilityLabel="Delete completed session"
                 accessibilityRole="button"
                 onPress={() => {
@@ -701,6 +742,24 @@ export function SessionListScreenShell({
               <Text selectable style={styles.metaText}>
                 Restore this session to the default history list.
               </Text>
+
+              <Pressable
+                accessibilityLabel="Edit completed session"
+                accessibilityRole="button"
+                onPress={openCompletedSessionEdit}
+                style={[styles.modalActionButton, styles.modalNeutralButton]}
+                testID="completed-session-edit-menu-action-button">
+                <Text style={styles.modalNeutralButtonText}>Edit session</Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityLabel="Reopen completed session"
+                accessibilityRole="button"
+                onPress={attemptCompletedSessionReopen}
+                style={[styles.modalActionButton, styles.modalNeutralButton]}
+                testID="completed-session-reopen-menu-action-button">
+                <Text style={styles.modalNeutralButtonText}>Reopen session</Text>
+              </Pressable>
 
               <Pressable
                 accessibilityLabel="Undelete completed session"

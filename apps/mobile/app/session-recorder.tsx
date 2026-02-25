@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { SessionContentLayout } from '@/components/session-recorder/session-content-layout';
 import {
   SEEDED_EXERCISES,
   SEEDED_LOCATIONS,
@@ -923,81 +924,64 @@ export default function SessionRecorderScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content} testID="session-recorder-screen">
-      <View style={styles.section}>
-        <View style={styles.topRow}>
-          <View style={styles.rowField}>
-            <Text style={styles.label}>Date and Time</Text>
-            <View accessibilityLabel="Session date and time" style={styles.readOnlyInput}>
-              <Text style={styles.readOnlyInputText}>{state.session.dateTime}</Text>
-            </View>
+      <SessionContentLayout
+        dateTimeValue={
+          <View accessibilityLabel="Session date and time" style={styles.readOnlyInput}>
+            <Text style={styles.readOnlyInputText}>{state.session.dateTime}</Text>
           </View>
-
-          <View style={styles.rowField}>
-            <Text style={styles.label}>Gym</Text>
-            <Pressable style={styles.gymButton} onPress={openGymModal}>
-              <Text numberOfLines={1} style={styles.gymButtonText}>
-                {selectedGym ? selectedGym.name : 'Choose gym'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.exerciseList}>
-        {state.session.exercises.map((exercise, exerciseIndex) => (
-          <View key={exercise.id} style={styles.exerciseCard}>
-            <View style={styles.exerciseCardHeader}>
-              <Text numberOfLines={1} style={styles.exerciseCardTitle}>
-                {exercise.name || `Exercise ${exerciseIndex + 1}`}
-              </Text>
-              <Pressable
-                accessibilityLabel={`Exercise options ${exerciseIndex + 1}`}
-                style={styles.exerciseMenuButton}
-                onPress={() => openExerciseActionMenu(exercise.id)}>
-                <Text style={styles.exerciseMenuButtonText}>•••</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.setList}>
-              {exercise.sets.map((set, setIndex) => (
-                <View key={set.id} style={styles.setRow}>
-                  <TextInput
-                    accessibilityLabel={`Weight for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
-                    keyboardType="decimal-pad"
-                    placeholder="Weight"
-                    style={[styles.input, styles.setRowInput]}
-                    value={set.weight}
-                    onChangeText={(value) => updateSetField(exercise.id, set.id, 'weight', value)}
-                  />
-                  <TextInput
-                    accessibilityLabel={`Reps for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
-                    keyboardType="number-pad"
-                    placeholder="Reps"
-                    style={[styles.input, styles.setRowInput]}
-                    value={set.reps}
-                    onChangeText={(value) => updateSetField(exercise.id, set.id, 'reps', value)}
-                  />
-                  <Pressable
-                    accessibilityLabel={`Remove set ${setIndex + 1} from exercise ${exerciseIndex + 1}`}
-                    style={styles.setDeleteButton}
-                    onPress={() => removeSetFromExercise(exercise.id, set.id)}>
-                    <Text style={styles.setDeleteButtonText}>X</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-
+        }
+        gymValue={
+          <Pressable style={styles.gymButton} onPress={openGymModal}>
+            <Text numberOfLines={1} style={styles.gymButtonText}>
+              {selectedGym ? selectedGym.name : 'Choose gym'}
+            </Text>
+          </Pressable>
+        }
+        exercises={state.session.exercises}
+        renderSetRow={({ exercise, exerciseIndex, set, setIndex }) => (
+          <View style={styles.setRow}>
+            <TextInput
+              accessibilityLabel={`Weight for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+              keyboardType="decimal-pad"
+              placeholder="Weight"
+              style={[styles.input, styles.setRowInput]}
+              value={set.weight}
+              onChangeText={(value) => updateSetField(exercise.id, set.id, 'weight', value)}
+            />
+            <TextInput
+              accessibilityLabel={`Reps for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+              keyboardType="number-pad"
+              placeholder="Reps"
+              style={[styles.input, styles.setRowInput]}
+              value={set.reps}
+              onChangeText={(value) => updateSetField(exercise.id, set.id, 'reps', value)}
+            />
             <Pressable
-              accessibilityLabel={`Add set to exercise ${exerciseIndex + 1}`}
-              style={styles.addSetButton}
-              onPress={() => addSetToExercise(exercise.id)}>
-              <Text style={styles.primaryActionButtonText}>Add set</Text>
+              accessibilityLabel={`Remove set ${setIndex + 1} from exercise ${exerciseIndex + 1}`}
+              style={styles.setDeleteButton}
+              onPress={() => removeSetFromExercise(exercise.id, set.id)}>
+              <Text style={styles.setDeleteButtonText}>X</Text>
             </Pressable>
           </View>
-        ))}
-
-        {state.session.exercises.length === 0 ? <Text style={styles.emptyText}>No exercises logged yet.</Text> : null}
-      </View>
+        )}
+        renderExerciseHeaderAction={({ exercise, exerciseIndex }) => (
+          <Pressable
+            accessibilityLabel={`Exercise options ${exerciseIndex + 1}`}
+            style={styles.exerciseMenuButton}
+            onPress={() => openExerciseActionMenu(exercise.id)}>
+            <Text style={styles.exerciseMenuButtonText}>•••</Text>
+          </Pressable>
+        )}
+        renderExerciseFooter={({ exercise, exerciseIndex }) => (
+          <Pressable
+            accessibilityLabel={`Add set to exercise ${exerciseIndex + 1}`}
+            style={styles.addSetButton}
+            onPress={() => addSetToExercise(exercise.id)}>
+            <Text style={styles.primaryActionButtonText}>Add set</Text>
+          </Pressable>
+        )}
+        renderEmptyState={(text) => <Text style={styles.emptyText}>{text}</Text>}
+      />
 
       <Pressable
         accessibilityLabel="Log new exercise"

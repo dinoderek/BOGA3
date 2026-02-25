@@ -9,6 +9,11 @@ export type UpsertLocalGymInput = {
   now?: Date;
 };
 
+export type LocalGymLookupRecord = {
+  id: string;
+  name: string;
+};
+
 export const upsertLocalGym = async (input: UpsertLocalGymInput) => {
   const database = await bootstrapLocalDataLayer();
   const now = input.now ?? new Date();
@@ -38,4 +43,10 @@ export const upsertLocalGym = async (input: UpsertLocalGymInput) => {
       })
       .run();
   });
+};
+
+export const loadLocalGymById = async (gymId: string): Promise<LocalGymLookupRecord | null> => {
+  const database = await bootstrapLocalDataLayer();
+  const row = database.select({ id: gyms.id, name: gyms.name }).from(gyms).where(eq(gyms.id, gymId)).get();
+  return row ?? null;
 };

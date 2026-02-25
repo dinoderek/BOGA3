@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260225-01`
 - Title: M7 completed-session detail route and recorder-like read-only UI (reuse-first shell)
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-25`
 - Session interaction mode: `interactive (default)`
@@ -146,11 +146,31 @@ Add a completed-session detail route reachable from completed session rows and i
 - Manual verification summary (required when CI is absent/partial):
   - Summarize local manual checks for row tap vs menu tap behavior and detail screen readability on at least one small-phone viewport.
 
+Evidence captured this session:
+- Test evidence:
+  - `apps/mobile/app/__tests__/session-list-screen.test.tsx` covers completed-row body navigation to detail and verifies kebab-menu tap opens `Edit session`, `Reopen session`, and `Delete session` without triggering navigation.
+  - `apps/mobile/app/__tests__/completed-session-detail-screen.test.tsx` covers detail route loading, success (read-only content/actions rendered), empty state, and error state.
+- Contract traceability:
+  - Read-only detail reuses extracted session metadata/exercise/set layout via `apps/mobile/components/session-recorder/session-content-layout.tsx`, which is also consumed by `apps/mobile/app/session-recorder.tsx` to avoid duplicating the full content tree.
+- Visual/manual evidence:
+  - Automated render/state tests were captured in this task; manual screenshots and on-device visual checks are deferred to `T-20260225-04` (integration/UX evidence closeout task).
+
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
 - What changed:
+  - Added completed-session detail route shell at `apps/mobile/app/completed-session/[sessionId].tsx` with a mockable data-client seam, loading/error/empty states, recorder-like read-only rendering, and visible `Edit session` / `Reopen session` / `Delete` actions.
+  - Extracted shared session presentation structure into `apps/mobile/components/session-recorder/session-content-layout.tsx` and updated `apps/mobile/app/session-recorder.tsx` to use it (metadata + exercise/set card scaffolding reuse).
+  - Updated `apps/mobile/app/session-list.tsx` so completed row body taps navigate to the detail route, while kebab menu taps remain separate and now include `Edit`, `Reopen`, and `Delete`/`Undelete` actions.
+  - Added/updated route-level tests for completed-row navigation/menu separation and detail-screen loading/success/error/empty rendering.
 - What tests ran:
+  - `npm test -- --runInBand app/__tests__/session-list-screen.test.tsx app/__tests__/completed-session-detail-screen.test.tsx` (from `apps/mobile`)
+  - `npm run lint` (from `apps/mobile`)
+  - `npm run typecheck` (from `apps/mobile`)
+  - `npm run test -- --runInBand` (from `apps/mobile`)
 - What remains:
+  - Task 02: replace fixture-backed completed-detail data seam with repository-backed load-by-id + reopen/edit contracts.
+  - Task 03: wire actual completed-session edit and reopen behaviors.
+  - Task 04: collect integration/UX evidence (screenshots/manual flow verification) and end-to-end regression coverage.
 
 ## Status update checklist (mandatory at closeout)
 

@@ -385,6 +385,21 @@ describe('SessionListScreenShell', () => {
     jest.useRealTimers();
   });
 
+  it('navigates from completed row body and keeps menu interaction separate', () => {
+    render(<SessionListScreenShell initialSessions={NO_ACTIVE_SESSIONS} />);
+
+    fireEvent.press(screen.getByTestId('completed-session-open-button-completed-visible'));
+    expect(mockPush).toHaveBeenCalledWith('/completed-session/completed-visible');
+
+    mockPush.mockReset();
+    fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(screen.getByText('Edit session')).toBeTruthy();
+    expect(screen.getByText('Reopen session')).toBeTruthy();
+    expect(screen.getByText('Delete session')).toBeTruthy();
+  });
+
   it('shows the empty state when there are no active or completed sessions', () => {
     render(<SessionListScreenShell initialSessions={[]} />);
 

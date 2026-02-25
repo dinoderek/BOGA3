@@ -8,6 +8,7 @@ import {
 const createMockStore = (): jest.Mocked<SessionDraftStore> => ({
   saveDraftGraph: jest.fn(),
   loadLatestDraftGraph: jest.fn(),
+  loadSessionGraphById: jest.fn(),
   loadSessionById: jest.fn(),
   completeSession: jest.fn(),
   listCompletedSessions: jest.fn(),

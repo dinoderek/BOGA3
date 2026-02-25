@@ -17,7 +17,7 @@ export {
   type SessionListSummary,
   type SetSessionDeletedStateOptions,
 } from './session-list';
-export { upsertLocalGym, type UpsertLocalGymInput } from './local-gyms';
+export { loadLocalGymById, upsertLocalGym, type LocalGymLookupRecord, type UpsertLocalGymInput } from './local-gyms';
 export {
   calculateSessionDurationSec,
   completeSessionDraft,
@@ -25,6 +25,7 @@ export {
   createSessionDraftRepository,
   listCompletedSessionsForAnalysis,
   loadLatestSessionDraftSnapshot,
+  loadSessionSnapshotById,
   persistSessionDraftSnapshot,
   type CompleteSessionOptions,
   type CompleteSessionResult,
@@ -39,6 +40,7 @@ export {
   type SessionDraftSnapshot,
   type SessionDraftStatus,
   type SessionDraftStore,
+  type SessionGraphSnapshot,
   type SessionPersistenceRecord,
 } from './session-drafts';
 export { insertSmokeRecord, listSmokeRecords, type SmokeRecord } from './smoke-records';
