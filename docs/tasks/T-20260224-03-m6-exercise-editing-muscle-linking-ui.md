@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260224-03`
 - Title: M6 exercise editing UI for linking muscle groups and weights
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-24`
 - Session interaction mode: `interactive (default)`
@@ -105,15 +105,35 @@ Implement exercise editing support that allows user-editable exercises to link o
 
 ## Evidence (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
-- UI flow evidence (screenshots/test trace summary) for add/edit/remove muscle links.
-- Validation behavior evidence (duplicate link and missing-link cases).
-- Test/gate results summary.
+- UI flow evidence (test trace summary):
+  - `app/__tests__/exercise-catalog-screen.test.tsx` covers successful custom exercise creation with muscle-link add + weight entry + save persistence call assertions.
+  - `app/__tests__/exercise-catalog-screen.test.tsx` covers editing an existing exercise mapping (weight update + link removal) and successful save.
+  - No manual screenshots were captured in this session; interaction coverage is provided via React Native Testing Library assertions/traces.
+- Validation behavior evidence (duplicate link and missing-link cases):
+  - Duplicate muscle links are prevented in the UI by disabling already-added taxonomy chips and verified by asserting only one link row is created.
+  - Missing-link validation blocks save with `Add at least one linked muscle before saving.` and no repository save call.
+  - Invalid row weight validation blocks save with a row-specific error (`> 0` and `<= 10` local editor guard).
+- Test/gate results summary:
+  - Targeted: `npm test -- --runInBand app/__tests__/exercise-catalog-repository.test.ts app/__tests__/exercise-catalog-screen.test.tsx` (pass)
+  - `npm run lint` (pass)
+  - `npm run typecheck` (pass)
+  - `npm test -- --runInBand` (pass)
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
 - What changed:
+  - Added a new local exercise-catalog repository module (`apps/mobile/src/data/exercise-catalog.ts`) that lists seeded/system muscle groups, lists exercise definitions with weighted muscle mappings, and saves exercise definitions by replacing their mapping set transactionally in the local SQLite/Drizzle store.
+  - Added a dedicated exercise editing UI route (`apps/mobile/app/exercise-catalog.tsx`) for creating/editing exercises with muscle links using the system taxonomy labels, inline weight editing (`decimal-pad`), and per-link removal.
+  - Implemented editor validation for required exercise name, required at least one linked muscle, duplicate muscle-link prevention/guarding, and valid numeric weight range (`> 0` and `<= 10` local UI guard).
+  - Registered the new route in the app stack (`apps/mobile/app/_layout.tsx`) with the title `Exercise Catalog`.
+  - Added targeted repository and UI interaction tests for add/edit/remove/validation flows (`exercise-catalog-repository.test.ts`, `exercise-catalog-screen.test.tsx`).
 - What tests ran:
+  - `npm test -- --runInBand app/__tests__/exercise-catalog-repository.test.ts app/__tests__/exercise-catalog-screen.test.tsx`
+  - `npm run lint`
+  - `npm run typecheck`
+  - `npm test -- --runInBand`
 - What remains:
+  - M6 remains open for `T-20260224-04` (session-recorder exercise management integration) and `T-20260224-05` (historical mapping behavior options/decision task).
 
 ## Status update checklist (mandatory at closeout)
 

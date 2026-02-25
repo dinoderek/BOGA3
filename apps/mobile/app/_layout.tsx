@@ -16,6 +16,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ title: 'Sessions' }} />
         <Stack.Screen name="session-list" options={{ title: 'Sessions' }} />
         <Stack.Screen name="session-recorder" options={{ title: 'Session Recorder' }} />
+        <Stack.Screen name="exercise-catalog" options={{ title: 'Exercise Catalog' }} />
       </Stack>
       <StatusBar style="auto" />
     </>

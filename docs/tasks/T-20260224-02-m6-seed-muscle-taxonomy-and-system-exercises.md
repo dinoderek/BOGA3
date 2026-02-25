@@ -114,7 +114,7 @@ Define and seed the M6 non-editable muscle taxonomy plus an initial set of syste
   - `npm run typecheck` (pass)
   - `npm test -- --runInBand` (pass)
 - What remains:
-  - M6 remains open for exercise editing muscle-linking UI (`T-20260224-03`) and the historical mapping behavior decision/options task (`T-20260224-04`).
+  - M6 remains open for exercise editing muscle-linking UI (`T-20260224-03`), session-recorder exercise management integration (`T-20260224-04`), and the historical mapping behavior decision/options task (`T-20260224-05`).
 
 ## Status update checklist (mandatory at closeout)
 
