@@ -19,7 +19,7 @@
 
 ## Objective
 
-Implement `Supabase`-backed API methods to read/write user-scoped gym and session-tracking state (`gyms`, `sessions`, `session_exercises`, `exercise_sets`) with authentication and authorization enforced.
+Implement `Supabase`-backed API methods to read/write user-scoped gym and session-tracking state (`gyms`, `sessions`, `session_exercises`, `exercise_sets`) with authentication and authorization enforced, and validate the chosen API surface with thorough local contract/integration coverage.
 
 ## Scope
 
@@ -40,6 +40,10 @@ Implement `Supabase`-backed API methods to read/write user-scoped gym and sessio
   - validation failures
   - unauthorized requests
   - cross-user access denial
+- Add test coverage appropriate to the chosen implementation surface:
+  - unit tests for custom runtime logic/validation (for example `Edge Functions`) when present
+  - local Supabase integration/contract tests for real auth + `RLS` behavior (required)
+  - cross-stack mobile+backend `E2E` implementation is not required in this task, but contracts/test fixtures should support the documented `E2E` strategy
 - Document endpoint catalog and example payloads, including mapping from provider-neutral contract to Supabase implementation artifacts (Edge Function names, RPC names, or table routes).
 
 ### Out of scope
@@ -55,8 +59,9 @@ Implement `Supabase`-backed API methods to read/write user-scoped gym and sessio
 3. Every endpoint/method enforces user ownership semantics via backend-enforced controls (`RLS` and/or server-side checks).
 4. Unauthorized requests are rejected with deterministic error responses.
 5. Cross-user access attempts are rejected and test-covered.
-6. Endpoint contracts are documented and stable enough for a dedicated FE integration milestone.
-7. Backend quality gates and contract tests pass.
+6. Test coverage reflects the chosen API surface (unit coverage for custom code where present, plus required local Supabase integration/contract coverage).
+7. Endpoint contracts are documented and stable enough for a dedicated FE integration milestone.
+8. Backend quality gates and contract tests pass.
 
 ## Testing and verification approach
 
@@ -66,8 +71,10 @@ Implement `Supabase`-backed API methods to read/write user-scoped gym and sessio
   - `npm run test`
   - `supabase db reset` (or selected local migration/bootstrap command path) when schema/API contract fixtures change
   - targeted API contract test suite command(s) (to be finalized during implementation)
+  - surface-specific fast tests (for example `deno test` for Edge Functions) when custom runtime code is introduced
 - Notes:
   - Include at least one end-to-end API flow per entity family and one negative ownership test per family.
+  - If the chosen surface is mostly `PostgREST/RPC` with minimal custom code, compensate for limited unit-test surface with stronger contract/integration and `RLS` coverage.
   - Tests must run primarily against local Supabase runtime to preserve the local-fidelity requirement from `T-20260220-07`.
 
 ## Implementation notes
@@ -91,6 +98,7 @@ Implement `Supabase`-backed API methods to read/write user-scoped gym and sessio
 - `npm run test` (from applicable backend/function workspace)
 - `supabase db reset` (or selected local migration/bootstrap command path) when schema/API fixtures changed
 - API contract test suite command(s) (from applicable backend/function workspace)
+- Surface-specific fast test command(s) for introduced custom runtime code (if applicable)
 
 ## Evidence
 

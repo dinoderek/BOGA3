@@ -12,6 +12,7 @@ Define the minimum scaffolding required before feature development, and standard
    - `docs/specs/00-mvp-deliverables.md`
    - `docs/specs/03-technical-architecture.md`
    - `docs/specs/06-testing-strategy.md`
+   - `docs/specs/09-project-structure.md`
    - `docs/specs/08-ux-delivery-standard.md` (required for UI tasks)
 2. This playbook exists and is followed.
 3. A milestone spec exists for the active milestone.
@@ -23,6 +24,7 @@ Define the minimum scaffolding required before feature development, and standard
    - `docs/specs/README.md`
    - `docs/specs/03-technical-architecture.md`
    - `docs/specs/06-testing-strategy.md`
+   - `docs/specs/09-project-structure.md`
 2. MVP level:
    - `docs/specs/00-mvp-deliverables.md`
 3. Milestone level:
@@ -44,6 +46,10 @@ Rule: each lower level may add detail but must not override or relax parent-leve
    - fill task `Completion note`
    - update milestone `Status` and task breakdown item states
    - update decision log entries when decisions changed
+6. If a task introduces a new runtime, deployment surface, or test layer:
+   - update `docs/specs/06-testing-strategy.md`,
+   - update this playbook if execution/verification workflow changes,
+   - update relevant template(s) if future tasks need new required fields or checks.
 
 ## Task execution protocol (quality-first)
 
@@ -67,6 +73,7 @@ Use this sequence for every task card:
      - `npm run lint`
      - `npm run typecheck`
      - `npm run test`
+     - replace/add runtime-specific gates when the task is not Node-only (for example `supabase` CLI checks, `deno test`, `pgTAP`, Maestro smoke commands)
    - Run task-specific checks if defined.
    - Rule: do not defer all verification to the end; apply targeted checks during development and full gates at closeout.
 6. Closeout:
@@ -94,7 +101,8 @@ Provide these references at execution start:
 2. Active milestone spec
 3. Active task card
 4. Any changed parent specs
-5. `docs/specs/08-ux-delivery-standard.md` (for UI tasks)
+5. `docs/specs/09-project-structure.md` (always load for context; update only when task changes paths/layout/conventions)
+6. `docs/specs/08-ux-delivery-standard.md` (for UI tasks)
 
 ## Task card rules
 
@@ -107,6 +115,9 @@ Provide these references at execution start:
    - UX contract with key user flows (for UI tasks)
    - Acceptance criteria
    - Testing and verification approach (commands/checks)
+   - test-layer ownership and execution triggers for non-trivial backend/deployment/E2E work
+   - CI/manual verification posture when CI is absent or partial
+   - project-structure impact (new paths/conventions or explicit no-structure-change decision)
    - Allowed files/areas
 3. Task card must end with a completion note:
    - What changed
@@ -128,17 +139,27 @@ Before ending any implementation session, AI must update both:
    - task breakdown progress for touched tasks
 
 Rule: do not consider a task done if code is complete but status fields were not updated.
+Rule: if a task makes significant project-structure changes (for example adds/moves/removes top-level folders, moves canonical test locations, introduces a new workspace, or changes path conventions), update `docs/specs/09-project-structure.md` in the same session and summarize the change in the task completion note.
 
 ## Automated feedback loops (before human review)
 
 1. Local verification gates must pass (`lint`, `typecheck`, `test`).
-2. CI verification gates must pass on the branch/PR.
+2. CI verification gates must pass on the branch/PR, if CI is configured.
 3. Run an AI self-review pass against:
    - Acceptance criteria coverage
    - Test completeness
    - Offline requirements
    - Security/data access constraints
 4. Human review starts only after loops above are green.
+
+## Current CI posture (2026-02-25)
+
+1. No CI pipeline is currently configured for this repo.
+2. Until CI exists:
+   - local verification gates are mandatory,
+   - task cards must clearly call out manual/deferred hosted checks,
+   - completion notes must summarize manual verification evidence.
+3. When CI is introduced, update this playbook and `docs/specs/06-testing-strategy.md` in the same task/session to reflect the new gate ownership.
 
 ## Stop-ship conditions
 
@@ -162,4 +183,5 @@ Provide clear information to the human about the failure, what you tried to fix 
 ## Change discipline
 
 1. If implementation changes architecture/testing behavior, update the relevant spec in the same session.
-2. Record major decisions using `Date / Decision / Reason / Impact`.
+2. If implementation makes significant project-structure changes, update `docs/specs/09-project-structure.md` in the same session.
+3. Record major decisions using `Date / Decision / Reason / Impact`.

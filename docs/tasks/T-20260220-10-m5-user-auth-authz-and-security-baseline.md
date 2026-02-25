@@ -40,6 +40,7 @@ Implement MVP backend user identity model on `Supabase`, a controlled user-provi
   - no client exposure of `service role` credentials
   - explicit use-boundary documentation for `anon` vs `service role` vs server-only secrets
 - Implement contract tests for auth success/failure and cross-user access denial.
+- Use deterministic local test fixtures/baselines defined in `T-20260220-08` (for example `user_a`, `user_b`) for repeatable ownership-denial tests.
 
 ### Out of scope
 
@@ -65,8 +66,10 @@ Implement MVP backend user identity model on `Supabase`, a controlled user-provi
   - `npm run test`
   - `supabase db reset` (or selected local migration/bootstrap command path) before auth/authz contract test run when schema/policies change
   - targeted auth/authz contract tests (suite naming to be defined in-session)
+  - `DB`-level policy/function test command (for example `pgTAP` or equivalent SQL-level test path) when policies/functions/constraints change
 - Notes:
   - Include at least one explicit cross-user access-denied test per protected resource family.
+  - Prefer real `RLS` enforcement verification against local Supabase runtime; handler-only mocks are insufficient for ownership guarantees.
   - Tests should exercise the strongest available enforcement boundary (`RLS` and/or server-only checks), not only handler-level guards.
 
 ## Implementation notes
@@ -89,6 +92,7 @@ Implement MVP backend user identity model on `Supabase`, a controlled user-provi
 - `npm run test` (from applicable backend/function workspace)
 - `supabase db reset` (or selected local migration/bootstrap command path) when schema/policies changed
 - Auth/authz contract test suite command (from applicable backend/function workspace)
+- `DB`-level policy/function test command when policies/functions/constraints changed
 
 ## Evidence
 

@@ -42,6 +42,7 @@ Define and document the `Supabase` deployment path from free tier to paid scale 
 - Define backup/restore and rollback expectations for hosted Supabase environments, including free-tier limitations and manual backup/restore procedures if managed backups are unavailable.
 - Define scale-up triggers and migration plan from free tier to paid tier.
 - Add deployment checklist suitable for repeatable release execution.
+- Define hosted/deployed smoke validation command path and manual execution cadence while CI is not yet configured.
 
 ### Out of scope
 
@@ -55,7 +56,8 @@ Define and document the `Supabase` deployment path from free tier to paid scale 
 3. Rollback and backup/restore expectations are documented and testable, including what is manual vs managed on the selected plan tier.
 4. Free-tier limits, paid-upgrade trigger conditions, and spend guardrails are explicit.
 5. Strategy documents how spending is constrained (zero-spend mode or predefined capped spend path) without relying on uncapped auto-spend, and includes Supabase-specific caveats/operator controls.
-6. The strategy is referenced by milestone docs and is usable by follow-up implementation tasks.
+6. Hosted/deployed smoke validation steps are documented (including what is manual now because CI is absent and what should move into CI later).
+7. The strategy is referenced by milestone docs and is usable by follow-up implementation tasks.
 
 ## Testing and verification approach
 
@@ -64,6 +66,7 @@ Define and document the `Supabase` deployment path from free tier to paid scale 
   - command sanity check for any deployment helper script included in task scope
 - Notes:
   - If automation/scripts are added, include dry-run evidence.
+  - This task owns the hosted/deployed smoke validation command path that `T-20260220-08` only defines at an ownership/expectation level.
 
 ## Implementation notes
 
@@ -88,6 +91,7 @@ Define and document the `Supabase` deployment path from free tier to paid scale 
 - Spend guardrail summary.
 - Supabase-specific operator controls summary (including billing/spend-cap caveats and manual guardrails).
 - Rollback and backup policy summary.
+- Hosted/deployed smoke validation path summary (manual cadence while CI is absent).
 
 ## Completion note
 

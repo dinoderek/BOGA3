@@ -12,6 +12,7 @@
 - MVP deliverables: `docs/specs/00-mvp-deliverables.md`
 - Architecture: `docs/specs/03-technical-architecture.md`
 - Testing strategy: `docs/specs/06-testing-strategy.md`
+- Project structure: `docs/specs/09-project-structure.md`
 
 ## Milestone objective
 
@@ -30,6 +31,8 @@ Describe the outcome this milestone must achieve.
 1. 
 2. 
 3. 
+
+Rule (when applicable): if the milestone introduces a new runtime, deployment surface, or test layer, include a deliverable/task to update `docs/specs/04-ai-development-playbook.md`, `docs/specs/06-testing-strategy.md`, and relevant template(s).
 
 ## Acceptance criteria
 
