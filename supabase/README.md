@@ -88,6 +88,68 @@ Current coverage:
 - Edge health endpoint smoke
 - deterministic fixture seed smoke
 
+## M5 auth/authz baseline (implemented in `T-20260220-10`)
+
+Current auth posture for backend/API work:
+
+- `Supabase Auth` + Postgres `RLS`
+- `email + password` sign-in for provisioned users
+- public self-signup disabled (`[auth].enable_signup = false`)
+- email provider kept enabled for password logins (`[auth.email].enable_signup = true`)
+- user-owned sync tables live in `app_public` and are protected by `RLS`
+- `gyms`, `sessions`, `session_exercises`, and `exercise_sets` are user-private in MVP
+
+### Key boundaries (must keep)
+
+- `anon` key is client-safe and used with user JWTs for normal app data access.
+- `service_role` is server/admin only (provisioning, maintenance, tightly scoped backend tasks).
+- Never expose `service_role` to mobile/client code.
+
+## Auth provisioning (controlled users, no self-signup)
+
+Provision deterministic local auth fixtures (`user_a`, `user_b`) after local reset:
+
+```bash
+./supabase/scripts/auth-provision-local-fixtures.sh
+```
+
+Provision or update one user (local or any environment where `API_URL` + `SERVICE_ROLE_KEY` are exported):
+
+```bash
+./supabase/scripts/auth-provision-user.sh \
+  --email user@example.test \
+  --password 'StrongPassword!234'
+```
+
+Notes:
+
+- Uses the Supabase Auth Admin API (service-role only).
+- Local fixture provisioning also syncs `public.dev_fixture_principals` aliases (`user_a`, `user_b`) to the real local auth user UUIDs for deterministic ownership tests.
+
+## Auth/authz contract tests (local Supabase)
+
+Run the M5 auth/authz baseline suite:
+
+```bash
+./supabase/scripts/test-auth-authz.sh
+```
+
+Coverage includes:
+
+- password auth success/failure
+- self-signup disabled path
+- unauthenticated access denial on protected tables
+- cross-user read/update denial (`RLS`)
+- owner spoofing denial
+- cross-user parent/child ownership mismatch rejection (DB constraint path)
+
+## Accessing `app_public` via REST (local/manual testing)
+
+`app_public` is exposed in the local API config. For direct `PostgREST` calls, send schema profile headers:
+
+- `Accept-Profile: app_public`
+- `Content-Profile: app_public` (writes)
+
 ## Fixture baseline (deterministic)
 
 `supabase/seed.sql` seeds `public.dev_fixture_principals` with named fixtures used by follow-on ownership/authz tests:

@@ -113,7 +113,7 @@ Decide and lock the backend platform for MVP, stand up a minimal backend that ru
 1. `docs/tasks/T-20260220-07-m5-backend-stack-decision-and-architecture-update.md` - evaluate backend options and finalize architecture decision. (`completed`)
 2. `docs/tasks/T-20260220-08-m5-minimal-backend-local-runtime.md` - scaffold local backend runtime, reset/seed baseline, and backend testing conventions. (`completed`)
 3. `docs/tasks/T-20260220-09-m5-backend-deployment-strategy-and-environments.md` - define deployment strategy, environments, and operational safeguards. (`planned`)
-4. `docs/tasks/T-20260220-10-m5-user-auth-authz-and-security-baseline.md` - implement user model, auth/authz rules, and backend hardening baseline. (`planned`)
+4. `docs/tasks/T-20260220-10-m5-user-auth-authz-and-security-baseline.md` - implement user model, auth/authz rules, and backend hardening baseline. (`completed`)
 5. `docs/tasks/T-20260220-11-m5-sync-api-for-session-domain.md` - implement authenticated sync API for session domain entities with contract tests. (`planned`)
 6. `docs/tasks/T-20260225-12-m5-quality-gate-command-and-testing-checklist-rationalization.md` - define/implement a standard fast local quality gate and simplify task verification checklists. (`planned`)
 
@@ -142,15 +142,22 @@ Decide and lock the backend platform for MVP, stand up a minimal backend that ru
 - Reason: `Supabase` best satisfies the combined M5 constraints of local runtime requirement, auth/authz delivery speed, SQL/data portability, and high-fidelity local testing.
 - Impact: Remaining M5 tasks can proceed without reopening provider selection; fallback only activates if a concrete blocking issue is found during implementation.
 
+- Date: 2026-02-25
+- Decision: M5 auth/authz baseline uses `email + password` sign-in for admin-provisioned users only, direct `owner_user_id -> auth.users(id)` linkage, and table-level `RLS` with redundant ownership columns on all sync-domain tables.
+- Reason: Fastest path to secure ownership enforcement and local-fidelity auth/RLS testing while deferring profile-table and FE-auth complexity.
+- Impact: `T-20260220-11` can implement sync APIs against pre-secured user-owned tables in `app_public` without reopening the ownership model.
+
 ## Completion note
 
 - What changed:
   - `T-20260220-08` completed: added `supabase/` local runtime scaffold (migration + deterministic seed + health Edge Function), backend-local smoke wrappers/tests, and backend runbook/env examples.
   - Updated project/testing/process docs and templates for Supabase backend local verification conventions, hosted-smoke ownership documentation, and `supabase/` project structure placement.
+  - `T-20260220-10` completed: added `Supabase Auth` + `RLS` security baseline for user-owned sync tables in `app_public`, controlled user provisioning scripts, and local auth/authz contract tests (including auth failure, unauth denial, and cross-user denial coverage).
 - Verification summary:
   - Local Supabase runtime started successfully (port-offset config `554xx` used to avoid a host collision on default `54322`).
   - `supabase db reset` (via wrapper) reapplied the baseline migration and deterministic seed.
   - Health endpoint and seed fixture smokes passed against the local Supabase API surface.
   - Combined backend-local fast smoke suite passed (`./supabase/scripts/test-fast.sh`).
+  - Auth/authz local contract suite passed (`./supabase/scripts/test-auth-authz.sh`) including password auth success/failure, self-signup disabled checks, unauthenticated denial, and cross-user `RLS`/constraint denial paths.
 - What remains:
-  - Milestone status remains `in_progress`; tasks `T-20260220-09`, `T-20260220-10`, `T-20260220-11`, and `T-20260225-12` are still pending.
+  - Milestone status remains `in_progress`; tasks `T-20260220-09`, `T-20260220-11`, and `T-20260225-12` are still pending.

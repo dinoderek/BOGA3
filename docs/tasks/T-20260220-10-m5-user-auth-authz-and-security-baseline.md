@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260220-10`
 - Title: M5 user concept, authentication, authorization, and security baseline
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
@@ -106,5 +106,30 @@ Implement MVP backend user identity model on `Supabase`, a controlled user-provi
 ## Completion note
 
 - What changed:
+- Added `Supabase` auth/authz baseline migration in `supabase/migrations/20260225143000_m5_auth_authz_security_baseline.sql`:
+  - user-owned sync-domain tables in `app_public` (`gyms`, `sessions`, `session_exercises`, `exercise_sets`)
+  - redundant `owner_user_id -> auth.users(id)` ownership linkage on all protected tables
+  - composite ownership FKs to prevent cross-user parent/child linkage
+  - `RLS` enabled on all protected tables with owner-only CRUD policies for `authenticated`
+  - owner immutability trigger for protected tables
+- Updated `supabase/config.toml` auth posture for M5:
+  - `app_public` exposed in local API schemas
+  - global self-signup disabled (`[auth].enable_signup = false`)
+  - email provider login preserved for provisioned users (`[auth.email].enable_signup = true`)
+- Added controlled provisioning scripts (service-role only):
+  - `supabase/scripts/auth-provision-user.sh`
+  - `supabase/scripts/auth-provision-local-fixtures.sh`
+  - deterministic fixture constants in `supabase/scripts/auth-fixture-constants.sh`
+- Added local auth/authz contract test suite:
+  - `supabase/tests/auth-authz-contract.sh`
+  - `supabase/scripts/test-auth-authz.sh`
+- Updated `supabase/README.md` with auth posture, provisioning commands, and auth/authz test runbook.
 - What tests ran:
+- `./supabase/scripts/test-auth-authz.sh`
+- `./supabase/scripts/db-lint-local.sh`
+- `./supabase/scripts/smoke-seed.sh`
+- `npm run lint` / `npm run typecheck` / `npm run test`: `N/A` (no backend Node/TS workspace introduced; runtime-specific Supabase gates used)
 - What remains:
+- `T-20260220-09`: hosted deployment strategy/environment/secrets and hosted smoke ownership/commands.
+- `T-20260220-11`: authenticated sync API contract implementation for session domain entities.
+- `T-20260225-12`: repo-level quality-gate command rationalization.
