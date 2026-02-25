@@ -67,9 +67,9 @@ describe('IndexScreen', () => {
     render(<IndexScreen />);
 
     await waitFor(() => {
-      expect(screen.getByText('Active Session')).toBeTruthy();
+      expect(screen.getByText('Active')).toBeTruthy();
     });
-    expect(screen.getByText('Completed History')).toBeTruthy();
+    expect(screen.getByText('History')).toBeTruthy();
     expect(screen.getByTestId('resume-active-session-button')).toBeTruthy();
     expect(screen.getByTestId('complete-active-session-button')).toBeTruthy();
     expect(screen.queryByText('Milestone 0 foundation ready')).toBeNull();

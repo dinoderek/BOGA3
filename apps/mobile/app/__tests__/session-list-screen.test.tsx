@@ -202,7 +202,7 @@ describe('SessionListScreenShell', () => {
     });
     expect(screen.getByTestId('session-summary-active-stale-sets').props.children).toBe('0 sets');
     expect(screen.getByTestId('session-summary-active-stale-exercises').props.children).toBe('0 exercises');
-    expect(screen.getByTestId('session-summary-active-stale-gym').props.children).toBe('No gym');
+    expect(screen.queryByTestId('session-summary-active-stale-gym')).toBeNull();
 
     phase = 'updated';
     act(() => {
@@ -285,7 +285,7 @@ describe('SessionListScreenShell', () => {
 
     expect(screen.getByTestId('session-list-pinned-top-region')).toBeTruthy();
     expect(screen.getByTestId('completed-history-scroll')).toBeTruthy();
-    expect(screen.queryByText('Active Session')).toBeNull();
+    expect(screen.queryByText('Active')).toBeNull();
     expect(screen.getByText('Start Session')).toBeTruthy();
     expect(screen.queryByText('Resume Active')).toBeNull();
     expect(screen.queryByText('Close Active')).toBeNull();
@@ -312,7 +312,7 @@ describe('SessionListScreenShell', () => {
   it('shows no completed-history state while an active session exists', () => {
     render(<SessionListScreenShell initialSessions={ACTIVE_ONLY_SESSIONS} />);
 
-    expect(screen.getByText('Active Session')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
     expect(screen.getByTestId('resume-active-session-button')).toBeTruthy();
     expect(screen.getByText('No completed sessions')).toBeTruthy();
     expect(screen.queryByTestId('session-list-empty-state')).toBeNull();
@@ -332,7 +332,7 @@ describe('SessionListScreenShell', () => {
     render(<SessionListScreenShell />);
 
     fireEvent.press(screen.getByTestId('active-session-menu-button'));
-    expect(screen.getByText('Discard session')).toBeTruthy();
+    expect(screen.getByText('Delete session')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('discard-active-session-button'));
 

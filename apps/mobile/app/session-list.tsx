@@ -117,8 +117,9 @@ function formatExerciseCount(exerciseCount: number): string {
   return `${exerciseCount} ${exerciseCount === 1 ? 'exercise' : 'exercises'}`;
 }
 
-function formatGymToken(gymName: string | null): string {
-  return gymName?.trim() ? gymName : 'No gym';
+function formatLocationLabel(gymName: string | null): string | null {
+  const trimmedGymName = gymName?.trim();
+  return trimmedGymName ? trimmedGymName : null;
 }
 
 const mapRepositorySummaryToListItem = (
@@ -190,36 +191,60 @@ function SessionSummaryLine({
           Math.max(0, Math.floor((nowMs - new Date(session.startedAt).getTime()) / 1000))
         )
       : session.durationDisplay || formatCompactDuration(session.durationSec);
+  const locationLabel = formatLocationLabel(session.gymName);
 
   return (
-    <View style={styles.summaryLine}>
-      <Text selectable numberOfLines={1} style={[styles.summaryToken, styles.summaryTokenPrimary]} testID={`${testIdPrefix}-start`}>
-        {formatDateTimeStamp(session.startedAt)}
-      </Text>
-      <Text selectable style={styles.summarySeparator}>
-        •
-      </Text>
-      <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-duration`}>
-        {durationLabel}
-      </Text>
-      <Text selectable style={styles.summarySeparator}>
-        •
-      </Text>
-      <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-sets`}>
-        {formatSetCount(session.setCount)}
-      </Text>
-      <Text selectable style={styles.summarySeparator}>
-        •
-      </Text>
-      <Text selectable style={styles.summaryToken} testID={`${testIdPrefix}-exercises`}>
-        {formatExerciseCount(session.exerciseCount)}
-      </Text>
-      <Text selectable style={styles.summarySeparator}>
-        •
-      </Text>
-      <Text selectable numberOfLines={1} style={styles.summaryToken} testID={`${testIdPrefix}-gym`}>
-        {formatGymToken(session.gymName)}
-      </Text>
+    <View style={styles.summaryLines}>
+      <View style={styles.summaryRow}>
+        <Text
+          selectable
+          numberOfLines={1}
+          style={[styles.summaryToken, styles.summaryTokenPrimary, styles.summaryTokenStrong]}
+          testID={`${testIdPrefix}-start`}>
+          {formatDateTimeStamp(session.startedAt)}
+        </Text>
+        <Text selectable style={styles.summarySeparator}>
+          •
+        </Text>
+        <Text selectable numberOfLines={1} style={[styles.summaryToken, styles.summaryTokenStrong]} testID={`${testIdPrefix}-duration`}>
+          {durationLabel}
+        </Text>
+        {locationLabel ? (
+          <>
+            <Text selectable style={styles.summarySeparator}>
+              •
+            </Text>
+            <Text selectable style={[styles.summaryToken, styles.summaryAtToken, styles.summaryTokenStrong]}>
+              @
+            </Text>
+            <Text
+              selectable
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={[styles.summaryToken, styles.summaryLocationToken, styles.summaryTokenStrong]}
+              testID={`${testIdPrefix}-gym`}>
+              {locationLabel}
+            </Text>
+          </>
+        ) : null}
+      </View>
+
+      <View style={styles.summaryRow}>
+        <Text selectable numberOfLines={1} style={[styles.summaryToken, styles.summaryTokenSecondary]} testID={`${testIdPrefix}-sets`}>
+          {formatSetCount(session.setCount)}
+        </Text>
+        <Text selectable style={styles.summarySeparator}>
+          •
+        </Text>
+        <Text
+          selectable
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.summaryToken, styles.summaryTokenSecondary, styles.summaryFlexibleToken]}
+          testID={`${testIdPrefix}-exercises`}>
+          {formatExerciseCount(session.exerciseCount)}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -510,7 +535,7 @@ export function SessionListScreenShell({
           ) : (
             <View style={styles.sectionBlock}>
               <Text selectable style={styles.sectionTitle}>
-                Active Session
+                Active
               </Text>
               <View style={[styles.sessionRow, styles.activeSessionRow]} testID={`active-session-row-${activeSession.id}`}>
                 <Pressable
@@ -557,7 +582,7 @@ export function SessionListScreenShell({
         <View style={styles.historyRegion}>
           <View style={styles.sectionHeaderRow}>
             <Text selectable style={styles.sectionTitle}>
-              Completed History
+              History
             </Text>
             <Pressable
               accessibilityLabel={showDeletedSessions ? 'Hide deleted sessions' : 'Show deleted sessions'}
@@ -661,22 +686,15 @@ export function SessionListScreenShell({
             testID="active-session-menu-overlay"
           />
           <View style={styles.modalPanel}>
-            <Text selectable style={styles.modalTitle}>
-              Active Session
-            </Text>
-            <Text selectable style={styles.metaText}>
-              Discard removes the in-progress session from the list.
-            </Text>
-
             <Pressable
-              accessibilityLabel="Discard active session"
+              accessibilityLabel="Delete active session"
               accessibilityRole="button"
               onPress={() => {
                 void discardActiveSession();
               }}
               style={[styles.modalActionButton, styles.modalDangerButton]}
               testID="discard-active-session-button">
-              <Text style={styles.modalDangerButtonText}>Discard session</Text>
+              <Text style={styles.modalDangerButtonText}>Delete session</Text>
             </Pressable>
           </View>
         </View>
@@ -697,13 +715,6 @@ export function SessionListScreenShell({
           />
           {completedSessionMenuState?.action === 'delete' ? (
             <View style={styles.modalPanel} testID="completed-session-delete-modal-card">
-              <Text selectable style={styles.modalTitle}>
-                Session Options
-              </Text>
-              <Text selectable style={styles.metaText}>
-                Hide this session from the default history list.
-              </Text>
-
               <Pressable
                 accessibilityLabel="Edit completed session"
                 accessibilityRole="button"
@@ -736,13 +747,6 @@ export function SessionListScreenShell({
           ) : null}
           {completedSessionMenuState?.action === 'undelete' ? (
             <View style={styles.modalPanel} testID="completed-session-undelete-modal-card">
-              <Text selectable style={styles.modalTitle}>
-                Session Options
-              </Text>
-              <Text selectable style={styles.metaText}>
-                Restore this session to the default history list.
-              </Text>
-
               <Pressable
                 accessibilityLabel="Edit completed session"
                 accessibilityRole="button"
@@ -862,8 +866,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeSessionRow: {
-    borderColor: '#cfe1ff',
-    backgroundColor: '#f5f9ff',
+    borderColor: '#b8e3c3',
+    backgroundColor: '#ebf8ef',
   },
   deletedCompletedRow: {
     borderColor: '#e0c9c9',
@@ -872,9 +876,11 @@ const styles = StyleSheet.create({
   },
   sessionRowMainPressable: {
     flex: 1,
+    minWidth: 0,
   },
   sessionRowMain: {
     flex: 1,
+    minWidth: 0,
   },
   sessionRowActions: {
     flexDirection: 'row',
@@ -908,21 +914,45 @@ const styles = StyleSheet.create({
   completeGlyphText: {
     color: '#124d29',
   },
-  summaryLine: {
+  summaryLines: {
+    gap: 2,
+    minHeight: 34,
+  },
+  summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
     gap: 4,
-    minHeight: 20,
+    minWidth: 0,
   },
   summaryToken: {
     color: '#13243b',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     fontVariant: ['tabular-nums'],
   },
   summaryTokenPrimary: {
     color: '#0f2a46',
+  },
+  summaryTokenStrong: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  summaryTokenSecondary: {
+    color: '#45566f',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  summaryAtToken: {
+    color: '#4a5d77',
+  },
+  summaryLocationToken: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  summaryFlexibleToken: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   summarySeparator: {
     color: '#8ea0b8',
