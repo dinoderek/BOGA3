@@ -137,6 +137,7 @@ Provide these references at execution start:
 4. Any changed parent specs
 5. `docs/specs/09-project-structure.md` (always load for context; update only when task changes paths/layout/conventions)
 6. `docs/specs/08-ux-delivery-standard.md` (for UI tasks)
+7. `docs/specs/10-api-authn-authz-guidelines.md` (for backend API/auth work and API-consuming integration tasks)
 
 ## Task card rules
 

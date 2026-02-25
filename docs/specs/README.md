@@ -14,5 +14,6 @@ This folder is the source of truth for product and technical decisions.
 - `docs/specs/07-future-features.md`: Deferred/planned feature backlog with agreed product/UX decisions.
 - `docs/specs/08-ux-delivery-standard.md`: Standard UX contract, iteration loop, and evidence requirements for UI work.
 - `docs/specs/09-project-structure.md`: Canonical repo/project structure and path conventions (current state + agreed additions).
+- `docs/specs/10-api-authn-authz-guidelines.md`: Minimal authN/authZ/API development and consumption rules for M5+ backend work.
 - `docs/specs/templates/milestone-spec-template.md`: Template for milestone deep dives.
 - `docs/specs/templates/task-card-template.md`: Template for per-session AI task execution.

@@ -1,0 +1,370 @@
+# M5 AuthN/Z + Security Baseline Design (Brainstorm v1)
+
+## Purpose
+
+Design proposal for `T-20260220-10` before implementation.  
+Focus: MVP user identity model on `Supabase`, auth flows, authorization (`RLS`), provisioning, and security baseline.
+
+## Inputs / constraints (current)
+
+- Backend platform is locked to `Supabase (Auth + Postgres + RLS)`.
+- FE auth UI integration is out of scope for this task.
+- M5 requires real backend-enforced user ownership for sync-domain tables.
+- Local-first verification is required (Supabase local stack + deterministic fixtures).
+- User preferences for this design pass:
+  - investigate Supabase auth options first, then choose MVP subset
+  - no self-signup
+  - redundant ownership columns on child tables are acceptable
+  - `gyms` remain user-private in MVP
+  - Supabase built-in auth rate limiting + config hardening is sufficient baseline (no custom rate limiter in M5)
+  - logging/audit policy should be minimal and explicit
+
+## Supabase Auth capability scan (out-of-the-box)
+
+Supabase Auth supports, out of the box:
+
+- password-based auth
+- email passwordless auth (magic link / OTP)
+- phone auth (OTP with provider integration)
+- social OAuth providers
+- SSO
+- JWT-based sessions that integrate with Postgres `RLS`
+- admin user management APIs (`createUser`, invites, etc.) using server-only credentials
+
+## M5 recommendation (auth method + posture)
+
+### Auth methods enabled in M5
+
+- `Email + password` only
+
+### Auth methods disabled in M5
+
+- public self-signup
+- magic link / email OTP
+- phone OTP
+- OAuth/social login
+- anonymous sign-in
+
+### Why this subset
+
+- Smallest path to prove auth works end-to-end with deterministic local tests.
+- Avoids redirect/deep-link and email-template complexity before FE auth integration.
+- Avoids passwordless auto-signup edge cases while self-signup is intentionally disabled.
+- Keeps security posture explicit: only pre-provisioned users can authenticate.
+
+## User identity model (auth linkage) - options and recommendation
+
+### Option A: Direct ownership FKs to `auth.users(id)` (recommended for M5)
+
+Pattern:
+
+- App-owned tables store `owner_user_id uuid not null references auth.users(id)`.
+- `RLS` policies use `auth.uid()` to compare against `owner_user_id`.
+- No app profile table is required for MVP authz.
+
+Pros:
+
+- Minimal schema and migration scope.
+- Simplest `RLS` policy expressions.
+- Fewer triggers / sync points between auth schema and app schema.
+- Fastest path for M5 authz + sync API ownership enforcement.
+
+Cons:
+
+- App tables are directly coupled to `auth.users`.
+- If we later want app-specific user metadata, we add another table later (`profiles`) and backfill references only where needed.
+
+### Option B: App profile table (`app_public.user_profiles` or `profiles`) + app FKs to profile PK
+
+Pattern:
+
+- Create app table keyed by `auth.users(id)` (1:1).
+- App-owned tables FK to `app_public.user_profiles(id)`.
+- Often paired with a trigger on auth user creation.
+
+Pros:
+
+- Cleaner boundary for app-specific metadata and lifecycle.
+- Avoids sprinkling direct `auth.*` joins through app queries.
+- Better long-term foundation if user-facing profile features are near-term.
+
+Cons:
+
+- Extra table + trigger + backfill behavior to design/test now.
+- More moving parts before M5 sync APIs exist.
+- Does not materially improve MVP row ownership enforcement versus direct FK.
+
+### Recommendation
+
+- Use **Option A** in M5: direct `owner_user_id -> auth.users(id)` on app-owned tables.
+- Defer `profiles` until a concrete app metadata need exists (display name, avatar, preferences, group/public profile, etc.).
+- Document an explicit migration path to add `app_public.user_profiles` later with `id = auth.users.id` if needed.
+
+## Ownership model (MVP sync tables)
+
+Tables in scope for M5/M5.5 sync foundation:
+
+- `gyms`
+- `sessions`
+- `session_exercises`
+- `exercise_sets`
+
+### Ownership decision
+
+- All four tables store redundant `owner_user_id`.
+- `gyms` are user-private only in MVP.
+
+### Why redundant ownership on child tables
+
+- Simpler and faster `RLS` predicates (`owner_user_id = auth.uid()`) on every table.
+- Easier direct querying/filtering without nested joins.
+- Cleaner negative-path tests per resource family.
+- Better operational debuggability (owner visible on every row).
+
+### Integrity requirement (important)
+
+Because ownership is redundant, DB constraints must prevent mismatches.
+
+Recommended schema pattern:
+
+- `sessions(owner_user_id)` references `auth.users(id)`
+- `session_exercises(owner_user_id)` references `auth.users(id)`
+- `exercise_sets(owner_user_id)` references `auth.users(id)`
+- composite FK from child to parent including owner:
+  - `session_exercises (session_id, owner_user_id)` -> `sessions (id, owner_user_id)`
+  - `exercise_sets (session_exercise_id, owner_user_id)` -> `session_exercises (id, owner_user_id)`
+- composite FK for user-private gym link:
+  - `sessions (gym_id, owner_user_id)` -> `gyms (id, owner_user_id)` (with nullable `gym_id` handling)
+
+This avoids cross-user references even if an application bug tries to attach a child row to another user's parent row.
+
+## Schema placement and API exposure
+
+### Proposed schema placement
+
+- Keep app-owned sync tables in `app_public` (already reserved in baseline migration).
+- Keep dev-only fixtures in `public` (current `dev_fixture_principals` is acceptable for local tooling/tests).
+
+### API exposure posture (for M5/M5.5)
+
+- Expose only app-owned schema(s) needed by the API surface (`app_public`) when required.
+- Do not expose `auth` schema.
+- `RLS` enabled on all app-owned tables before any client-facing data access path is considered complete.
+
+## Authentication flow design (M5, no FE UI yet)
+
+### Supported user lifecycle in M5
+
+1. Admin/operator provisions a user (local or hosted).
+2. User signs in with email/password.
+3. Requests include access token.
+4. DB authorization is enforced by `RLS` using `auth.uid()`.
+5. Sign-out invalidates local session on client (FE integration deferred).
+
+### Provisioning mechanism (M5)
+
+Primary path (recommended):
+
+- Use a **server-only admin provisioning script** (service-role key) for local/dev/test and hosted environments.
+- Support actions like:
+  - create user
+  - optionally set password
+  - auto-confirm email for controlled provisioning
+  - idempotent "ensure user exists" by email
+
+Fallback/ops path:
+
+- Supabase Dashboard admin user creation/invite for manual operations.
+
+Rationale:
+
+- Scripted provisioning is repeatable and testable.
+- Dashboard remains useful for emergency/manual ops but should not be the only path.
+
+## Local deterministic auth fixtures (`user_a`, `user_b`) - recommendation
+
+### Recommendation (hybrid, practical)
+
+Use **real local Supabase Auth users** for auth/integration tests, with deterministic fixture aliases:
+
+- `user_a` and `user_b` are real local auth accounts with known test credentials.
+- Tests authenticate through real Supabase Auth (sign-in success/failure) to validate actual session issuance.
+- `public.dev_fixture_principals` remains the alias registry (`user_a`, `user_b`, etc.) for repeatable tests and human-readable ownership fixtures.
+
+### UUID determinism recommendation
+
+- Prefer deterministic aliases (`user_a`, `user_b`) as the hard requirement.
+- If fixed UUIDs can be reliably assigned during provisioning, keep that behavior.
+- If not, make the provisioning script authoritative for writing/updating `dev_fixture_principals.subject_uuid` after creating/auth reconciling local users.
+
+Reason:
+
+- Auth correctness tests should use real Auth flows.
+- Rigid dependence on pre-seeded hardcoded UUIDs is less important than stable fixture identities and repeatable setup.
+- Avoid direct writes to `auth.*` internals unless local-only and clearly isolated, because it is more brittle than admin APIs.
+
+## Authorization design (`RLS` + DB constraints)
+
+## Policy posture
+
+- `RLS` enabled on every user-owned table in scope.
+- Deny-by-default (no broad allow policies).
+- Only authenticated users can access app-owned tables.
+- `anon` has no read/write access to user-owned rows.
+
+### Baseline policy shape (conceptual)
+
+For each user-owned table:
+
+- `SELECT`: allow where `owner_user_id = auth.uid()`
+- `INSERT`: allow where `owner_user_id = auth.uid()`
+- `UPDATE`: allow where existing row `owner_user_id = auth.uid()` and new row `owner_user_id = auth.uid()`
+- `DELETE`: allow where `owner_user_id = auth.uid()`
+
+### Additional hardening
+
+- Make `owner_user_id` immutable after insert (trigger or `WITH CHECK` + update restrictions).
+- Prefer DB constraints/defaults that reduce trust in API handlers.
+- Keep cross-user denial enforceable even if custom API handler guards regress.
+
+## Service-role / anon / authenticated boundaries
+
+### `anon` key
+
+- Safe for mobile/client use.
+- Grants API access but no protected data without valid user JWT and matching `RLS`.
+
+### `authenticated` role (user JWT)
+
+- Used for normal app data access.
+- Scoped by `RLS`.
+
+### `service_role` key
+
+- Server-only / admin-only.
+- Never shipped in mobile app.
+- Used only for provisioning scripts, admin maintenance, and tightly scoped server tasks.
+
+### JWT secret / signing keys
+
+- Never exposed to mobile app or client bundles.
+- Local-only test helpers may use local JWT signing secret for test tooling if needed, but keep this isolated to backend-local scripts/tests.
+
+## Security baseline (M5)
+
+### Input validation
+
+- Validate all custom API inputs at the boundary (Edge Function or server handler) using explicit schemas.
+- For direct `PostgREST` writes, rely on DB constraints + `RLS` + narrow API surface; add RPC wrappers if validation needs grow.
+- Reject unknown fields where practical for custom handlers.
+
+### Auth endpoint hardening (M5)
+
+- Disable public self-signup.
+- Disable unused providers/methods.
+- Use Supabase built-in auth rate-limit settings (no custom rate limiter in M5).
+- Prefer controlled provisioning with auto-confirm (admin path) instead of public email confirmation flows.
+
+### Secrets handling
+
+- No `service_role` in mobile app or client-exposed configs.
+- Separate local vs hosted env files (already scaffolded).
+- Document key usage boundaries in `supabase/README.md` and any future FE auth integration doc.
+
+### Minimal logging / audit policy (proposed)
+
+Allowed to log:
+
+- request path / function name
+- request ID / correlation ID
+- status code / error code
+- authenticated user UUID (if needed for debugging)
+- validation error summary (field names, not values, when sensitive)
+
+Do not log:
+
+- passwords
+- access tokens / refresh tokens / JWTs
+- `Authorization` headers
+- raw auth request bodies
+- service-role keys / secrets
+- full email addresses in error logs (redact or hash when possible)
+
+### Error response discipline
+
+- Return generic auth failure messages to clients where enumeration risk exists.
+- Keep detailed error context in server-side logs only (with redaction).
+
+## Config posture to document/implement in M5 (Supabase)
+
+High-level config intent (exact file values may differ by environment):
+
+- `[auth].enable_signup = false`
+- `[auth.email].enable_signup = false`
+- `[auth].enable_anonymous_sign_ins = false`
+- disable unused providers for M5
+- keep refresh token rotation enabled
+- keep/tune Supabase auth rate limits (document chosen values)
+- set explicit `site_url` / redirect URLs even if password-only (future-proofing, avoid surprises later)
+
+## Testing and verification design for `T-20260220-10`
+
+### Required test categories
+
+1. Auth success/failure tests
+- valid email/password signs in and yields session
+- invalid password fails
+- disabled self-signup path is rejected
+
+2. `RLS` ownership success tests
+- `user_a` can CRUD own rows
+- `user_b` can CRUD own rows
+
+3. Cross-user denial tests (must-have)
+- `user_b` cannot read/update/delete `user_a` rows for each protected resource family
+- child insert with mismatched parent owner is rejected (constraint and/or `RLS`)
+
+4. Unauthenticated denial tests
+- `anon` cannot access protected rows
+
+5. Service-role/admin boundary tests (minimal)
+- provisioning/admin script path works with service role
+- confirm service-role credentials are not required for normal user data-path tests
+
+### Local fixture/test setup notes
+
+- Run `./supabase/scripts/reset-local.sh` before suites that depend on policies/schema changes.
+- Add an idempotent local auth fixture provisioning step before auth/authz integration tests.
+- Keep fixture identities named (`user_a`, `user_b`) and documented in one place.
+
+## Future-ready but out of scope (document only)
+
+- FE auth screens and session persistence integration
+- social/OAuth login
+- passwordless login (magic link/OTP)
+- group/shared-resource authorization rules
+- app profile table (`profiles`) unless a concrete feature requires it
+- advanced audit pipelines / SIEM integration
+- custom auth abuse controls beyond Supabase config defaults
+
+## Proposed implementation order (for the actual coding task)
+
+1. Define/land schema ownership model (`owner_user_id`, constraints, `RLS` enablement) for M5 tables in scope.
+2. Configure auth posture (disable signup and unused providers/methods in local config + docs).
+3. Add admin provisioning script for local/hosted controlled user creation.
+4. Add local auth fixture provisioning for `user_a` / `user_b`.
+5. Implement `RLS` policies and ownership integrity constraints.
+6. Add auth/authz contract tests (success, unauth, cross-user denial).
+7. Document security baseline checklist and key-scope boundaries.
+
+## Open questions / assumptions to validate during implementation
+
+- Whether local auth fixture provisioning can reliably assign fixed UUIDs via admin APIs; if not, fixture alias determinism is sufficient.
+- Whether M5 sync API in `T-20260220-11` will use mostly `PostgREST/RPC` or Edge Functions (affects where input validation is concentrated, but not the ownership model).
+
+## References
+
+- Supabase Auth overview: https://supabase.com/docs/guides/auth
+- Supabase Auth admin `createUser` reference: https://supabase.com/docs/reference/javascript/auth-admin-createuser
+- Local project config baseline: `supabase/config.toml`
+- M5 task card: `docs/tasks/T-20260220-10-m5-user-auth-authz-and-security-baseline.md`
