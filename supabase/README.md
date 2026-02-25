@@ -143,6 +143,26 @@ Coverage includes:
 - owner spoofing denial
 - cross-user parent/child ownership mismatch rejection (DB constraint path)
 
+## M5 sync API contract baseline (implemented in `T-20260220-11`)
+
+Chosen API surface for the M5 sync baseline:
+
+- `PostgREST` table routes on `app_public` (`gyms`, `sessions`, `session_exercises`, `exercise_sets`)
+- auth via `anon` key + user JWT
+- authorization via table `RLS` + FK/check constraints
+
+Provider-neutral method catalog + Supabase mapping:
+
+- `supabase/session-sync-api-contract.md`
+
+Local sync API contract suite:
+
+```bash
+./supabase/scripts/test-sync-api-contract.sh
+```
+
+Coverage includes success read/write flows, validation failures, unauthenticated denial, and cross-user denial across all sync-domain entities.
+
 ## Accessing `app_public` via REST (local/manual testing)
 
 `app_public` is exposed in the local API config. For direct `PostgREST` calls, send schema profile headers:

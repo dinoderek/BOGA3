@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260220-11`
 - Title: M5 authenticated sync API for session domain entities
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
@@ -16,6 +16,7 @@
 - Milestone spec: `docs/specs/milestones/M5-backend-foundation-authz-and-sync-api.md`
 - Architecture (if relevant): `docs/specs/03-technical-architecture.md`
 - Testing strategy: `docs/specs/06-testing-strategy.md`
+- API authN/authZ guidelines: `docs/specs/10-api-authn-authz-guidelines.md`
 
 ## Objective
 
@@ -111,5 +112,14 @@ Implement `Supabase`-backed API methods to read/write user-scoped gym and sessio
 ## Completion note
 
 - What changed:
+- Chose `Supabase PostgREST` table routes on `app_public` as the explicit M5 sync API surface (no custom sync `Edge Functions` in this task) and documented the provider-neutral method catalog + Supabase mapping in `supabase/session-sync-api-contract.md`.
+- Added `supabase/tests/session-sync-api-contract.sh` with local contract/integration coverage for authenticated create/read/update/list flows across `gyms`, `sessions`, `session_exercises`, and `exercise_sets`.
+- Added negative-path coverage in the sync API contract suite for unauthenticated denial, validation failures, cross-user read/update denial via `RLS`, cross-user parent-child ownership mismatch rejection via FK constraints, and owner spoofing denial.
+- Added `supabase/scripts/test-sync-api-contract.sh` wrapper and documented the new sync API contract baseline + command in `supabase/README.md`.
 - What tests ran:
+- `./supabase/scripts/test-sync-api-contract.sh` ✅ (includes local runtime up, `supabase db reset`, local auth fixture provisioning, and sync API contract suite)
+- `./supabase/scripts/db-lint-local.sh` ✅
+- `./supabase/scripts/test-auth-authz.sh` ✅ (regression check for auth/RLS baseline)
+- `npm run lint` / `npm run typecheck` / `npm run test`: `N/A` (no backend Node/TS helper workspace or custom Edge runtime code introduced in this task; runtime-specific Supabase local gates were used instead)
 - What remains:
+- FE integration/client sync engine wiring remains out of scope and should consume the documented provider-neutral contract in a later task.
