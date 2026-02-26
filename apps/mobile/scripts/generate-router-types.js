@@ -1,5 +1,16 @@
 #!/usr/bin/env node
 
+/**
+ * Why this exists:
+ * - Expo Router typed route declarations in `.expo/types/router.d.ts` are generated when the
+ *   Expo dev server starts.
+ * - Our local `typecheck` / `quality-fast` flow can run in a headless shell without `npx expo start`.
+ * - When route types are stale, `tsc` fails with false-positive navigation path type errors.
+ *
+ * Important caveat:
+ * - This script uses `expo-router/build/*` internals (not a documented public CLI/API for typegen).
+ * - It is a pragmatic reliability fix for headless checks and may need updates when Expo Router changes.
+ */
 const fs = require('node:fs');
 const path = require('node:path');
 
