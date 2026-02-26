@@ -19,7 +19,7 @@ const createMockStore = (): jest.Mocked<SessionDraftStore> => ({
 const buildSessionRecord = (overrides: Partial<SessionPersistenceRecord> = {}): SessionPersistenceRecord => ({
   id: 'session-1',
   gymId: 'gym-1',
-  status: 'draft',
+  status: 'active',
   startedAt: new Date('2026-02-20T10:00:00.000Z'),
   completedAt: null,
   durationSec: null,
@@ -30,7 +30,7 @@ const buildSessionRecord = (overrides: Partial<SessionPersistenceRecord> = {}): 
 });
 
 describe('session draft repository', () => {
-  it('creates/persists draft snapshots through the store API with draft default status', async () => {
+  it('creates/persists draft snapshots through the store API with active default status', async () => {
     const store = createMockStore();
     const repository = createSessionDraftRepository(store);
     store.saveDraftGraph.mockResolvedValue({ sessionId: 'session-1' });
@@ -52,7 +52,7 @@ describe('session draft repository', () => {
       expect.objectContaining({
         sessionId: undefined,
         gymId: 'gym-1',
-        status: 'draft',
+        status: 'active',
       })
     );
   });

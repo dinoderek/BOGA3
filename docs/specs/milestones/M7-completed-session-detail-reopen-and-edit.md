@@ -97,7 +97,7 @@ Ship a completed-session detail flow that lets a user open a completed session f
 5. If any active session already exists, `Reopen session` is disabled and the UI explains why (single-active-session constraint).
 6. If no active session exists, `Reopen session` mutates the same completed session record to active status (no clone/new record) and the session appears as the active session in the list.
 7. Repository/data-layer logic prevents a reopen from creating a second active session even if UI gating is bypassed or stale.
-8. Entering completed-session edit loads the selected completed session by ID (not the latest active/draft session).
+8. Entering completed-session edit loads the selected completed session by ID (not the latest active session).
 9. Completed-session edit supports modifying exercises/sets/gym and editing both start and end times.
 10. Completed-session edit uses continuous autosave semantics so in-progress edits are not lost on app lifecycle transitions/navigation interruptions.
 11. Saving/finishing completed-session edits keeps the session status as `completed` and does not reopen the session.
@@ -112,11 +112,11 @@ Ship a completed-session detail flow that lets a user open a completed session f
 2. `docs/tasks/T-20260225-02-m7-completed-session-data-contracts-edit-and-reopen.md` - implement load-by-id session graph, completed-session edit persistence, reopen mutation, and single-active invariant tests. (`completed`)
 3. `docs/tasks/T-20260225-03-m7-mode-aware-recorder-completed-edit-flow.md` - add recorder/detail mode support, completed edit autosave, start/end time editing, validation, and save-return-to-list UX. (`completed`)
 4. `docs/tasks/T-20260225-04-m7-integration-tests-and-ux-evidence.md` - end-to-end/integration flow tests, regressions, and UX evidence closeout. (`planned`)
-5. `docs/tasks/T-20260226-01-m7-remove-draft-status-and-migrate-to-active-completed-lifecycle.md` - remove internal `draft` status, migrate local data, and align lifecycle logic to strict `active|completed`. (`planned`)
+5. `docs/tasks/T-20260226-01-m7-remove-draft-status-and-migrate-to-active-completed-lifecycle.md` - remove persisted `draft` status, migrate legacy rows to `active`, and align repository lifecycle contracts/tests to `active|completed`. (`completed`)
 
 ## Risks / dependencies
 
-- Current recorder screen is coupled to `loadLatestSessionDraftSnapshot()` and active-draft assumptions; mode isolation is required to avoid loading the wrong session during completed edit/view.
+- Current recorder screen is coupled to `loadLatestSessionDraftSnapshot()` and active-session assumptions; mode isolation is required to avoid loading the wrong session during completed edit/view.
 - Current draft store rejects writes to completed sessions, so new completed-session update APIs must be explicit and must not weaken active/completed invariants.
 - Reopen mutates the same record by product decision; this affects ordering/history visibility and future sync semantics and should be documented in repository behavior/tests.
 - Continuous autosave for completed-session edit increases accidental partial-write risk unless read-only vs edit mode boundaries are unambiguous and reversible enough for users.

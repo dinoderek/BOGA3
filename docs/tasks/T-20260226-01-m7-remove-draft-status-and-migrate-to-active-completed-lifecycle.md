@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260226-01`
 - Title: M7 remove `draft` status and migrate to strict `active|completed` session lifecycle
-- Status: `planned`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-26`
 - Session interaction mode: `interactive (default)`
@@ -111,8 +111,16 @@ Remove the internal `draft` session status from the local schema and app data mo
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
 - What changed:
+  - Removed persisted `draft` status from the mobile `sessions` schema (`active|completed` only) and updated repository lifecycle contracts/defaults accordingly.
+  - Added migration `0004_active_completed_lifecycle` (Drizzle SQL + runtime migration bundle + snapshot/journal metadata) to rebuild `sessions` and rewrite legacy `draft` rows to `active`.
+  - Updated repository and migration tests to validate the new lifecycle contract and migration rewrite behavior.
+  - Updated M7 milestone task breakdown with this task and left milestone `Status` unchanged (`in_progress`) because the remaining M7 feature tasks are still open.
 - What tests ran:
+  - `npm test -- --runTestsByPath app/__tests__/session-drafts-repository.test.ts app/__tests__/session-list-repository.test.ts app/__tests__/domain-schema-migrations.test.ts` (from `apps/mobile`) ✅
+  - `npm run typecheck` (from `apps/mobile`) ✅
+  - `./scripts/quality-fast.sh frontend` ✅ (`lint`, `typecheck`, full mobile `jest` suite)
 - What remains:
+  - M7 feature tasks for completed-session data contracts/edit flow/integration evidence remain open (`docs/tasks/T-20260225-02`, `-03`, `-04`).
 
 ## Status update checklist (mandatory at closeout)
 

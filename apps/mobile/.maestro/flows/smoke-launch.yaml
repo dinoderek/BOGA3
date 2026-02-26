@@ -1,6 +1,12 @@
 appId: host.exp.Exponent
 ---
 - takeScreenshot: "01-app-launch"
+- tapOn:
+    text: "mobile"
+    optional: true
+- tapOn:
+    text: "Sessions"
+    optional: true
 - assertVisible:
     id: "session-list-screen"
 - tapOn:

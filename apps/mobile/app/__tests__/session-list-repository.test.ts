@@ -25,7 +25,7 @@ const buildRecord = (overrides: Partial<SessionListStoreRecord> = {}): SessionLi
 });
 
 describe('session list repository', () => {
-  it('surfaces one active candidate at most and orders completed sessions by completedAt desc', async () => {
+  it('surfaces the most recent active session and orders completed sessions by completedAt desc', async () => {
     const store = createMockStore();
     const repository = createSessionListRepository(store);
 
@@ -36,13 +36,6 @@ describe('session list repository', () => {
         completedAt: null,
         durationSec: null,
         updatedAt: new Date('2026-02-20T11:00:00.000Z'),
-      }),
-      buildRecord({
-        id: 'draft-newer',
-        status: 'draft',
-        completedAt: null,
-        durationSec: null,
-        updatedAt: new Date('2026-02-20T11:10:00.000Z'),
       }),
       buildRecord({
         id: 'active-newer',

@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { bootstrapLocalDataLayer } from './bootstrap';
 import { exerciseSets, gyms, sessionExercises, sessions } from './schema';
 
-type SessionLifecycleStatus = 'draft' | 'active' | 'completed';
+type SessionLifecycleStatus = 'active' | 'completed';
 
 export type SessionListStoreRecord = {
   id: string;
@@ -97,6 +97,9 @@ export const formatCompactDuration = (durationSec: number | null): string => {
 
 const normalizeCount = (value: number | null | undefined) => (typeof value === 'number' && value > 0 ? value : 0);
 
+const normalizeSessionLifecycleStatus = (status: string): SessionLifecycleStatus =>
+  status === 'completed' ? 'completed' : 'active';
+
 const mapStoreSessionRow = (row: typeof sessions.$inferSelect, gymName: string | null): Omit<SessionListStoreRecord, 'exerciseCount' | 'setCount'> => {
   const startedAt = toDate(row.startedAt);
   const createdAt = toDate(row.createdAt);
@@ -108,7 +111,7 @@ const mapStoreSessionRow = (row: typeof sessions.$inferSelect, gymName: string |
 
   return {
     id: row.id,
-    status: row.status,
+    status: normalizeSessionLifecycleStatus(row.status as string),
     startedAt,
     completedAt: toDate(row.completedAt),
     durationSec: row.durationSec,
@@ -199,18 +202,6 @@ export const createDrizzleSessionListStore = (): SessionListStore => ({
   },
 });
 
-const activeStatusPriority = (status: SessionLifecycleStatus) => {
-  if (status === 'active') {
-    return 0;
-  }
-
-  if (status === 'draft') {
-    return 1;
-  }
-
-  return 2;
-};
-
 const compareMostRecent = (left: SessionListStoreRecord, right: SessionListStoreRecord) => {
   const updatedDelta = right.updatedAt.getTime() - left.updatedAt.getTime();
   if (updatedDelta !== 0) {
@@ -265,15 +256,8 @@ export const createSessionListRepository = (store: SessionListStore = createDriz
     const records = await store.listSessionRecords();
 
     const activeCandidates = records
-      .filter((record) => (record.status === 'active' || record.status === 'draft') && record.deletedAt === null)
-      .sort((left, right) => {
-        const statusDelta = activeStatusPriority(left.status) - activeStatusPriority(right.status);
-        if (statusDelta !== 0) {
-          return statusDelta;
-        }
-
-        return compareMostRecent(left, right);
-      });
+      .filter((record) => record.status === 'active' && record.deletedAt === null)
+      .sort(compareMostRecent);
 
     const active = activeCandidates.length > 0 ? toSummary(activeCandidates[0]) : null;
 

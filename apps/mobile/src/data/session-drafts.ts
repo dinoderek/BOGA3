@@ -3,7 +3,7 @@ import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
 import { exerciseSets, sessionExercises, sessions } from './schema';
 
-export type SessionDraftStatus = 'draft' | 'active';
+export type SessionDraftStatus = 'active';
 
 export type SessionDraftSetInput = {
   id?: string;
@@ -125,7 +125,7 @@ export type ReopenCompletedSessionResult = {
 export type SessionPersistenceRecord = {
   id: string;
   gymId: string | null;
-  status: 'draft' | 'active' | 'completed';
+  status: 'active' | 'completed';
   startedAt: Date;
   completedAt: Date | null;
   durationSec: number | null;
@@ -197,7 +197,6 @@ export type SessionDraftStore = {
   listCompletedSessions(): Promise<SessionPersistenceRecord[]>;
 };
 
-const DRAFT_STATUSES: SessionDraftStatus[] = ['draft', 'active'];
 const DEFAULT_DURATION_SORT = 'completedAt';
 const DEFAULT_SORT_DIRECTION = 'desc';
 
@@ -225,7 +224,10 @@ const ensureDate = (value: Date, label: string) => {
 const createLocalEntityId = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
-const normalizeDraftStatus = (status: SessionDraftStatus | undefined): SessionDraftStatus => status ?? 'draft';
+const normalizePersistedSessionStatus = (status: string): SessionPersistenceRecord['status'] =>
+  status === 'completed' ? 'completed' : 'active';
+
+const normalizeDraftStatus = (status: SessionDraftStatus | undefined): SessionDraftStatus => status ?? 'active';
 
 export const calculateSessionDurationSec = (startedAt: Date, completedAt: Date) => {
   ensureDate(startedAt, 'startedAt');
@@ -256,7 +258,7 @@ const mapSessionRow = (row: typeof sessions.$inferSelect): SessionPersistenceRec
   return {
     id: row.id,
     gymId: row.gymId,
-    status: row.status,
+    status: normalizePersistedSessionStatus(row.status as string),
     startedAt,
     completedAt: toDate(row.completedAt),
     durationSec: row.durationSec,
@@ -269,7 +271,7 @@ const mapSessionRow = (row: typeof sessions.$inferSelect): SessionPersistenceRec
 const mapDraftSnapshot = (graph: StoredDraftGraph): SessionDraftSnapshot => ({
   sessionId: graph.session.id,
   gymId: graph.session.gymId,
-  status: graph.session.status as SessionDraftStatus,
+  status: 'active',
   startedAt: graph.session.startedAt,
   createdAt: graph.session.createdAt,
   updatedAt: graph.session.updatedAt,
@@ -504,7 +506,7 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
     const latestDraft = database
       .select()
       .from(sessions)
-      .where(and(inArray(sessions.status, DRAFT_STATUSES), isNull(sessions.deletedAt)))
+      .where(and(eq(sessions.status, 'active'), isNull(sessions.deletedAt)))
       .orderBy(desc(sessions.updatedAt), desc(sessions.createdAt))
       .get();
     if (!latestDraft) {

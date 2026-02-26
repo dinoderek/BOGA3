@@ -17,6 +17,7 @@ describe('domain schema and runtime migrations', () => {
 
   it('includes session lifecycle, taxonomy tables, and deterministic ordering constraints in runtime SQL', () => {
     const migrationSql = Object.values(localRuntimeMigrations.migrations).join('\n');
+    const lifecycleStatusMigration = localRuntimeMigrations.migrations.m0004;
 
     expect(migrationSql).toContain('CREATE TABLE `muscle_groups`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_definitions`');
@@ -27,11 +28,18 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain('CREATE TABLE `session_exercises`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_sets`');
 
-    expect(migrationSql).toContain('`status` text DEFAULT \'draft\' NOT NULL');
     expect(migrationSql).toContain('`started_at` integer NOT NULL');
     expect(migrationSql).toContain('`completed_at` integer');
     expect(migrationSql).toContain('`duration_sec` integer');
     expect(migrationSql).toContain('`deleted_at` integer');
+    expect(lifecycleStatusMigration).toContain('`status` text DEFAULT \'active\' NOT NULL');
+    expect(lifecycleStatusMigration).toContain(
+      'CONSTRAINT "sessions_status_guard" CHECK("status" in (\'active\', \'completed\'))'
+    );
+    expect(lifecycleStatusMigration).toContain('INSERT INTO `__new_sessions`');
+    expect(lifecycleStatusMigration).toContain("ELSE 'active'");
+    expect(lifecycleStatusMigration).toContain('PRAGMA foreign_keys=OFF;');
+    expect(lifecycleStatusMigration).toContain('PRAGMA foreign_keys=ON;');
 
     expect(migrationSql).toContain('`is_editable` integer DEFAULT 0 NOT NULL');
     expect(migrationSql).toContain('`weight` real NOT NULL');

@@ -11,9 +11,9 @@ export const sessions = sqliteTable(
       .notNull()
       .default(sql`(lower(hex(randomblob(16))))`),
     gymId: text('gym_id').references(() => gyms.id, { onDelete: 'set null' }),
-    status: text('status', { enum: ['draft', 'active', 'completed'] })
+    status: text('status', { enum: ['active', 'completed'] })
       .notNull()
-      .default('draft'),
+      .default('active'),
     startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
     completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
     durationSec: integer('duration_sec'),
@@ -31,7 +31,7 @@ export const sessions = sqliteTable(
     deletedAtIdx: index('sessions_deleted_at_idx').on(table.deletedAt),
     statusGuard: check(
       'sessions_status_guard',
-      sql`${table.status} in ('draft', 'active', 'completed')`
+      sql`${table.status} in ('active', 'completed')`
     ),
     durationGuard: check('sessions_duration_non_negative', sql`${table.durationSec} is null or ${table.durationSec} >= 0`),
   })

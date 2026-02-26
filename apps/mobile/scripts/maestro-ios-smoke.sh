@@ -56,6 +56,14 @@ else
   SIM_UDID="$(IOS_SIM_DEVICE="$SLOT_DEVICE" "$SCRIPT_DIR/ios-sim-boot.sh" 2>"$SIM_LOG_FILE")"
 fi
 
+if [[ "${IOS_SIM_RESET_EXPO_GO_STATE:-1}" == "1" ]]; then
+  {
+    echo "[maestro-ios-smoke] Resetting Expo Go state on simulator $SIM_UDID"
+    xcrun simctl terminate "$SIM_UDID" host.exp.Exponent >/dev/null 2>&1 || true
+    xcrun simctl uninstall "$SIM_UDID" host.exp.Exponent >/dev/null 2>&1 || true
+  } >>"$SIM_LOG_FILE" 2>&1
+fi
+
 cd "$APP_DIR"
 CI=1 npx expo start --ios --non-interactive --port "$SLOT_PORT" >"$EXPO_LOG_FILE" 2>&1 &
 EXPO_PID=$!
