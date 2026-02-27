@@ -63,6 +63,7 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain(
       'CONSTRAINT "exercise_definitions_name_non_empty" CHECK("exercise_definitions"."name" <> \'\')'
     );
+    expect(migrationSql).toContain('CREATE INDEX `exercise_definitions_deleted_at_idx` ON `exercise_definitions` (`deleted_at`)');
 
     expect(migrationSql).not.toContain('CREATE INDEX `exercise_definitions_origin_scope_id_idx`');
     expect(migrationSql).not.toContain('CREATE INDEX `exercise_definitions_origin_source_id_idx`');

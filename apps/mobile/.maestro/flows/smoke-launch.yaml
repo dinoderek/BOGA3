@@ -18,7 +18,7 @@ appId: host.exp.Exponent
 - assertVisible:
     id: "session-recorder-screen"
 - tapOn: "Log new exercise"
-- tapOn: "Select exercise Barbell Squat"
+- tapOn: "Select exercise Barbell Back Squat"
 - tapOn: "Weight for exercise 1 set 1"
 - inputText: "225"
 - tapOn: "Reps for exercise 1 set 1"

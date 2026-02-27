@@ -4,7 +4,7 @@
 
 - Milestone ID: `M6`
 - Title: Exercise taxonomy and muscle-target weighting foundation
-- Status: `in_progress`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Target window: `post-MVP (TBD)`
 
@@ -140,7 +140,7 @@ Planned task cards for M6 are listed below.
 1. `docs/tasks/T-20260224-01-m6-local-schema-for-muscle-taxonomy-and-exercise-mappings.md` - design local schema for exercise definitions, muscle groups, and weighted associations. (`completed`)
 2. `docs/tasks/T-20260224-02-m6-seed-muscle-taxonomy-and-system-exercises.md` - define and seed the non-editable muscle taxonomy plus the initial system exercise mapping set. (`completed`)
 3. `docs/tasks/T-20260224-03-m6-exercise-editing-muscle-linking-ui.md` - implement exercise editing support for linking muscle groups and weights on user-editable exercises. (`completed`)
-4. `docs/tasks/T-20260224-04-m6-session-recorder-exercise-management-integration.md` - connect session recorder exercise manage/add flows to the persistent exercise catalog editor and refresh recorder selection behavior after return. (`planned`)
+4. `docs/tasks/T-20260224-04-m6-session-recorder-exercise-management-integration.md` - connect session recorder exercise manage/add flows to the persistent exercise catalog editor and refresh recorder selection behavior after return. (`completed`)
 5. `docs/tasks/T-20260224-05-m6-historical-mapping-behavior-options.md` - define and narrow/lock the historical mapping behavior policy path before analytics implementation. (`completed`)
 
 ## Risks / dependencies
@@ -195,13 +195,14 @@ Planned task cards for M6 are listed below.
   - Completed `T-20260224-02` with seed fixtures, validation, and bootstrap seeding for a non-editable system taxonomy plus an initial system exercise catalog with non-normalized weights.
   - Simplified v1 defaults to reduce false precision: single `chest` taxonomy group, `primary|secondary` roles only in seeds, and default weight ladder (`1.0` / `0.5`) only.
   - Completed `T-20260224-03` with a local exercise-catalog editing route + repository that supports linking seeded/system muscle groups to exercises with non-normalized weights, including add/edit/remove flows and editor validation for missing links, duplicate links, and invalid weights.
+  - Completed `T-20260224-04` with recorder-to-catalog integration for exercise `Manage`/`Add new` flows, soft-delete/undelete support in exercise catalog, and recorder picker refresh behavior aligned to active catalog exercises.
   - Completed `T-20260224-05` (docs-only) by comparing historical mapping behavior options and initially locking a snapshot-oriented direction; this historical direction was superseded in M9 planning (`2026-02-27`) by retroactive metadata semantics.
 - Verification summary:
   - `apps/mobile` lint/typecheck/test passed, including targeted schema/migration coverage and the previously failing session-list test after timer assertion fix.
   - Added targeted seed validation tests and bootstrap seed integration tests; full `apps/mobile` Jest suite remains green after seed integration.
   - Added targeted repository + UI interaction tests for exercise muscle-link editing (`exercise-catalog-repository`, `exercise-catalog-screen`) and re-ran full `apps/mobile` Jest suite successfully after the new route/repository work.
 - What remains:
-  - Complete session recorder integration for persistent exercise management/editing (`T-20260224-04`).
+  - No open M6 task-card items remain.
 
 ## Status update checklist (mandatory during task closeout)
 

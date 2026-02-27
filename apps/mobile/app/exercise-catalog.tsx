@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { TopLevelTabs } from '@/components/navigation/top-level-tabs';
@@ -9,6 +9,7 @@ import {
   listExerciseCatalogExercises,
   listExerciseCatalogMuscleGroups,
   saveExerciseCatalogExercise,
+  undeleteExerciseCatalogExercise,
   type ExerciseCatalogExercise,
   type ExerciseCatalogExerciseMuscleMapping,
   type ExerciseCatalogMuscleGroup,
@@ -36,6 +37,14 @@ const createBlankValidationState = (): EditorValidationState => ({
   primaryMuscleError: null,
   secondaryMusclesError: null,
 });
+
+const coerceRouteParam = (value: string | string[] | undefined): string | null => {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+};
 
 const getMuscleDisplayName = (
   muscleGroupId: string,
@@ -106,9 +115,16 @@ const formatExerciseMuscleSummary = (
 
 export default function ExerciseCatalogScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ source?: string | string[]; intent?: string | string[] }>();
+  const routeSource = coerceRouteParam(params.source);
+  const routeIntent = coerceRouteParam(params.intent);
+  const isFromSessionRecorder = routeSource === 'session-recorder';
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditorModalVisible, setIsEditorModalVisible] = useState(false);
+  const [showDeletedExercises, setShowDeletedExercises] = useState(false);
+  const [didHandleInitialIntent, setDidHandleInitialIntent] = useState(false);
   const [muscleSelectorMode, setMuscleSelectorMode] = useState<MuscleSelectorMode>(null);
   const [exerciseActionMenuTarget, setExerciseActionMenuTarget] = useState<ExerciseCatalogExercise | null>(null);
   const [exerciseDeleteTarget, setExerciseDeleteTarget] = useState<ExerciseCatalogExercise | null>(null);
@@ -124,40 +140,62 @@ export default function ExerciseCatalogScreen() {
   const [secondaryMuscleRows, setSecondaryMuscleRows] = useState<EditableSecondaryMuscleRow[]>([]);
   const [validation, setValidation] = useState<EditorValidationState>(createBlankValidationState);
 
-  useEffect(() => {
-    let cancelled = false;
+  const reloadCatalog = useCallback(async (options: { includeDeleted: boolean }) => {
+    setIsLoading(true);
+    setLoadError(null);
 
-    Promise.all([listExerciseCatalogMuscleGroups(), listExerciseCatalogExercises()])
-      .then(([loadedMuscleGroups, loadedExercises]) => {
-        if (cancelled) {
-          return;
-        }
-
-        setMuscleGroups(loadedMuscleGroups);
-        setExercises(loadedExercises);
-
-        setEditingExerciseId(null);
-        setExerciseName('');
-        setPrimaryMuscleGroupId(null);
-        setSecondaryMuscleRows([]);
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setLoadError('Unable to load exercise catalog. Try again.');
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const [loadedMuscleGroups, loadedExercises] = await Promise.all([
+        listExerciseCatalogMuscleGroups(),
+        listExerciseCatalogExercises({ includeDeleted: options.includeDeleted }),
+      ]);
+      setMuscleGroups(loadedMuscleGroups);
+      setExercises(loadedExercises);
+    } catch {
+      setLoadError('Unable to load exercise catalog. Try again.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      void (async () => {
+        setIsLoading(true);
+        setLoadError(null);
+
+        try {
+          const [loadedMuscleGroups, loadedExercises] = await Promise.all([
+            listExerciseCatalogMuscleGroups(),
+            listExerciseCatalogExercises({ includeDeleted: showDeletedExercises }),
+          ]);
+
+          if (cancelled) {
+            return;
+          }
+
+          setMuscleGroups(loadedMuscleGroups);
+          setExercises(loadedExercises);
+        } catch {
+          if (cancelled) {
+            return;
+          }
+
+          setLoadError('Unable to load exercise catalog. Try again.');
+        } finally {
+          if (!cancelled) {
+            setIsLoading(false);
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [showDeletedExercises])
+  );
 
   const muscleGroupById = new Map(muscleGroups.map((muscleGroup) => [muscleGroup.id, muscleGroup]));
   const selectedSecondaryMuscleIds = new Set(secondaryMuscleRows.map((row) => row.muscleGroupId));
@@ -200,6 +238,24 @@ export default function ExerciseCatalogScreen() {
     setSaveFeedback(null);
     setIsEditorModalVisible(true);
   };
+
+  useEffect(() => {
+    if (didHandleInitialIntent || isLoading || loadError) {
+      return;
+    }
+
+    if (routeIntent === 'add') {
+      setEditingExerciseId(null);
+      setExerciseName('');
+      setPrimaryMuscleGroupId(null);
+      setSecondaryMuscleRows([]);
+      resetValidationAndErrors();
+      setSaveFeedback(null);
+      setIsEditorModalVisible(true);
+    }
+
+    setDidHandleInitialIntent(true);
+  }, [didHandleInitialIntent, isLoading, loadError, routeIntent]);
 
   const closeEditorModal = () => {
     if (isSaving) {
@@ -347,6 +403,10 @@ export default function ExerciseCatalogScreen() {
       setIsEditorModalVisible(false);
       setMuscleSelectorMode(null);
       setExerciseActionMenuTarget(null);
+
+      if (isFromSessionRecorder) {
+        router.back();
+      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to save exercise.');
     } finally {
@@ -361,8 +421,8 @@ export default function ExerciseCatalogScreen() {
 
     try {
       await deleteExerciseCatalogExercise(exerciseDeleteTarget.id);
-      setExercises((current) => current.filter((exercise) => exercise.id !== exerciseDeleteTarget.id));
-      setSaveFeedback(`Deleted ${exerciseDeleteTarget.name}.`);
+      await reloadCatalog({ includeDeleted: showDeletedExercises });
+      setSaveFeedback('Exercise deleted.');
 
       if (editingExerciseId === exerciseDeleteTarget.id) {
         setEditingExerciseId(null);
@@ -374,6 +434,17 @@ export default function ExerciseCatalogScreen() {
       setSaveError(error instanceof Error ? error.message : 'Unable to delete exercise.');
     } finally {
       setExerciseDeleteTarget(null);
+    }
+  };
+
+  const undeleteExercise = async (exercise: ExerciseCatalogExercise) => {
+    try {
+      await undeleteExerciseCatalogExercise(exercise.id);
+      await reloadCatalog({ includeDeleted: showDeletedExercises });
+      setSaveFeedback('Exercise restored.');
+      setExerciseActionMenuTarget(null);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Unable to restore exercise.');
     }
   };
 
@@ -421,6 +492,28 @@ export default function ExerciseCatalogScreen() {
           testID="create-new-exercise-button">
           <Text style={styles.primaryButtonText}>New Exercise</Text>
         </Pressable>
+        <View style={styles.equalTopButtons}>
+          <Pressable
+            accessibilityLabel="Toggle show deleted exercises"
+            style={styles.secondaryButton}
+            onPress={() => {
+              setShowDeletedExercises((current) => !current);
+              setSaveError(null);
+              setSaveFeedback(null);
+            }}>
+            <Text style={styles.secondaryButtonText}>
+              {showDeletedExercises ? 'Hide deleted' : 'Show deleted'}
+            </Text>
+          </Pressable>
+          {isFromSessionRecorder ? (
+            <Pressable
+              accessibilityLabel="Back to session recorder"
+              style={styles.secondaryButton}
+              onPress={() => router.back()}>
+              <Text style={styles.secondaryButtonText}>Back to recorder</Text>
+            </Pressable>
+          ) : null}
+        </View>
         {saveFeedback ? (
           <View style={styles.feedbackCard}>
             <Text selectable style={styles.successText}>
@@ -440,7 +533,12 @@ export default function ExerciseCatalogScreen() {
               <Pressable
                 accessibilityLabel={`Edit exercise definition ${exercise.name}`}
                 style={styles.exerciseListRowMainPressable}
-                onPress={() => openEditorForExercise(exercise)}>
+                onPress={() => {
+                  if (exercise.deletedAt) {
+                    return;
+                  }
+                  openEditorForExercise(exercise);
+                }}>
                 <View style={styles.exerciseListRowTextStack}>
                   <Text numberOfLines={1} style={styles.exerciseListRowTitle}>
                     {exercise.name}
@@ -448,6 +546,11 @@ export default function ExerciseCatalogScreen() {
                   <Text numberOfLines={1} style={styles.exerciseListRowMuscleSummary}>
                     {formatExerciseMuscleSummary(exercise, muscleGroupById)}
                   </Text>
+                  {exercise.deletedAt ? (
+                    <Text selectable style={styles.deletedExerciseChip}>
+                      Deleted
+                    </Text>
+                  ) : null}
                 </View>
               </Pressable>
               <Pressable
@@ -461,7 +564,9 @@ export default function ExerciseCatalogScreen() {
 
           {exercises.length === 0 ? (
             <Text selectable style={styles.helperText}>
-              No exercises yet. Create one with the button above.
+              {showDeletedExercises
+                ? 'No exercises found for this filter.'
+                : 'No active exercises yet. Create one with the button above.'}
             </Text>
           ) : null}
         </View>
@@ -685,24 +790,39 @@ export default function ExerciseCatalogScreen() {
             <Pressable
               accessibilityLabel="Edit exercise from actions"
               style={styles.actionMenuButton}
+              disabled={Boolean(exerciseActionMenuTarget?.deletedAt)}
               onPress={() => {
                 const target = exerciseActionMenuTarget;
                 setExerciseActionMenuTarget(null);
-                if (target) {
+                if (target && !target.deletedAt) {
                   openEditorForExercise(target);
                 }
               }}>
               <Text style={styles.actionMenuButtonText}>Edit</Text>
             </Pressable>
-            <Pressable
-              accessibilityLabel="Delete exercise from actions"
-              style={[styles.actionMenuButton, styles.actionMenuDeleteButton]}
-              onPress={() => {
-                setExerciseDeleteTarget(exerciseActionMenuTarget);
-                setExerciseActionMenuTarget(null);
-              }}>
-              <Text style={styles.actionMenuDeleteButtonText}>Delete</Text>
-            </Pressable>
+            {exerciseActionMenuTarget?.deletedAt ? (
+              <Pressable
+                accessibilityLabel="Undelete exercise from actions"
+                style={styles.actionMenuButton}
+                onPress={() => {
+                  const target = exerciseActionMenuTarget;
+                  if (target) {
+                    void undeleteExercise(target);
+                  }
+                }}>
+                <Text style={styles.actionMenuButtonText}>Undelete</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityLabel="Delete exercise from actions"
+                style={[styles.actionMenuButton, styles.actionMenuDeleteButton]}
+                onPress={() => {
+                  setExerciseDeleteTarget(exerciseActionMenuTarget);
+                  setExerciseActionMenuTarget(null);
+                }}>
+                <Text style={styles.actionMenuDeleteButtonText}>Delete</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </Modal>
@@ -764,6 +884,10 @@ const styles = StyleSheet.create({
   pinnedTopRegion: {
     gap: 8,
     flexShrink: 0,
+  },
+  equalTopButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
   centeredState: {
     flex: 1,
@@ -901,6 +1025,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: uiColors.textSecondary,
     fontWeight: '600',
+  },
+  deletedExerciseChip: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: uiColors.textWarning,
   },
   exerciseRowKebabButton: {
     width: 30,

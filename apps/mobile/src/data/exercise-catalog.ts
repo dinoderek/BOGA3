@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
 import { exerciseDefinitions, exerciseMuscleMappings, muscleGroups } from './schema';
@@ -20,7 +20,12 @@ export type ExerciseCatalogExerciseMuscleMapping = {
 export type ExerciseCatalogExercise = {
   id: string;
   name: string;
+  deletedAt: Date | null;
   mappings: ExerciseCatalogExerciseMuscleMapping[];
+};
+
+export type ListExerciseCatalogExercisesOptions = {
+  includeDeleted?: boolean;
 };
 
 export type SaveExerciseCatalogExerciseInput = {
@@ -34,9 +39,21 @@ export type SaveExerciseCatalogExerciseInput = {
   now?: Date;
 };
 
+export type SetExerciseCatalogExerciseDeletedStateInput = {
+  id: string;
+  isDeleted: boolean;
+  now?: Date;
+};
+
+type DrizzleExerciseRow = {
+  id: string;
+  name: string;
+  deletedAt: Date | null;
+};
+
 export type ExerciseCatalogStore = {
   listMuscleGroups(): Promise<ExerciseCatalogMuscleGroup[]>;
-  listExercises(): Promise<ExerciseCatalogExercise[]>;
+  listExercises(input: { includeDeleted: boolean }): Promise<ExerciseCatalogExercise[]>;
   saveExercise(input: {
     id?: string;
     name: string;
@@ -47,19 +64,18 @@ export type ExerciseCatalogStore = {
     }[];
     now: Date;
   }): Promise<ExerciseCatalogExercise>;
-  deleteExercise(input: { id: string }): Promise<void>;
+  setExerciseDeletedState(input: {
+    id: string;
+    deletedAt: Date | null;
+    now: Date;
+  }): Promise<void>;
 };
 
 const createLocalId = (prefix: string) =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 const mapExerciseGraph = (
-  exerciseRow:
-    | {
-        id: string;
-        name: string;
-      }
-    | undefined,
+  exerciseRow: DrizzleExerciseRow | undefined,
   mappingRows: {
     id: string;
     exerciseDefinitionId: string;
@@ -75,6 +91,7 @@ const mapExerciseGraph = (
   return {
     id: exerciseRow.id,
     name: exerciseRow.name,
+    deletedAt: exerciseRow.deletedAt,
     mappings: mappingRows
       .filter((mapping) => mapping.exerciseDefinitionId === exerciseRow.id)
       .map((mapping) => ({
@@ -86,15 +103,26 @@ const mapExerciseGraph = (
   };
 };
 
-const listExerciseGraphs = async (database: LocalDatabase): Promise<ExerciseCatalogExercise[]> => {
-  const exerciseRows = database
+const listExerciseGraphs = async (
+  database: LocalDatabase,
+  input: { includeDeleted: boolean }
+): Promise<ExerciseCatalogExercise[]> => {
+  const baseQuery = database
     .select({
       id: exerciseDefinitions.id,
       name: exerciseDefinitions.name,
+      deletedAt: exerciseDefinitions.deletedAt,
     })
-    .from(exerciseDefinitions)
-    .orderBy(asc(exerciseDefinitions.name))
-    .all();
+    .from(exerciseDefinitions);
+
+  const exerciseRows = (
+    input.includeDeleted
+      ? baseQuery.orderBy(asc(exerciseDefinitions.name)).all()
+      : baseQuery
+          .where(isNull(exerciseDefinitions.deletedAt))
+          .orderBy(asc(exerciseDefinitions.name))
+          .all()
+  ) as DrizzleExerciseRow[];
 
   if (exerciseRows.length === 0) {
     return [];
@@ -132,9 +160,9 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
       .orderBy(asc(muscleGroups.sortOrder), asc(muscleGroups.displayName))
       .all();
   },
-  async listExercises() {
+  async listExercises(input) {
     const database = await bootstrapLocalDataLayer();
-    return listExerciseGraphs(database);
+    return listExerciseGraphs(database, input);
   },
   async saveExercise(input) {
     const database = await bootstrapLocalDataLayer();
@@ -151,6 +179,7 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
         tx.update(exerciseDefinitions)
           .set({
             name: input.name,
+            deletedAt: null,
             updatedAt: input.now,
           })
           .where(eq(exerciseDefinitions.id, exerciseId))
@@ -160,6 +189,7 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
           .values({
             id: exerciseId,
             name: input.name,
+            deletedAt: null,
             createdAt: input.now,
             updatedAt: input.now,
           })
@@ -189,10 +219,11 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
       .select({
         id: exerciseDefinitions.id,
         name: exerciseDefinitions.name,
+        deletedAt: exerciseDefinitions.deletedAt,
       })
       .from(exerciseDefinitions)
       .where(eq(exerciseDefinitions.id, exerciseId))
-      .get();
+      .get() as DrizzleExerciseRow | undefined;
 
     const mappingRows = database
       .select({
@@ -209,11 +240,15 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
 
     return mapExerciseGraph(exerciseRow, mappingRows);
   },
-  async deleteExercise(input) {
+  async setExerciseDeletedState(input) {
     const database = await bootstrapLocalDataLayer();
 
     database
-      .delete(exerciseDefinitions)
+      .update(exerciseDefinitions)
+      .set({
+        deletedAt: input.deletedAt,
+        updatedAt: input.now,
+      })
       .where(eq(exerciseDefinitions.id, input.id))
       .run();
   },
@@ -227,14 +262,33 @@ const assertFiniteDate = (value: Date) => {
 
 const deriveRoleFromWeight = (weight: number): 'primary' | 'secondary' => (weight > 0.75 ? 'primary' : 'secondary');
 
-export const createExerciseCatalogRepository = (store: ExerciseCatalogStore = createDrizzleExerciseCatalogStore()) => ({
-  listMuscleGroups() {
-    return store.listMuscleGroups();
-  },
-  listExercises() {
-    return store.listExercises();
-  },
-  async saveExercise(input: SaveExerciseCatalogExerciseInput): Promise<ExerciseCatalogExercise> {
+export const createExerciseCatalogRepository = (store: ExerciseCatalogStore = createDrizzleExerciseCatalogStore()) => {
+  const persistDeletedState = async (input: SetExerciseCatalogExerciseDeletedStateInput): Promise<void> => {
+    const trimmedId = input.id.trim();
+    if (!trimmedId) {
+      throw new Error('Exercise id is required');
+    }
+
+    const now = input.now ?? new Date();
+    assertFiniteDate(now);
+
+    await store.setExerciseDeletedState({
+      id: trimmedId,
+      deletedAt: input.isDeleted ? now : null,
+      now,
+    });
+  };
+
+  return {
+    listMuscleGroups() {
+      return store.listMuscleGroups();
+    },
+    listExercises(options: ListExerciseCatalogExercisesOptions = {}) {
+      return store.listExercises({
+        includeDeleted: options.includeDeleted === true,
+      });
+    },
+    async saveExercise(input: SaveExerciseCatalogExerciseInput): Promise<ExerciseCatalogExercise> {
     const name = input.name.trim();
     if (!name) {
       throw new Error('Exercise name is required');
@@ -271,26 +325,38 @@ export const createExerciseCatalogRepository = (store: ExerciseCatalogStore = cr
       };
     });
 
-    return store.saveExercise({
-      id: input.id,
-      name,
-      mappings: normalizedMappings,
-      now,
-    });
-  },
-  async deleteExercise(id: string): Promise<void> {
-    const trimmedId = id.trim();
-    if (!trimmedId) {
-      throw new Error('Exercise id is required');
-    }
-
-    await store.deleteExercise({ id: trimmedId });
-  },
-});
+      return store.saveExercise({
+        id: input.id,
+        name,
+        mappings: normalizedMappings,
+        now,
+      });
+    },
+    async setExerciseDeletedState(input: SetExerciseCatalogExerciseDeletedStateInput): Promise<void> {
+      await persistDeletedState(input);
+    },
+    async deleteExercise(id: string, now?: Date): Promise<void> {
+      await persistDeletedState({
+        id,
+        isDeleted: true,
+        now,
+      });
+    },
+    async undeleteExercise(id: string, now?: Date): Promise<void> {
+      await persistDeletedState({
+        id,
+        isDeleted: false,
+        now,
+      });
+    },
+  };
+};
 
 const defaultExerciseCatalogRepository = createExerciseCatalogRepository();
 
 export const listExerciseCatalogMuscleGroups = defaultExerciseCatalogRepository.listMuscleGroups;
 export const listExerciseCatalogExercises = defaultExerciseCatalogRepository.listExercises;
 export const saveExerciseCatalogExercise = defaultExerciseCatalogRepository.saveExercise;
+export const setExerciseCatalogExerciseDeletedState = defaultExerciseCatalogRepository.setExerciseDeletedState;
 export const deleteExerciseCatalogExercise = defaultExerciseCatalogRepository.deleteExercise;
+export const undeleteExerciseCatalogExercise = defaultExerciseCatalogRepository.undeleteExercise;

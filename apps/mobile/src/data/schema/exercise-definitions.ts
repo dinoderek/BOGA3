@@ -9,6 +9,7 @@ export const exerciseDefinitions = sqliteTable(
       .notNull()
       .default(sql`(lower(hex(randomblob(16))))`),
     name: text('name').notNull(),
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -18,6 +19,7 @@ export const exerciseDefinitions = sqliteTable(
   },
   (table) => ({
     nameIdx: index('exercise_definitions_name_idx').on(table.name),
+    deletedAtIdx: index('exercise_definitions_deleted_at_idx').on(table.deletedAt),
     nameNonEmptyGuard: check('exercise_definitions_name_non_empty', sql`${table.name} <> ''`),
   })
 );

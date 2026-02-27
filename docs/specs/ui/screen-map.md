@@ -44,16 +44,19 @@ Brief entrypoint map of the current mobile screens.
   - completed-edit loading/error/content states
   - in-route picker/editor/action modals
 - Key exits:
+  - `exercise-catalog` (`source=session-recorder&intent=manage|add` from exercise picker)
   - dismisses to `/` on submit/save success
 
 4. `/exercise-catalog`
 - File: `apps/mobile/app/exercise-catalog.tsx`
 - Purpose:
-  - exercise catalog management (create/edit/delete exercises and muscle mappings)
+  - exercise catalog management (create/edit/soft-delete/undelete exercises and muscle mappings)
 - Key states (high level):
   - loading / error / content
   - in-route editor/action/delete modals
+  - deleted visibility toggle (`Show deleted` / `Hide deleted`)
 - Key exits:
+  - `session-recorder` via recorder-return affordance when opened from recorder
   - `session-list` via top-level tabs
 
 5. `/completed-session/[sessionId]`

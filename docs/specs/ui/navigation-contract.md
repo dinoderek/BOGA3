@@ -45,8 +45,11 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
 
 4. `/exercise-catalog`
 - File: `apps/mobile/app/exercise-catalog.tsx`
-- Params:
-  - none
+- Query params:
+  - `source` (optional; `session-recorder` enables recorder-return affordances)
+  - `intent` (optional; `add` auto-opens create editor once on initial load)
+- Behavior:
+  - when opened from recorder, `Back to recorder` uses `router.back()`
 
 5. `/completed-session/[sessionId]`
 - File: `apps/mobile/app/completed-session/[sessionId].tsx`
@@ -75,6 +78,12 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
    - successful reopen (`dismissTo('/')`)
 9. `/session-recorder...` -> `/`
    - successful submit/save (`dismissTo('/')`)
+10. `/session-recorder` -> `/exercise-catalog?source=session-recorder&intent=manage`
+   - exercise picker `Manage` action
+11. `/session-recorder` -> `/exercise-catalog?source=session-recorder&intent=add`
+   - exercise picker `Add new` action
+12. `/exercise-catalog?source=session-recorder...` -> `/session-recorder`
+   - explicit back action or post-save return (`router.back()`)
 
 Note:
 

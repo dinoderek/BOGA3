@@ -120,13 +120,24 @@ jest.mock('@/src/data', () => ({
   setSessionDeletedState: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@/src/data/exercise-catalog', () => ({
+  listExerciseCatalogExercises: jest.fn().mockResolvedValue([
+    { id: 'sys_barbell_back_squat', name: 'Barbell Squat', deletedAt: null, mappings: [] },
+    { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
+    { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
+  ]),
+}));
+
 jest.mock('expo-router', () => {
   const mockPush = jest.fn();
   return {
     useLocalSearchParams: () => ({}),
     useNavigation: () => ({ addListener: jest.fn(() => () => undefined), dispatch: jest.fn() }),
     useRouter: () => ({ push: mockPush, replace: jest.fn() }),
-    useFocusEffect: () => {},
+    useFocusEffect: (callback: () => void | (() => void)) => {
+      const React = require('react');
+      React.useEffect(() => callback(), [callback]);
+    },
     __mockPush: mockPush,
   };
 });
@@ -180,7 +191,7 @@ describe('session list -> recorder -> back journey', () => {
     fireEvent.press(screen.getByText('Choose gym'));
     fireEvent.press(screen.getByLabelText('Select gym Westside Barbell Club'));
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
     fireEvent.changeText(screen.getByLabelText('Weight for exercise 1 set 1'), '225');
     fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
 

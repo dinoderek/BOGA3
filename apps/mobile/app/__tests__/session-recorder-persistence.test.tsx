@@ -36,7 +36,19 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('@/src/data/exercise-catalog', () => ({
+  listExerciseCatalogExercises: jest.fn().mockResolvedValue([
+    { id: 'sys_barbell_back_squat', name: 'Barbell Squat', deletedAt: null, mappings: [] },
+    { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
+    { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
+  ]),
+}));
+
 jest.mock('expo-router', () => ({
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const React = require('react');
+    React.useEffect(() => callback(), [callback]);
+  },
   useLocalSearchParams: () => mockSearchParams,
   useNavigation: () => ({ addListener: mockNavigationAddListener, dispatch: mockNavigationDispatch }),
   useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
@@ -119,7 +131,7 @@ describe('SessionRecorderScreen persistence wiring', () => {
     });
 
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
 
     await waitFor(() => {
       expect(mockPersistSessionDraftSnapshot).toHaveBeenCalledTimes(1);
@@ -175,7 +187,7 @@ describe('SessionRecorderScreen persistence wiring', () => {
     });
 
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
     await waitFor(() => {
       expect(mockPersistSessionDraftSnapshot).toHaveBeenCalledTimes(1);
     });

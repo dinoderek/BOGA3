@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SessionContentLayout } from '@/components/session-recorder/session-content-layout';
 import { uiColors } from '@/components/ui';
 import {
-  SEEDED_EXERCISES,
   SEEDED_LOCATIONS,
   Session,
   SessionExercise,
-  SessionExercisePreset,
   SessionLocation,
   SessionRecorderState,
   SessionSet,
@@ -25,6 +23,10 @@ import {
   type SessionDraftSnapshot,
   type SessionGraphSnapshot,
 } from '@/src/data';
+import {
+  listExerciseCatalogExercises,
+  type ExerciseCatalogExercise,
+} from '@/src/data/exercise-catalog';
 import { createDraftAutosaveController, type DraftAutosaveController } from '@/src/session-recorder/draft-autosave';
 import { createSessionRecorderLifecycleHelpers } from '@/src/session-recorder/lifecycle-helpers';
 
@@ -211,13 +213,6 @@ function createInitialState(): SessionRecorderState {
     editingLocationId: null,
     editingLocationName: '',
     exercisePickerVisible: false,
-    exerciseModalMode: 'picker',
-    exerciseEditorReturnMode: 'picker',
-    exercisePresets: SEEDED_EXERCISES,
-    pendingExerciseName: '',
-    showArchivedExercisesInManager: false,
-    editingExerciseId: null,
-    editingExerciseName: '',
     exerciseSelectionTargetId: null,
     exerciseActionMenuVisible: false,
     activeExerciseActionId: null,
@@ -230,10 +225,6 @@ function createLocationId(locationName: string): string {
 
 function createExerciseId(): string {
   return `exercise-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function createExercisePresetId(exerciseName: string): string {
-  return `custom-exercise-${exerciseName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 }
 
 function createSetId(): string {
@@ -325,6 +316,9 @@ export default function SessionRecorderScreen() {
   const [completedEditStartTouched, setCompletedEditStartTouched] = useState(false);
   const [completedEditEndTouched, setCompletedEditEndTouched] = useState(false);
   const [completedEditSubmitAttempted, setCompletedEditSubmitAttempted] = useState(false);
+  const [exercisePickerOptions, setExercisePickerOptions] = useState<ExerciseCatalogExercise[]>([]);
+  const [isExerciseCatalogLoading, setIsExerciseCatalogLoading] = useState(false);
+  const [exerciseCatalogLoadError, setExerciseCatalogLoadError] = useState<string | null>(null);
   const stateRef = useRef(state);
   const completedEditEndDateTimeRef = useRef<string | null>(completedEditEndDateTime);
   const persistedSessionIdRef = useRef<string | null>(null);
@@ -332,6 +326,7 @@ export default function SessionRecorderScreen() {
   const autosaveRef = useRef<DraftAutosaveController | null>(null);
   const hasSessionMutationRef = useRef(false);
   const replayingBeforeRemoveActionRef = useRef(false);
+  const pendingExercisePickerRestoreTargetRef = useRef<string | null | undefined>(undefined);
 
   stateRef.current = state;
   completedEditEndDateTimeRef.current = completedEditEndDateTime;
@@ -558,6 +553,63 @@ export default function SessionRecorderScreen() {
     };
   }, [autosaveController, lifecycleHelpers]);
 
+  const reloadExercisePickerOptions = useCallback(async () => {
+    setIsExerciseCatalogLoading(true);
+    setExerciseCatalogLoadError(null);
+
+    try {
+      const loadedExercises = await listExerciseCatalogExercises();
+      setExercisePickerOptions(loadedExercises);
+    } catch {
+      setExerciseCatalogLoadError('Unable to load exercises right now.');
+    } finally {
+      setIsExerciseCatalogLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      void (async () => {
+        setIsExerciseCatalogLoading(true);
+        setExerciseCatalogLoadError(null);
+
+        try {
+          const loadedExercises = await listExerciseCatalogExercises();
+          if (cancelled) {
+            return;
+          }
+          setExercisePickerOptions(loadedExercises);
+        } catch {
+          if (cancelled) {
+            return;
+          }
+          setExerciseCatalogLoadError('Unable to load exercises right now.');
+        } finally {
+          if (!cancelled) {
+            setIsExerciseCatalogLoading(false);
+            if (pendingExercisePickerRestoreTargetRef.current !== undefined) {
+              const selectionTargetId = pendingExercisePickerRestoreTargetRef.current;
+              pendingExercisePickerRestoreTargetRef.current = undefined;
+              setState((current) => ({
+                ...current,
+                exercisePickerVisible: true,
+                exerciseSelectionTargetId: selectionTargetId ?? null,
+                exerciseActionMenuVisible: false,
+                activeExerciseActionId: null,
+              }));
+            }
+          }
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
   const markSessionStructuralMutation = () => {
     hasSessionMutationRef.current = true;
     if (!persistenceHydratedRef.current) {
@@ -592,19 +644,6 @@ export default function SessionRecorderScreen() {
         ? state.locations
         : state.locations.filter((location) => !location.archived),
     [state.locations, state.showArchivedInManager]
-  );
-
-  const activeExercisePresets = useMemo(
-    () => state.exercisePresets.filter((exercisePreset) => !exercisePreset.archived),
-    [state.exercisePresets]
-  );
-
-  const managedExercisePresets = useMemo(
-    () =>
-      state.showArchivedExercisesInManager
-        ? state.exercisePresets
-        : state.exercisePresets.filter((exercisePreset) => !exercisePreset.archived),
-    [state.exercisePresets, state.showArchivedExercisesInManager]
   );
 
   const clearSubmitFeedback = () => {
@@ -780,36 +819,23 @@ export default function SessionRecorderScreen() {
     setState((current) => ({
       ...current,
       exercisePickerVisible: true,
-      exerciseModalMode: 'picker',
-      exerciseEditorReturnMode: 'picker',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: exerciseIdToChange,
       exerciseActionMenuVisible: false,
       activeExerciseActionId: null,
     }));
+    void reloadExercisePickerOptions();
   };
 
   const dismissExerciseModal = () => {
     setState((current) => ({
       ...current,
       exercisePickerVisible: false,
-      exerciseModalMode: 'picker',
-      exerciseEditorReturnMode: 'picker',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
   };
 
   const selectExercisePreset = (exercisePresetId: string) => {
-    const selectedExercisePreset = state.exercisePresets.find(
-      (exercisePreset) => exercisePreset.id === exercisePresetId
-    );
+    const selectedExercisePreset = exercisePickerOptions.find((exercisePreset) => exercisePreset.id === exercisePresetId);
     if (!selectedExercisePreset) {
       return;
     }
@@ -827,153 +853,21 @@ export default function SessionRecorderScreen() {
           : [...current.session.exercises, createExercise(selectedExercisePreset.name)],
       },
       exercisePickerVisible: false,
-      exerciseModalMode: 'picker',
-      exerciseEditorReturnMode: 'picker',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      showArchivedExercisesInManager: false,
       exerciseSelectionTargetId: null,
     }));
     clearSubmitFeedback();
     markSessionStructuralMutation();
   };
 
-  const openManageExercises = () => {
+  const openExerciseCatalogFromRecorder = (intent: 'manage' | 'add') => {
+    pendingExercisePickerRestoreTargetRef.current = state.exerciseSelectionTargetId;
     setState((current) => ({
       ...current,
-      exerciseModalMode: 'manage',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      exerciseActionMenuVisible: false,
-      activeExerciseActionId: null,
-    }));
-  };
-
-  const openAddExerciseEditor = () => {
-    setState((current) => ({
-      ...current,
-      exerciseModalMode: 'editor',
-      exerciseEditorReturnMode: 'picker',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      exerciseActionMenuVisible: false,
-      activeExerciseActionId: null,
-    }));
-  };
-
-  const openEditExerciseEditor = (exercisePreset: SessionExercisePreset) => {
-    setState((current) => ({
-      ...current,
-      exerciseModalMode: 'editor',
-      exerciseEditorReturnMode: 'manage',
-      editingExerciseId: exercisePreset.id,
-      editingExerciseName: exercisePreset.name,
-      pendingExerciseName: '',
-    }));
-  };
-
-  const returnFromExerciseEditor = () => {
-    setState((current) => ({
-      ...current,
-      exerciseModalMode: current.exerciseEditorReturnMode,
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-    }));
-  };
-
-  const handlePendingExerciseNameChange = (pendingExerciseName: string) => {
-    setState((current) => ({
-      ...current,
-      pendingExerciseName,
-    }));
-  };
-
-  const handleEditingExerciseNameChange = (editingExerciseName: string) => {
-    setState((current) => ({
-      ...current,
-      editingExerciseName,
-    }));
-  };
-
-  const saveExerciseFromEditor = () => {
-    const draftName = (state.editingExerciseId ? state.editingExerciseName : state.pendingExerciseName).trim();
-    if (!draftName) {
-      return;
-    }
-
-    if (state.editingExerciseId) {
-      setState((current) => ({
-        ...current,
-        exercisePresets: current.exercisePresets.map((exercisePreset) =>
-          exercisePreset.id === current.editingExerciseId ? { ...exercisePreset, name: draftName } : exercisePreset
-        ),
-        exerciseModalMode: 'manage',
-        editingExerciseId: null,
-        editingExerciseName: '',
-      }));
-      return;
-    }
-
-    const newExercisePreset: SessionExercisePreset = {
-      id: createExercisePresetId(draftName),
-      name: draftName,
-      archived: false,
-    };
-
-    setState((current) => ({
-      ...current,
-      exercisePresets: [...current.exercisePresets, newExercisePreset],
-      session: {
-        ...current.session,
-        exercises: current.exerciseSelectionTargetId
-          ? current.session.exercises.map((exercise) =>
-              exercise.id === current.exerciseSelectionTargetId
-                ? { ...exercise, name: newExercisePreset.name }
-                : exercise
-            )
-          : [...current.session.exercises, createExercise(newExercisePreset.name)],
-      },
       exercisePickerVisible: false,
-      exerciseModalMode: 'picker',
-      exerciseEditorReturnMode: 'picker',
-      pendingExerciseName: '',
-      editingExerciseId: null,
-      editingExerciseName: '',
-      showArchivedExercisesInManager: false,
-      exerciseSelectionTargetId: null,
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
     }));
-    clearSubmitFeedback();
-    markSessionStructuralMutation();
-  };
-
-  const returnToPickerFromExerciseManage = () => {
-    setState((current) => ({
-      ...current,
-      exerciseModalMode: 'picker',
-      showArchivedExercisesInManager: false,
-      editingExerciseId: null,
-      editingExerciseName: '',
-    }));
-  };
-
-  const toggleExerciseArchivedVisibility = () => {
-    setState((current) => ({
-      ...current,
-      showArchivedExercisesInManager: !current.showArchivedExercisesInManager,
-    }));
-  };
-
-  const toggleExerciseArchive = (exercisePresetId: string, archived: boolean) => {
-    setState((current) => ({
-      ...current,
-      exercisePresets: current.exercisePresets.map((exercisePreset) =>
-        exercisePreset.id === exercisePresetId ? { ...exercisePreset, archived: !archived } : exercisePreset
-      ),
-    }));
+    router.push(`/exercise-catalog?source=session-recorder&intent=${intent}`);
   };
 
   const openExerciseActionMenu = (exerciseId: string) => {
@@ -1227,9 +1121,6 @@ export default function SessionRecorderScreen() {
   const gymEditorPrimaryLabel = state.editingLocationId ? 'Save' : 'Add';
   const gymEditorTitle = state.editingLocationId ? 'Edit Gym' : 'Add Gym';
   const gymEditorInputValue = state.editingLocationId ? state.editingLocationName : state.pendingLocationName;
-  const exerciseEditorPrimaryLabel = state.editingExerciseId ? 'Save' : 'Add';
-  const exerciseEditorTitle = state.editingExerciseId ? 'Edit Exercise' : 'Add Exercise';
-  const exerciseEditorInputValue = state.editingExerciseId ? state.editingExerciseName : state.pendingExerciseName;
   const cleanupModalTitle =
     submitCleanupPrompt?.step === 'incomplete-sets'
       ? 'Remove incomplete sets and submit?'
@@ -1584,11 +1475,15 @@ export default function SessionRecorderScreen() {
           />
 
           <View style={styles.modalCard}>
-            {state.exerciseModalMode === 'picker' ? (
-              <>
-                <Text style={styles.modalTitle}>Select Exercise</Text>
-                <ScrollView contentContainerStyle={styles.modalList}>
-                  {activeExercisePresets.map((exercisePreset) => (
+            <Text style={styles.modalTitle}>Select Exercise</Text>
+            <ScrollView contentContainerStyle={styles.modalList}>
+              {isExerciseCatalogLoading ? <Text style={styles.emptyText}>Loading exercises...</Text> : null}
+              {!isExerciseCatalogLoading && exerciseCatalogLoadError ? (
+                <Text style={styles.emptyText}>{exerciseCatalogLoadError}</Text>
+              ) : null}
+              {!isExerciseCatalogLoading && !exerciseCatalogLoadError ? (
+                <>
+                  {exercisePickerOptions.map((exercisePreset) => (
                     <Pressable
                       key={exercisePreset.id}
                       accessibilityLabel={`Select exercise ${exercisePreset.name}`}
@@ -1597,86 +1492,29 @@ export default function SessionRecorderScreen() {
                       <Text style={styles.pickerOptionText}>{exercisePreset.name}</Text>
                     </Pressable>
                   ))}
-                </ScrollView>
-
-                <View style={styles.equalButtonRow}>
-                  <Pressable style={styles.secondaryActionButton} onPress={openManageExercises}>
-                    <Text style={styles.secondaryActionButtonText}>Manage</Text>
-                  </Pressable>
-                  <Pressable style={styles.secondaryActionButton} onPress={openAddExerciseEditor}>
-                    <Text style={styles.secondaryActionButtonText}>Add new</Text>
-                  </Pressable>
-                </View>
-              </>
-            ) : null}
-
-            {state.exerciseModalMode === 'manage' ? (
-              <>
-                <Text style={styles.modalTitle}>Manage Exercises</Text>
-
-                <View style={styles.equalButtonRow}>
-                  <Pressable style={styles.secondaryActionButton} onPress={returnToPickerFromExerciseManage}>
-                    <Text style={styles.secondaryActionButtonText}>Back to picker</Text>
-                  </Pressable>
-                  <Pressable style={styles.secondaryActionButton} onPress={toggleExerciseArchivedVisibility}>
-                    <Text style={styles.secondaryActionButtonText}>
-                      {state.showArchivedExercisesInManager ? 'Hide archived' : 'Show archived'}
-                    </Text>
-                  </Pressable>
-                </View>
-
-                <ScrollView contentContainerStyle={styles.modalList}>
-                  {managedExercisePresets.map((exercisePreset) => (
-                    <View key={exercisePreset.id} style={styles.manageRow}>
-                      <Text numberOfLines={1} style={styles.manageRowTitle}>
-                        {exercisePreset.name}
-                      </Text>
-                      <Pressable
-                        accessibilityLabel={`Edit exercise ${exercisePreset.name}`}
-                        style={styles.inlineSecondaryButton}
-                        onPress={() => openEditExerciseEditor(exercisePreset)}>
-                        <Text style={styles.inlineSecondaryButtonText}>Edit</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityLabel={`${exercisePreset.archived ? 'Unarchive' : 'Archive'} exercise ${exercisePreset.name}`}
-                        style={[
-                          styles.inlineArchiveButton,
-                          exercisePreset.archived ? styles.unarchiveButton : styles.archiveDangerButton,
-                        ]}
-                        onPress={() => toggleExerciseArchive(exercisePreset.id, exercisePreset.archived)}>
-                        <Text style={styles.inlineArchiveButtonText}>
-                          {exercisePreset.archived ? 'Unarchive' : 'Archive'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  ))}
-                  {managedExercisePresets.length === 0 ? (
-                    <Text style={styles.emptyText}>No exercises for the current filter.</Text>
+                  {exercisePickerOptions.length === 0 ? (
+                    <Text style={styles.emptyText}>No active exercises available.</Text>
                   ) : null}
-                </ScrollView>
-              </>
-            ) : null}
+                </>
+              ) : null}
+            </ScrollView>
 
-            {state.exerciseModalMode === 'editor' ? (
-              <>
-                <Text style={styles.modalTitle}>{exerciseEditorTitle}</Text>
-                <TextInput
-                  autoFocus
-                  placeholder="Exercise name"
-                  style={styles.input}
-                  value={exerciseEditorInputValue}
-                  onChangeText={state.editingExerciseId ? handleEditingExerciseNameChange : handlePendingExerciseNameChange}
-                />
-                <View style={styles.equalButtonRow}>
-                  <Pressable style={styles.secondaryActionButton} onPress={returnFromExerciseEditor}>
-                    <Text style={styles.secondaryActionButtonText}>Back</Text>
-                  </Pressable>
-                  <Pressable style={styles.primaryActionButton} onPress={saveExerciseFromEditor}>
-                    <Text style={styles.primaryActionButtonText}>{exerciseEditorPrimaryLabel}</Text>
-                  </Pressable>
-                </View>
-              </>
-            ) : null}
+            <View style={styles.equalButtonRow}>
+              <Pressable
+                style={styles.secondaryActionButton}
+                onPress={() => {
+                  openExerciseCatalogFromRecorder('manage');
+                }}>
+                <Text style={styles.secondaryActionButtonText}>Manage</Text>
+              </Pressable>
+              <Pressable
+                style={styles.secondaryActionButton}
+                onPress={() => {
+                  openExerciseCatalogFromRecorder('add');
+                }}>
+                <Text style={styles.secondaryActionButtonText}>Add new</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>

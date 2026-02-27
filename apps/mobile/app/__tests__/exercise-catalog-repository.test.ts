@@ -7,7 +7,7 @@ const createMockStore = (): jest.Mocked<ExerciseCatalogStore> => ({
   listMuscleGroups: jest.fn(),
   listExercises: jest.fn(),
   saveExercise: jest.fn(),
-  deleteExercise: jest.fn(),
+  setExerciseDeletedState: jest.fn(),
 });
 
 describe('exercise catalog repository', () => {
@@ -23,6 +23,7 @@ describe('exercise catalog repository', () => {
     store.saveExercise.mockResolvedValue({
       id: 'exercise-1',
       name: 'Custom Press',
+      deletedAt: null,
       mappings: [
         { id: 'map-1', muscleGroupId: 'chest', weight: 1, role: 'primary' },
         { id: 'map-2', muscleGroupId: 'triceps', weight: 0.5, role: 'secondary' },
@@ -48,6 +49,18 @@ describe('exercise catalog repository', () => {
       ],
       now,
     });
+  });
+
+  it('lists exercises with explicit includeDeleted defaults', async () => {
+    const store = createMockStore();
+    const repository = createExerciseCatalogRepository(store);
+    store.listExercises.mockResolvedValue([]);
+
+    await repository.listExercises();
+    await repository.listExercises({ includeDeleted: true });
+
+    expect(store.listExercises).toHaveBeenNthCalledWith(1, { includeDeleted: false });
+    expect(store.listExercises).toHaveBeenNthCalledWith(2, { includeDeleted: true });
   });
 
   it('rejects missing links, duplicate links, and invalid weights', async () => {
@@ -92,12 +105,23 @@ describe('exercise catalog repository', () => {
     expect(store.saveExercise).not.toHaveBeenCalled();
   });
 
-  it('deletes an exercise by id', async () => {
+  it('writes soft-delete state changes for delete and undelete', async () => {
     const store = createMockStore();
     const repository = createExerciseCatalogRepository(store);
+    const now = new Date('2026-02-27T12:00:00.000Z');
 
-    await repository.deleteExercise('exercise-1');
+    await repository.deleteExercise('exercise-1', now);
+    await repository.undeleteExercise('exercise-1', now);
 
-    expect(store.deleteExercise).toHaveBeenCalledWith({ id: 'exercise-1' });
+    expect(store.setExerciseDeletedState).toHaveBeenNthCalledWith(1, {
+      id: 'exercise-1',
+      deletedAt: now,
+      now,
+    });
+    expect(store.setExerciseDeletedState).toHaveBeenNthCalledWith(2, {
+      id: 'exercise-1',
+      deletedAt: null,
+      now,
+    });
   });
 });

@@ -38,7 +38,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 3. Danger actions are explicitly destructive and visually distinct.
    - Examples:
      - delete session
-     - delete exercise
+     - soft-delete exercise
      - remove destructive menu actions
 4. Tab actions (`TopLevelTabs`) are navigation controls, not generic primary actions.
    - They use tab semantics (`accessibilityRole="tab"` / tablist) and active-state visuals.
@@ -49,7 +49,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
    - Examples:
      - session list action menus
      - exercise catalog editor/action/delete modals
-     - session recorder gym/exercise pickers/managers/editors
+     - session recorder gym/exercise pickers/action menus
 2. Modal open/close is treated as state within the current route and should not be documented as a navigation transition.
 3. Dismiss overlays via backdrop press are common and expected when the flow is not destructive-final.
 
@@ -67,6 +67,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
    - trailing kebab/icon action for secondary actions
 2. This split interaction pattern is used in both `session-list` and `exercise-catalog`, and should be preserved during refactors unless behavior intentionally changes.
 3. Deleted/archived visibility is controlled via toggles and state hints, not separate routes.
+4. In `exercise-catalog`, deleted exercises remain in list history when deleted visibility is enabled, show explicit `Deleted` state, and expose `Undelete` from row actions.
 
 ### 5. Forms and validation conventions
 
@@ -94,6 +95,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 
 1. Route mode/state changes that affect screen behavior (for example `session-recorder` completed-edit mode) must be documented in `docs/specs/ui/navigation-contract.md`.
 2. Route alias behavior (`/` -> `session-list`) should be treated as a navigation entry alias, not a unique screen design.
+3. `exercise-catalog` supports recorder-entry query semantics (`source=session-recorder`, `intent=add|manage`) and should keep recorder return behavior explicit.
 
 ### 9. UI guardrail enforcement (current enforced rule)
 

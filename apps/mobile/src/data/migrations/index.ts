@@ -36,6 +36,12 @@ export const localRuntimeMigrations: RuntimeMigrationConfig = {
         tag: '0004_active_completed_lifecycle',
         breakpoints: true,
       },
+      {
+        idx: 5,
+        when: 1772190386093,
+        tag: '0005_slimy_iron_lad',
+        breakpoints: true,
+      },
     ],
   },
   migrations: {
@@ -185,5 +191,7 @@ CREATE INDEX \`sessions_status_idx\` ON \`sessions\` (\`status\`);--> statement-
 CREATE INDEX \`sessions_completed_at_idx\` ON \`sessions\` (\`completed_at\`);--> statement-breakpoint
 CREATE INDEX \`sessions_deleted_at_idx\` ON \`sessions\` (\`deleted_at\`);--> statement-breakpoint
 PRAGMA foreign_keys=ON;`,
+    m0005: `ALTER TABLE \`exercise_definitions\` ADD \`deleted_at\` integer;--> statement-breakpoint
+CREATE INDEX \`exercise_definitions_deleted_at_idx\` ON \`exercise_definitions\` (\`deleted_at\`);`,
   },
 };

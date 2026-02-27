@@ -23,11 +23,23 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('@/src/data/exercise-catalog', () => ({
+  listExerciseCatalogExercises: jest.fn().mockResolvedValue([
+    { id: 'sys_barbell_back_squat', name: 'Barbell Squat', deletedAt: null, mappings: [] },
+    { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
+    { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
+  ]),
+}));
+
 jest.mock('expo-router', () => {
   const mockReplace = jest.fn();
   const mockDismissTo = jest.fn();
   const mockDismissAll = jest.fn();
   return {
+    useFocusEffect: (callback: () => void | (() => void)) => {
+      const React = require('react');
+      React.useEffect(() => callback(), [callback]);
+    },
     useLocalSearchParams: () => mockSearchParams,
     useNavigation: () => ({ addListener: jest.fn(() => () => undefined), dispatch: jest.fn() }),
     useRouter: () => ({
@@ -103,7 +115,7 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
     fireEvent.changeText(screen.getByLabelText('Weight for exercise 1 set 1'), '225');
     fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
     fireEvent.press(screen.getByText('Submit Session'));
@@ -120,7 +132,7 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
     fireEvent.changeText(screen.getByLabelText('Weight for exercise 1 set 1'), '225');
     fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
     fireEvent.press(screen.getByText('Submit Session'));
@@ -140,7 +152,7 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     fireEvent.press(screen.getByText('Choose gym'));
     fireEvent.press(screen.getByLabelText('Select gym Westside Barbell Club'));
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Barbell Squat'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
     fireEvent.changeText(screen.getByLabelText('Weight for exercise 1 set 1'), '225');
     fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
     fireEvent.press(screen.getByLabelText('Add set to exercise 1'));
@@ -168,7 +180,7 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
-    fireEvent.press(screen.getByLabelText('Select exercise Bench Press'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Bench Press'));
     fireEvent.press(screen.getByLabelText('Remove set 1 from exercise 1'));
     fireEvent.press(screen.getByText('Submit Session'));
 

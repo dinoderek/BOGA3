@@ -21,7 +21,19 @@ jest.mock('@/src/data', () => ({
   }),
 }));
 
+jest.mock('@/src/data/exercise-catalog', () => ({
+  listExerciseCatalogExercises: jest.fn().mockResolvedValue([
+    { id: 'sys_barbell_back_squat', name: 'Barbell Squat', deletedAt: null, mappings: [] },
+    { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
+    { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
+  ]),
+}));
+
 jest.mock('expo-router', () => ({
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    const React = require('react');
+    React.useEffect(() => callback(), [callback]);
+  },
   useLocalSearchParams: () => ({}),
   useNavigation: () => ({ addListener: jest.fn(() => () => undefined), dispatch: jest.fn() }),
   useRouter: () => ({ replace: jest.fn(), push: jest.fn() }),
