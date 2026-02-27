@@ -1,0 +1,145 @@
+# M9 Brainstorm: Exercise Variations
+
+## Why this milestone
+
+We want exercise variations so users can distinguish meaningful execution differences (grip/hold/machine/implement), while keeping logging fast and intuitive.
+
+## Current context
+
+- We do not have analytics yet.
+- Variation support can make logging flow heavier if not designed carefully.
+- Current priority for M9: improve exercise selection/creation UX so the experience stays quick and intuitive.
+- Variations should belong to one base exercise (not shared globally across exercises).
+- Grouping behavior for analytics/progress is a future feature (foundation only in M9).
+- Variation creation is expected to be infrequent, so default home should likely be exercise management.
+
+## Locked decisions (workshop draft)
+
+1. Default variation policy:
+   - no variation is required for logging.
+2. Variation model:
+   - variation is key/value based metadata.
+   - pre-seed keys: `grip`, `hold`, `machine`, `implement`, `incline`.
+   - pre-seed known values for seeded keys.
+   - users can add new keys and new values.
+3. Authoring surface:
+   - variation create/edit is catalog-only in M9 (not inline in recorder).
+4. Decision placement:
+   - product decisions in `docs/specs/00-product.md`.
+   - technical decisions in `docs/specs/03-technical-architecture.md`.
+   - milestone-specific details remain in milestone docs/task cards.
+
+## Problem framing
+
+Without variations:
+- users either lose detail (everything logged as one exercise),
+- or explode the catalog with many near-duplicate exercises.
+
+With naive variation UX:
+- logging becomes slower,
+- users may be forced into too many setup choices.
+
+M9 should avoid both outcomes.
+
+## Candidate M9 objective (draft)
+
+Ship a variation-capable exercise model and recorder flow where:
+- adding an exercise remains a low-friction action,
+- users can select/change variation quickly when needed,
+- variation authoring/organization lives primarily in exercise management,
+- data model is ready for future analytics grouping rules without locking those rules now.
+
+## Candidate model direction (draft)
+
+### Data foundation
+
+- Keep `exercise_definitions` as the base exercise entity.
+- Add per-exercise variation entities (for example, `exercise_variations`).
+- Logged session exercises should reference base exercise identity (and likely variation identity) rather than storing only free-form names.
+- Keep display fields/snapshots only where needed for resilience/backward compatibility.
+
+### Variation shape (v1)
+
+- Support predefined variation dimensions as optional tags:
+  - `grip` (wide, medium, narrow)
+  - `hold` (reverse, neutral, overhand, etc.)
+  - `machine` (lat pulldown, cable stack, hammer machine, etc.)
+  - `implement` (barbell, dumbbell, cable handle, etc.)
+- Support user-defined free-form variation names/notes in a later iteration if needed (or behind an explicit scope toggle for M9).
+
+## UX direction to validate
+
+### Exercise management (primary authoring surface)
+
+- Users create/edit/archive variations from the exercise catalog.
+- Each exercise can have 0..n variations (or 1..n if we enforce a default variation).
+- Catalog UX should make "base exercise + variation list" clear and quick to scan.
+
+### Session recorder (quick consumption surface)
+
+- Recorder flow should optimize for speed:
+  - add base exercise quickly,
+  - choose/change variation only when user cares,
+  - avoid forcing extra modal steps for the default path.
+
+Potential patterns to test:
+- one-tap add with default variation + optional "change variation" action;
+- recent variations surfaced first for each exercise;
+- long-press or secondary action to pick variation before inserting.
+
+## Historical behavior decision to revisit
+
+Existing policy (M6 docs) leaned toward reproducible historical analytics via snapshot semantics.
+
+New concern raised:
+- users may expect history views to reflect edits to exercise definitions/labels.
+
+Important split to decide explicitly:
+- immutable logged facts (set values, performed exercise identity at log time),
+- mutable metadata presentation (names/labels/groupings shown later).
+
+M9 should define the minimum stable contract for logged identity now, and lock retroactive metadata semantics (exercise/variation/mapping metadata) for future analytics interpretation.
+
+## History + analytics strategy options (to lock)
+
+### Option A: Retroactive metadata + retroactive analytics (no versioning) (recommended if we optimize for simplicity now)
+
+- Session logs store immutable fact refs:
+  - `exercise_definition_id`
+  - optional `exercise_variation_id`
+  - immutable set/rep/weight/timestamp facts.
+- Exercise/variation/muscle-mapping edits are retroactive:
+  - history labels update to latest names/keys/values.
+  - analytics uses latest metadata/mappings.
+- No versioned exercise definitions in M9.
+- Precomputed analytics (future) are treated as cache:
+  - edits invalidate affected aggregates,
+  - recompute runs for affected entities.
+
+Trade-off:
+- simpler model now, but users can accidentally rewrite historical interpretation by editing definitions.
+
+### Option B: Snapshot/versioned historical semantics (current M6 direction)
+
+- Completed-session analytics remains reproducible and insulated from later mapping edits.
+- Requires snapshot or versioning model.
+
+Trade-off:
+- stronger historical fidelity, but higher model/sync/compute complexity.
+
+## Remaining decisions to lock before finalizing M9 spec
+
+1. Historical semantics:
+   - lock Option A (retroactive, no versioning) vs Option B (snapshot/versioned).
+   - if Option A is chosen, explicitly supersede the M6 historical decision.
+2. Migration strategy for existing `machineName`:
+   - legacy text-only compatibility vs backfill into variation entities.
+
+## Candidate task slices (draft)
+
+1. Decision alignment task: historical semantics + explicit M6 supersession/retention decision.
+2. Model + migration design for exercise/variation identity and session references.
+3. Exercise catalog UX for managing per-exercise key/value variations.
+4. Session recorder UX for fast exercise + variation selection/change.
+5. Data backfill/migration strategy for existing logged `machineName` values.
+6. Spec/product decision updates (`00-product.md` and `03-technical-architecture.md`).
