@@ -127,7 +127,6 @@ export default function ExerciseCatalogScreen() {
   const [didHandleInitialIntent, setDidHandleInitialIntent] = useState(false);
   const [muscleSelectorMode, setMuscleSelectorMode] = useState<MuscleSelectorMode>(null);
   const [exerciseActionMenuTarget, setExerciseActionMenuTarget] = useState<ExerciseCatalogExercise | null>(null);
-  const [exerciseDeleteTarget, setExerciseDeleteTarget] = useState<ExerciseCatalogExercise | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -414,17 +413,13 @@ export default function ExerciseCatalogScreen() {
     }
   };
 
-  const deleteExercise = async () => {
-    if (!exerciseDeleteTarget) {
-      return;
-    }
-
+  const deleteExercise = async (exercise: ExerciseCatalogExercise) => {
     try {
-      await deleteExerciseCatalogExercise(exerciseDeleteTarget.id);
+      await deleteExerciseCatalogExercise(exercise.id);
       await reloadCatalog({ includeDeleted: showDeletedExercises });
       setSaveFeedback('Exercise deleted.');
 
-      if (editingExerciseId === exerciseDeleteTarget.id) {
+      if (editingExerciseId === exercise.id) {
         setEditingExerciseId(null);
         setExerciseName('');
         setPrimaryMuscleGroupId(null);
@@ -432,8 +427,6 @@ export default function ExerciseCatalogScreen() {
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Unable to delete exercise.');
-    } finally {
-      setExerciseDeleteTarget(null);
     }
   };
 
@@ -485,17 +478,17 @@ export default function ExerciseCatalogScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.pinnedTopRegion}>
-        <Pressable
-          accessibilityLabel="Create new exercise"
-          style={styles.primaryButton}
-          onPress={startNewExercise}
-          testID="create-new-exercise-button">
-          <Text style={styles.primaryButtonText}>New Exercise</Text>
-        </Pressable>
-        <View style={styles.equalTopButtons}>
+        <View style={styles.topActionRow}>
+          <Pressable
+            accessibilityLabel="Create new exercise"
+            style={[styles.primaryButton, styles.topActionButton]}
+            onPress={startNewExercise}
+            testID="create-new-exercise-button">
+            <Text style={styles.primaryButtonText}>New Exercise</Text>
+          </Pressable>
           <Pressable
             accessibilityLabel="Toggle show deleted exercises"
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, styles.topActionButton]}
             onPress={() => {
               setShowDeletedExercises((current) => !current);
               setSaveError(null);
@@ -505,15 +498,15 @@ export default function ExerciseCatalogScreen() {
               {showDeletedExercises ? 'Hide deleted' : 'Show deleted'}
             </Text>
           </Pressable>
-          {isFromSessionRecorder ? (
-            <Pressable
-              accessibilityLabel="Back to session recorder"
-              style={styles.secondaryButton}
-              onPress={() => router.back()}>
-              <Text style={styles.secondaryButtonText}>Back to recorder</Text>
-            </Pressable>
-          ) : null}
         </View>
+        {isFromSessionRecorder ? (
+          <Pressable
+            accessibilityLabel="Back to session recorder"
+            style={styles.secondaryButton}
+            onPress={() => router.back()}>
+            <Text style={styles.secondaryButtonText}>Back to recorder</Text>
+          </Pressable>
+        ) : null}
         {saveFeedback ? (
           <View style={styles.feedbackCard}>
             <Text selectable style={styles.successText}>
@@ -533,24 +526,26 @@ export default function ExerciseCatalogScreen() {
               <Pressable
                 accessibilityLabel={`Edit exercise definition ${exercise.name}`}
                 style={styles.exerciseListRowMainPressable}
-                onPress={() => {
-                  if (exercise.deletedAt) {
-                    return;
-                  }
-                  openEditorForExercise(exercise);
-                }}>
+              onPress={() => {
+                if (exercise.deletedAt) {
+                  return;
+                }
+                openEditorForExercise(exercise);
+              }}>
                 <View style={styles.exerciseListRowTextStack}>
-                  <Text numberOfLines={1} style={styles.exerciseListRowTitle}>
-                    {exercise.name}
-                  </Text>
+                  <View style={styles.exerciseListRowTitleRow}>
+                    <Text numberOfLines={1} style={styles.exerciseListRowTitle}>
+                      {exercise.name}
+                    </Text>
+                    {exercise.deletedAt ? (
+                      <Text selectable style={styles.deletedExerciseChip}>
+                        Deleted
+                      </Text>
+                    ) : null}
+                  </View>
                   <Text numberOfLines={1} style={styles.exerciseListRowMuscleSummary}>
                     {formatExerciseMuscleSummary(exercise, muscleGroupById)}
                   </Text>
-                  {exercise.deletedAt ? (
-                    <Text selectable style={styles.deletedExerciseChip}>
-                      Deleted
-                    </Text>
-                  ) : null}
                 </View>
               </Pressable>
               <Pressable
@@ -692,9 +687,6 @@ export default function ExerciseCatalogScreen() {
             </ScrollView>
 
             <View style={styles.modalFooterRow}>
-              <Pressable style={styles.secondaryButton} onPress={closeEditorModal}>
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
               <Pressable
                 accessibilityLabel="Save exercise definition"
                 style={[styles.primaryButton, styles.modalPrimaryButton]}
@@ -817,47 +809,15 @@ export default function ExerciseCatalogScreen() {
                 accessibilityLabel="Delete exercise from actions"
                 style={[styles.actionMenuButton, styles.actionMenuDeleteButton]}
                 onPress={() => {
-                  setExerciseDeleteTarget(exerciseActionMenuTarget);
+                  const target = exerciseActionMenuTarget;
                   setExerciseActionMenuTarget(null);
+                  if (target) {
+                    void deleteExercise(target);
+                  }
                 }}>
                 <Text style={styles.actionMenuDeleteButtonText}>Delete</Text>
               </Pressable>
             )}
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        animationType="fade"
-        transparent
-        visible={exerciseDeleteTarget !== null}
-        onRequestClose={() => setExerciseDeleteTarget(null)}>
-        <View style={styles.modalRoot}>
-          <Pressable
-            accessibilityLabel="Dismiss exercise delete modal overlay"
-            style={styles.modalOverlay}
-            onPress={() => setExerciseDeleteTarget(null)}
-          />
-          <View style={styles.deleteModalCard}>
-            <Text selectable style={styles.modalTitle}>
-              Delete Exercise
-            </Text>
-            <Text selectable style={styles.helperText}>
-              Delete {exerciseDeleteTarget?.name ?? 'this exercise'} from the exercise catalog?
-            </Text>
-            <View style={styles.modalFooterRow}>
-              <Pressable style={styles.secondaryButton} onPress={() => setExerciseDeleteTarget(null)}>
-                <Text style={styles.secondaryButtonText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                accessibilityLabel="Confirm delete exercise"
-                style={styles.deleteConfirmButton}
-                onPress={() => {
-                  void deleteExercise();
-                }}>
-                <Text style={styles.deleteConfirmButtonText}>Delete</Text>
-              </Pressable>
-            </View>
           </View>
         </View>
       </Modal>
@@ -885,9 +845,12 @@ const styles = StyleSheet.create({
     gap: 8,
     flexShrink: 0,
   },
-  equalTopButtons: {
+  topActionRow: {
     flexDirection: 'row',
     gap: 8,
+  },
+  topActionButton: {
+    flex: 1,
   },
   centeredState: {
     flex: 1,
@@ -966,7 +929,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalPrimaryButton: {
-    flex: 1,
+    width: '100%',
   },
   secondaryButton: {
     borderRadius: 8,
@@ -983,20 +946,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: uiColors.textSecondary,
     fontWeight: '600',
-  },
-  deleteConfirmButton: {
-    flex: 1,
-    borderRadius: 8,
-    backgroundColor: uiColors.actionDanger,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    minHeight: 42,
-  },
-  deleteConfirmButtonText: {
-    color: uiColors.surfaceDefault,
-    fontWeight: '700',
   },
   exerciseListRow: {
     flexDirection: 'row',
@@ -1016,7 +965,13 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 1,
   },
+  exerciseListRowTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   exerciseListRowTitle: {
+    flexShrink: 1,
     fontSize: 13,
     fontWeight: '600',
     color: uiColors.textPrimary,
@@ -1027,9 +982,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deletedExerciseChip: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: uiColors.textWarning,
+    borderWidth: 1,
+    borderColor: uiColors.borderWarning,
+    backgroundColor: uiColors.surfaceWarning,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   exerciseRowKebabButton: {
     width: 30,
@@ -1156,14 +1117,6 @@ const styles = StyleSheet.create({
     backgroundColor: uiColors.surfaceDefault,
     padding: 14,
     gap: 12,
-  },
-  deleteModalCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: uiColors.borderMuted,
-    backgroundColor: uiColors.surfaceDefault,
-    padding: 14,
-    gap: 10,
   },
   actionMenuCard: {
     borderRadius: 14,

@@ -127,6 +127,7 @@ describe('ExerciseCatalogScreen', () => {
     await screen.findByText('Exercise Actions');
     fireEvent.press(screen.getByLabelText('Edit exercise from actions'));
     await screen.findByText('Edit Exercise');
+    expect(screen.queryByText('Cancel')).toBeNull();
     fireEvent.changeText(screen.getByLabelText('Exercise definition name'), 'Bench Press');
     fireEvent.press(screen.getByLabelText('Remove secondary muscle Triceps'));
     fireEvent.press(screen.getByLabelText('Open secondary muscle selector'));
@@ -211,8 +212,6 @@ describe('ExerciseCatalogScreen', () => {
     fireEvent.press(screen.getByLabelText('Exercise actions Incline Press'));
     await screen.findByText('Exercise Actions');
     fireEvent.press(screen.getByLabelText('Delete exercise from actions'));
-    await screen.findByText('Delete Exercise');
-    fireEvent.press(screen.getByLabelText('Confirm delete exercise'));
 
     await waitFor(() => expect(mockDeleteExercise).toHaveBeenCalledWith('custom-ex-1'));
     expect(screen.getByText('Exercise deleted.')).toBeTruthy();
