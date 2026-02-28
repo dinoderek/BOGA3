@@ -7,7 +7,7 @@ areas: "frontend,docs"
 runtimes: "node,expo,maestro"
 gates_fast: "./scripts/quality-fast.sh frontend"
 gates_slow: "./scripts/quality-slow.sh frontend"
-docs_touched: "docs/tasks/T-20260224-04-m6-session-recorder-exercise-management-integration.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/screen-map.md,docs/specs/ui/ux-rules.md,docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md"
+docs_touched: "docs/tasks/T-20260224-04-m6-session-recorder-exercise-management-integration.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/screen-map.md,docs/specs/ui/ux-rules.md,docs/specs/ui/components-catalog.md,docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md"
 ---
 
 # Task Card
@@ -138,9 +138,10 @@ Integrate the M6 exercise catalog management/editing experience into the session
 
 - Planned docs/spec files to update and why:
   - `docs/tasks/T-20260224-04-m6-session-recorder-exercise-management-integration.md` - scope extension + test-flow plan
-  - `docs/specs/ui/navigation-contract.md` - update transitions if recorder add/manage opens catalog route
+  - `docs/specs/ui/navigation-contract.md` - update transitions if recorder manage opens catalog route and add-new behavior changes
   - `docs/specs/ui/screen-map.md` - update recorder/catalog screen-purpose notes for integrated flow semantics
   - `docs/specs/ui/ux-rules.md` - update list/deleted-state semantics for exercise catalog if behavior contract changes
+  - `docs/specs/ui/components-catalog.md` - document shared reusable exercise editor modal component
 - UI docs update required?: `yes` (route transition + list/deleted-state semantics will change)
 - Tokens/primitives compliance statement:
   - Reuse plan: continue using existing `uiColors`/shared UI primitives and current modal/list patterns unless promoting reusable primitives is justified during implementation.
@@ -210,7 +211,7 @@ Integrate the M6 exercise catalog management/editing experience into the session
 
 - What changed:
   - Implemented session-recorder integration with persistent exercise catalog:
-    - exercise picker `Manage` / `Add new` now navigate to `exercise-catalog` with recorder-intent query params (`source=session-recorder`, `intent=manage|add`).
+    - exercise picker `Manage` navigates to `exercise-catalog` with recorder-origin query params, while `Add new` opens the shared exercise editor modal directly inside `session-recorder`.
     - returning from catalog preserves recorder draft context; successful save from recorder-origin catalog returns via `router.back()`.
   - Removed recorder-local exercise preset management artifacts so recorder no longer maintains a competing in-memory exercise catalog/edit/archive flow.
   - Added exercise catalog soft-delete lifecycle:

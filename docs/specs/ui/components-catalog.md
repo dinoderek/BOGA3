@@ -19,6 +19,8 @@ Brief entrypoint inventory of the current reusable UI component set.
   - canonical tokens + primitive UI building blocks
 - `apps/mobile/components/navigation/`
   - shared navigation-specific UI (app-specific, not generic primitives)
+- `apps/mobile/components/exercise-catalog/`
+  - shared exercise-catalog editing UI reused across route and recorder flows
 - `apps/mobile/components/session-recorder/`
   - shared session-recorder/session-detail UI composition components and supporting UI modules
 
@@ -59,7 +61,12 @@ Brief entrypoint inventory of the current reusable UI component set.
 - Purpose:
   - app-specific top-level Sessions/Exercises tab strip used on `session-list` and `exercise-catalog`
 
-2. `SessionContentLayout`
+2. `ExerciseEditorModal`
+- File: `apps/mobile/components/exercise-catalog/exercise-editor-modal.tsx`
+- Purpose:
+  - shared create/edit exercise editor modal reused by `exercise-catalog` and `session-recorder` add-new flow
+
+3. `SessionContentLayout`
 - File: `apps/mobile/components/session-recorder/session-content-layout.tsx`
 - Purpose:
   - shared layout scaffold for session exercise/set content used by `session-recorder` and completed-session detail screens

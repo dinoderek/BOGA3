@@ -49,7 +49,7 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
   - `source` (optional; `session-recorder` enables recorder-return affordances)
   - `intent` (optional; `add` auto-opens create editor once on initial load)
 - Behavior:
-  - when opened from recorder, `Back to recorder` uses `router.back()`
+  - when opened from recorder, saving an exercise returns via `router.back()`
 
 5. `/completed-session/[sessionId]`
 - File: `apps/mobile/app/completed-session/[sessionId].tsx`
@@ -80,14 +80,13 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
    - successful submit/save (`dismissTo('/')`)
 10. `/session-recorder` -> `/exercise-catalog?source=session-recorder&intent=manage`
    - exercise picker `Manage` action
-11. `/session-recorder` -> `/exercise-catalog?source=session-recorder&intent=add`
-   - exercise picker `Add new` action
-12. `/exercise-catalog?source=session-recorder...` -> `/session-recorder`
+11. `/exercise-catalog?source=session-recorder...` -> `/session-recorder`
    - explicit back action or post-save return (`router.back()`)
 
 Note:
 
 - Modal opens/closes are in-route UI state transitions, not route transitions.
+- `session-recorder` exercise picker `Add new` now opens an in-route exercise editor modal rather than navigating to `/exercise-catalog`.
 
 ## Header titles (current, high level)
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { AppState, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { ExerciseEditorModal } from '@/components/exercise-catalog/exercise-editor-modal';
 import { SessionContentLayout } from '@/components/session-recorder/session-content-layout';
 import { uiColors } from '@/components/ui';
 import {
@@ -319,6 +320,7 @@ export default function SessionRecorderScreen() {
   const [exercisePickerOptions, setExercisePickerOptions] = useState<ExerciseCatalogExercise[]>([]);
   const [isExerciseCatalogLoading, setIsExerciseCatalogLoading] = useState(false);
   const [exerciseCatalogLoadError, setExerciseCatalogLoadError] = useState<string | null>(null);
+  const [isExerciseCreateModalVisible, setIsExerciseCreateModalVisible] = useState(false);
   const stateRef = useRef(state);
   const completedEditEndDateTimeRef = useRef<string | null>(completedEditEndDateTime);
   const persistedSessionIdRef = useRef<string | null>(null);
@@ -840,6 +842,10 @@ export default function SessionRecorderScreen() {
       return;
     }
 
+    applySelectedExerciseName(selectedExercisePreset.name);
+  };
+
+  const applySelectedExerciseName = (exerciseName: string) => {
     setState((current) => ({
       ...current,
       session: {
@@ -847,10 +853,10 @@ export default function SessionRecorderScreen() {
         exercises: current.exerciseSelectionTargetId
           ? current.session.exercises.map((exercise) =>
               exercise.id === current.exerciseSelectionTargetId
-                ? { ...exercise, name: selectedExercisePreset.name }
+                ? { ...exercise, name: exerciseName }
                 : exercise
             )
-          : [...current.session.exercises, createExercise(selectedExercisePreset.name)],
+          : [...current.session.exercises, createExercise(exerciseName)],
       },
       exercisePickerVisible: false,
       exerciseSelectionTargetId: null,
@@ -859,7 +865,7 @@ export default function SessionRecorderScreen() {
     markSessionStructuralMutation();
   };
 
-  const openExerciseCatalogFromRecorder = (intent: 'manage' | 'add') => {
+  const openExerciseCatalogFromRecorder = () => {
     pendingExercisePickerRestoreTargetRef.current = state.exerciseSelectionTargetId;
     setState((current) => ({
       ...current,
@@ -867,7 +873,36 @@ export default function SessionRecorderScreen() {
       exerciseActionMenuVisible: false,
       activeExerciseActionId: null,
     }));
-    router.push(`/exercise-catalog?source=session-recorder&intent=${intent}`);
+    router.push('/exercise-catalog?source=session-recorder&intent=manage');
+  };
+
+  const openInlineExerciseCreate = () => {
+    setState((current) => ({
+      ...current,
+      exercisePickerVisible: false,
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
+    }));
+    setIsExerciseCreateModalVisible(true);
+  };
+
+  const closeInlineExerciseCreate = () => {
+    setIsExerciseCreateModalVisible(false);
+    setState((current) => ({
+      ...current,
+      exercisePickerVisible: true,
+      exerciseActionMenuVisible: false,
+      activeExerciseActionId: null,
+    }));
+  };
+
+  const handleInlineExerciseCreated = async (exercise: ExerciseCatalogExercise) => {
+    setExercisePickerOptions((current) => {
+      const withoutSaved = current.filter((option) => option.id !== exercise.id);
+      return [...withoutSaved, exercise].sort((left, right) => left.name.localeCompare(right.name));
+    });
+    setIsExerciseCreateModalVisible(false);
+    applySelectedExerciseName(exercise.name);
   };
 
   const openExerciseActionMenu = (exerciseId: string) => {
@@ -1503,14 +1538,14 @@ export default function SessionRecorderScreen() {
               <Pressable
                 style={styles.secondaryActionButton}
                 onPress={() => {
-                  openExerciseCatalogFromRecorder('manage');
+                  openExerciseCatalogFromRecorder();
                 }}>
                 <Text style={styles.secondaryActionButtonText}>Manage</Text>
               </Pressable>
               <Pressable
                 style={styles.secondaryActionButton}
                 onPress={() => {
-                  openExerciseCatalogFromRecorder('add');
+                  openInlineExerciseCreate();
                 }}>
                 <Text style={styles.secondaryActionButtonText}>Add new</Text>
               </Pressable>
@@ -1518,6 +1553,15 @@ export default function SessionRecorderScreen() {
           </View>
         </View>
       </Modal>
+
+      <ExerciseEditorModal
+        visible={isExerciseCreateModalVisible}
+        editingExercise={null}
+        onRequestClose={closeInlineExerciseCreate}
+        onSaved={(exercise) => {
+          void handleInlineExerciseCreated(exercise);
+        }}
+      />
 
       <Modal
         animationType="fade"

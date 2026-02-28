@@ -44,7 +44,7 @@ Brief entrypoint map of the current mobile screens.
   - completed-edit loading/error/content states
   - in-route picker/editor/action modals
 - Key exits:
-  - `exercise-catalog` (`source=session-recorder&intent=manage|add` from exercise picker)
+  - `exercise-catalog` (`source=session-recorder&intent=manage` from exercise picker)
   - dismisses to `/` on submit/save success
 
 4. `/exercise-catalog`
@@ -56,7 +56,7 @@ Brief entrypoint map of the current mobile screens.
   - in-route editor/action/delete modals
   - deleted visibility toggle (`Show deleted` / `Hide deleted`)
 - Key exits:
-  - `session-recorder` via recorder-return affordance when opened from recorder
+  - `session-recorder` after save when opened from recorder-origin manage flow
   - `session-list` via top-level tabs
 
 5. `/completed-session/[sessionId]`

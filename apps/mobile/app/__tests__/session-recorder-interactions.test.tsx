@@ -4,6 +4,7 @@ import SessionRecorderScreen from '../session-recorder';
 
 const mockPush = jest.fn();
 const mockFocusCallbacks = new Set<() => void | (() => void)>();
+let mockSearchParams: Record<string, string | undefined> = {};
 
 jest.mock('@/src/data', () => ({
   loadLocalGymById: jest.fn().mockResolvedValue(null),
@@ -45,6 +46,22 @@ jest.mock('@/src/data/exercise-catalog', () => ({
       mappings: [],
     },
   ]),
+  listExerciseCatalogMuscleGroups: jest.fn().mockResolvedValue([
+    { id: 'chest', displayName: 'Chest', familyName: 'Chest', sortOrder: 0 },
+    { id: 'triceps', displayName: 'Triceps', familyName: 'Arms', sortOrder: 1 },
+    { id: 'delts_front', displayName: 'Front Delts', familyName: 'Shoulders', sortOrder: 2 },
+  ]),
+  saveExerciseCatalogExercise: jest.fn().mockImplementation(async (input: any) => ({
+    id: input.id ?? 'custom-exercise-1',
+    name: input.name.trim(),
+    deletedAt: null,
+    mappings: input.mappings.map((mapping: any, index: number) => ({
+      id: `map-${index + 1}`,
+      muscleGroupId: mapping.muscleGroupId,
+      weight: mapping.weight,
+      role: mapping.role,
+    })),
+  })),
 }));
 
 jest.mock('expo-router', () => ({
@@ -61,7 +78,7 @@ jest.mock('expo-router', () => ({
       };
     }, [callback]);
   },
-  useLocalSearchParams: () => ({}),
+  useLocalSearchParams: () => mockSearchParams,
   useNavigation: () => ({ addListener: jest.fn(() => () => undefined), dispatch: jest.fn() }),
   useRouter: () => ({ replace: jest.fn(), push: mockPush }),
   __triggerFocus: () => {
@@ -75,10 +92,47 @@ const { __triggerFocus } = jest.requireMock('expo-router') as {
   __triggerFocus: () => void;
 };
 
+const { loadSessionSnapshotById: mockLoadSessionSnapshotById } = jest.requireMock('@/src/data') as {
+  loadSessionSnapshotById: jest.Mock;
+};
+
+const { saveExerciseCatalogExercise: mockSaveExerciseCatalogExercise } = jest.requireMock(
+  '@/src/data/exercise-catalog'
+) as {
+  saveExerciseCatalogExercise: jest.Mock;
+};
+
+const buildCompletedEditSnapshot = (overrides: Partial<any> = {}) => ({
+  sessionId: 'completed-edit-1',
+  gymId: null,
+  status: 'completed',
+  startedAt: new Date('2026-02-25T10:00:00.000Z'),
+  completedAt: new Date('2026-02-25T10:45:00.000Z'),
+  durationSec: 2700,
+  deletedAt: null,
+  createdAt: new Date('2026-02-25T10:00:00.000Z'),
+  updatedAt: new Date('2026-02-25T10:45:00.000Z'),
+  exercises: [
+    {
+      id: 'exercise-1',
+      name: 'Bench Press',
+      machineName: null,
+      originScopeId: 'private',
+      originSourceId: 'local',
+      sets: [{ id: 'set-1', repsValue: '5', weightValue: '225' }],
+    },
+  ],
+  ...overrides,
+});
+
 describe('SessionRecorderScreen exercise interactions', () => {
   beforeEach(() => {
     mockPush.mockReset();
     mockFocusCallbacks.clear();
+    mockSearchParams = {};
+    mockLoadSessionSnapshotById.mockReset();
+    mockLoadSessionSnapshotById.mockResolvedValue(null);
+    mockSaveExerciseCatalogExercise.mockClear();
   });
 
   it('adds a preset exercise from the log flow and updates first set fields', async () => {
@@ -102,18 +156,28 @@ describe('SessionRecorderScreen exercise interactions', () => {
     expect(screen.getByDisplayValue('5')).toBeTruthy();
   });
 
-  it('routes Add new to exercise catalog and keeps set add/remove interactions intact', async () => {
+  it('creates a new exercise inline from the picker and keeps set add/remove interactions intact', async () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
     fireEvent.press(screen.getByText('Add new'));
-    expect(mockPush).toHaveBeenCalledWith('/exercise-catalog?source=session-recorder&intent=add');
-    expect(screen.queryByText('Select Exercise')).toBeNull();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(await screen.findByText('Create Exercise')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Log new exercise'));
-    expect(await screen.findByLabelText('Select exercise Bench Press')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Select exercise Bench Press'));
-    expect(screen.getByText('Bench Press')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Exercise definition name'), 'Custom Press');
+    fireEvent.press(screen.getByLabelText('Open primary muscle selector'));
+    fireEvent.press(await screen.findByLabelText('Select primary muscle Chest'));
+    fireEvent.press(screen.getByLabelText('Save exercise definition'));
+
+    await waitFor(() => {
+      expect(mockSaveExerciseCatalogExercise).toHaveBeenCalledWith({
+        id: undefined,
+        name: 'Custom Press',
+        mappings: [{ muscleGroupId: 'chest', weight: 1, role: 'primary' }],
+      });
+    });
+
+    expect(screen.getByText('Custom Press')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Add set to exercise 1'));
     expect(screen.getByLabelText('Weight for exercise 1 set 2')).toBeTruthy();
@@ -144,7 +208,7 @@ describe('SessionRecorderScreen exercise interactions', () => {
     fireEvent.press(screen.getByText('Log new exercise'));
     expect(await screen.findByLabelText('Select exercise Barbell Squat')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Add new'));
+    fireEvent.press(screen.getByText('Manage'));
     expect(screen.queryByText('Select Exercise')).toBeNull();
 
     act(() => {
@@ -153,6 +217,36 @@ describe('SessionRecorderScreen exercise interactions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Select Exercise')).toBeTruthy();
+    });
+  });
+
+  it('uses the same inline add-new flow in completed-edit mode', async () => {
+    mockSearchParams = { mode: 'completed-edit', sessionId: 'completed-edit-1' };
+    mockLoadSessionSnapshotById.mockResolvedValue(buildCompletedEditSnapshot());
+
+    render(<SessionRecorderScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Changes')).toBeTruthy();
+      expect(screen.getByText('Bench Press')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByText('Log new exercise'));
+    fireEvent.press(screen.getByText('Add new'));
+    expect(await screen.findByText('Create Exercise')).toBeTruthy();
+
+    fireEvent.changeText(screen.getByLabelText('Exercise definition name'), 'Cable Fly');
+    fireEvent.press(screen.getByLabelText('Open primary muscle selector'));
+    fireEvent.press(await screen.findByLabelText('Select primary muscle Chest'));
+    fireEvent.press(screen.getByLabelText('Save exercise definition'));
+
+    await waitFor(() => {
+      expect(mockSaveExerciseCatalogExercise).toHaveBeenCalledWith({
+        id: undefined,
+        name: 'Cable Fly',
+        mappings: [{ muscleGroupId: 'chest', weight: 1, role: 'primary' }],
+      });
+      expect(screen.getByText('Cable Fly')).toBeTruthy();
     });
   });
 

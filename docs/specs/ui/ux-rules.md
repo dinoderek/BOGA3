@@ -49,7 +49,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
    - Examples:
      - session list action menus
      - exercise catalog editor/action/delete modals
-     - session recorder gym/exercise pickers/action menus
+     - session recorder gym/exercise pickers/action menus and inline exercise creation editor
 2. Modal open/close is treated as state within the current route and should not be documented as a navigation transition.
 3. Dismiss overlays via backdrop press are common and expected when the flow is not destructive-final.
 
@@ -95,7 +95,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 
 1. Route mode/state changes that affect screen behavior (for example `session-recorder` completed-edit mode) must be documented in `docs/specs/ui/navigation-contract.md`.
 2. Route alias behavior (`/` -> `session-list`) should be treated as a navigation entry alias, not a unique screen design.
-3. `exercise-catalog` supports recorder-entry query semantics (`source=session-recorder`, `intent=add|manage`) and should keep recorder return behavior explicit.
+3. `exercise-catalog` supports recorder-entry query semantics (`source=session-recorder`, `intent=manage`) for the manage flow, while recorder `Add new` uses the same exercise editor inside the recorder route.
 
 ### 9. UI guardrail enforcement (current enforced rule)
 

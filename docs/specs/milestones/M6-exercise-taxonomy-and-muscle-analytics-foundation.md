@@ -195,7 +195,7 @@ Planned task cards for M6 are listed below.
   - Completed `T-20260224-02` with seed fixtures, validation, and bootstrap seeding for a non-editable system taxonomy plus an initial system exercise catalog with non-normalized weights.
   - Simplified v1 defaults to reduce false precision: single `chest` taxonomy group, `primary|secondary` roles only in seeds, and default weight ladder (`1.0` / `0.5`) only.
   - Completed `T-20260224-03` with a local exercise-catalog editing route + repository that supports linking seeded/system muscle groups to exercises with non-normalized weights, including add/edit/remove flows and editor validation for missing links, duplicate links, and invalid weights.
-  - Completed `T-20260224-04` with recorder-to-catalog integration for exercise `Manage`/`Add new` flows, soft-delete/undelete support in exercise catalog, and recorder picker refresh behavior aligned to active catalog exercises.
+  - Completed `T-20260224-04` with recorder-to-catalog integration for exercise `Manage` flow, shared inline add-new exercise editing inside `session-recorder`, soft-delete/undelete support in exercise catalog, and recorder picker behavior aligned to active catalog exercises.
   - Completed `T-20260224-05` (docs-only) by comparing historical mapping behavior options and initially locking a snapshot-oriented direction; this historical direction was superseded in M9 planning (`2026-02-27`) by retroactive metadata semantics.
 - Verification summary:
   - `apps/mobile` lint/typecheck/test passed, including targeted schema/migration coverage and the previously failing session-list test after timer assertion fix.
