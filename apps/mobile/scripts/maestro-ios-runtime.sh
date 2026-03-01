@@ -24,9 +24,6 @@ LAUNCH_LOG_FILE
 TEARDOWN_LOG_FILE
 EXPO_LOG_FILE
 MAESTRO_RESET_STRATEGY
-MAESTRO_IOS_SLOT_ID
-MAESTRO_IOS_SLOT_INDEX
-MAESTRO_IOS_SLOT_OWNER_PID
 IOS_SIM_DEVICE
 IOS_SIM_UDID
 EXPO_DEV_SERVER_PORT
@@ -59,51 +56,6 @@ maestro_write_runtime_env() {
       printf '%s=%q\n' "$key" "${!key}" >>"$runtime_env_file"
     fi
   done < <(maestro_runtime_keys)
-}
-
-maestro_trim_csv_item() {
-  local csv_value="$1"
-  local target_index="$2"
-  local -a items=()
-
-  IFS=',' read -r -a items <<< "$csv_value"
-  if (( target_index >= ${#items[@]} )); then
-    return 0
-  fi
-
-  maestro_trim "${items[$target_index]}"
-}
-
-maestro_slot_port() {
-  local slot_index="$1"
-
-  if [[ -n "${EXPO_DEV_SERVER_PORT:-}" ]]; then
-    printf '%s\n' "$EXPO_DEV_SERVER_PORT"
-    return 0
-  fi
-
-  printf '%s\n' "$((EXPO_DEV_SERVER_BASE_PORT + slot_index))"
-}
-
-maestro_slot_udid() {
-  if [[ -z "${IOS_SIM_UDID_POOL:-}" ]]; then
-    return 0
-  fi
-
-  maestro_trim_csv_item "$IOS_SIM_UDID_POOL" "$1"
-}
-
-maestro_slot_device() {
-  local slot_index="$1"
-  local slot_device
-
-  slot_device="$(maestro_trim_csv_item "${IOS_SIM_DEVICE_POOL:-}" "$slot_index")"
-  if [[ -n "$slot_device" ]]; then
-    printf '%s\n' "$slot_device"
-    return 0
-  fi
-
-  printf '%s\n' "$IOS_SIM_DEVICE"
 }
 
 maestro_runtime_artifact_root() {

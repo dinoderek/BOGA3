@@ -86,9 +86,9 @@ Rules:
 - Both runner scripts now:
   - delegate immediately to `apps/mobile/scripts/maestro-ios-run-flow.sh`,
   - set `MAESTRO_RESET_STRATEGY` before entering the shared runner (`full` for smoke, `data` for data-smoke),
-  - acquire a shared slot via `maestro-ios-slot-lock.sh` and record the long-lived runner PID as slot ownership,
-  - derive the Expo port from `EXPO_DEV_SERVER_BASE_PORT + slot index` unless `EXPO_DEV_SERVER_PORT` is explicitly set,
-  - resolve a simulator from `IOS_SIM_UDID_POOL`, then `IOS_SIM_DEVICE_POOL`, then `IOS_SIM_DEVICE`,
+  - source the per-worktree config from `.maestro/maestro.env.local`,
+  - use the configured `EXPO_DEV_SERVER_PORT`,
+  - resolve a simulator from `IOS_SIM_UDID` or fall back to `IOS_SIM_DEVICE`,
   - create artifacts under `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`,
   - write `runtime.env` before provisioning so downstream lifecycle steps and teardown share one state file,
   - call `maestro-ios-provision.sh` to ensure the shared development-client build exists, boot the simulator, and install the `.app`,
@@ -96,7 +96,7 @@ Rules:
   - call `maestro-ios-launch.sh` to start `npx expo start --dev-client --host localhost --scheme <scheme> --port <port>`, wait on Metro `/status`, and open `exp+<scheme>://expo-development-client/?url=http://127.0.0.1:<port>`,
   - create a runtime-local flow copy with the resolved development-client bundle id,
   - execute `maestro test`,
-  - call `maestro-ios-teardown.sh` on both success and failure to stop Expo and release the slot.
+  - call `maestro-ios-teardown.sh` on both success and failure to stop Expo and terminate the app process.
 - Verified against:
   - `apps/mobile/package.json:17-18`
   - `apps/mobile/scripts/maestro-ios-smoke.sh`
@@ -115,15 +115,12 @@ Rules:
   - `apps/mobile/scripts/ios-sim-boot.sh`
   - `apps/mobile/scripts/maestro-ios-provision.sh`
 
-### Current slot-lock behavior
+### Current worktree-isolation behavior
 
-- `apps/mobile/scripts/maestro-ios-slot-lock.sh` implements host-level lock directories under `MAESTRO_IOS_SLOT_LOCK_ROOT` and uses `mkdir` as the lock primitive.
-- Default slots are `slot-1,slot-2,slot-3`.
-- It writes the owning runner PID into `<lock-dir>/pid` using `MAESTRO_IOS_SLOT_OWNER_PID` (falling back to `PPID`) so the lock remains valid for the lifetime of the actual scenario process instead of the short-lived lock helper.
-- It can recover stale locks when the recorded PID no longer exists.
-- It returns `"<slot-id> <slot-index>"` on acquisition.
-- Verified against:
-  - `apps/mobile/scripts/maestro-ios-slot-lock.sh`
+- Runtime isolation now comes from explicit per-worktree config instead of a shared host lock.
+- Each workspace sets its own `EXPO_DEV_SERVER_PORT` and simulator target in `apps/mobile/.maestro/maestro.env.local`.
+- `IOS_SIM_UDID` is preferred for shared-host use because simulator names can collide across cloned devices.
+- If two worktrees are configured with the same simulator or Metro port, they can still interfere with each other; the scripts no longer arbitrate that automatically.
 
 ### Current app/build assumptions
 
@@ -189,24 +186,21 @@ Rules:
 
 1. Future runtime scripts must treat `apps/mobile/.maestro/maestro.env.local` as the canonical local config file.
 2. The sample file is the only checked-in example/config template.
-3. Scripts may still accept direct environment overrides, but the documented baseline is to source `maestro.env.local`.
-4. The shared helper for this contract is `apps/mobile/scripts/maestro-env.sh`, which currently sources the sample file first and then `maestro.env.local`.
+3. Runtime scripts must fail fast when `apps/mobile/.maestro/maestro.env.local` is missing.
+4. The sample file is a template, not a runnable fallback.
+5. Scripts may still accept direct environment overrides, but the documented baseline is to source `maestro.env.local`.
+6. The shared helper for this contract is `apps/mobile/scripts/maestro-env.sh`, which validates the local file exists and then sources the sample file first and `maestro.env.local` second.
 
 ### 3. Canonical environment terminology
 
 Existing environment names that are already implemented remain canonical:
 
 - `TASK_ID`
-- `EXPO_DEV_SERVER_BASE_PORT`
 - `EXPO_DEV_SERVER_PORT`
 - `MAESTRO_RESET_STRATEGY`
-- `MAESTRO_IOS_SLOT_IDS`
-- `MAESTRO_IOS_SLOT_WAIT_SECONDS`
-- `MAESTRO_IOS_SLOT_POLL_SECONDS`
-- `MAESTRO_IOS_SLOT_LOCK_ROOT`
 - `IOS_SIM_DEVICE`
-- `IOS_SIM_DEVICE_POOL`
-- `IOS_SIM_UDID_POOL`
+- `IOS_SIM_UDID`
+- `EXPO_START_WAIT_SECONDS`
 
 New M10-required environment names are locked as:
 
@@ -284,9 +278,9 @@ Responsibility split:
 - `maestro-ios-provision.sh`
   - resolves or creates the simulator, boots it, installs the dev client, and writes runtime state.
 - `maestro-ios-launch.sh`
-  - acquires/uses the resolved slot, starts Expo on the isolated port, deep-links the dev client, and updates runtime state.
+  - starts Expo on the configured port, deep-links the dev client, and updates runtime state.
 - `maestro-ios-teardown.sh`
-  - performs cleanup using the emitted runtime state, including Expo process shutdown and slot release.
+  - performs cleanup using the emitted runtime state, including Expo process shutdown, app termination, and simulator shutdown by default.
 - `maestro-ios-smoke.sh` / `maestro-ios-data-smoke.sh`
   - remain the high-level scenario entrypoints and call the shared toolkit.
 
@@ -312,9 +306,6 @@ Minimum `runtime.env` fields:
 - `MAESTRO_ARTIFACT_ROOT`
 - `MAESTRO_RUNTIME_ENV_FILE`
 - `MAESTRO_RESET_STRATEGY`
-- `MAESTRO_IOS_SLOT_ID`
-- `MAESTRO_IOS_SLOT_INDEX`
-- `MAESTRO_IOS_SLOT_OWNER_PID`
 - `IOS_SIM_UDID`
 - `IOS_SIM_DEVICE`
 - `EXPO_DEV_SERVER_PORT`
@@ -334,13 +325,13 @@ Implementation note:
 ### 7. Parallel isolation contract
 
 1. Cross-worktree parallel safety remains mandatory.
-2. Slot-based host arbitration is retained as the canonical baseline for M10 because it already exists in code and is cross-worktree safe.
-3. Each acquired slot must deterministically map to:
+2. The completed implementation uses explicit per-worktree config instead of host-level arbitration.
+3. Each worktree must deterministically own:
    - one Expo port,
    - one simulator selection,
-   - one runtime state file,
-   - one cleanup owner.
-4. If later tasks extend or replace the current slot helper, they must preserve the same deterministic cross-worktree isolation guarantees.
+   - one local config file,
+   - one runtime state file per run.
+4. If a later task reintroduces automatic arbitration, it must preserve the same cross-worktree isolation guarantees without weakening the per-worktree config contract.
 
 ### 8. Reset taxonomy
 
@@ -389,7 +380,7 @@ Adopted from `docs/brainstorms/Maestro-Revamp`:
 
 Adjusted to fit the current codebase:
 
-- retain slot-based host arbitration instead of switching to a fixed `BOT_ID` naming model
+- rely on explicit per-worktree simulator/port config instead of host-level arbitration
 - keep `apps/mobile/artifacts/maestro/...` as the canonical artifact root
 - preserve existing runner command names and make them thin wrappers instead of replacing them
 - keep currently implemented env names where they already exist rather than renaming the whole surface

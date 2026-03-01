@@ -1,30 +1,22 @@
 # Maestro iOS Runtime Runbook
 
-The authoritative Maestro runtime/testing contract lives in [`docs/specs/11-maestro-runtime-and-testing-conventions.md`](../../docs/specs/11-maestro-runtime-and-testing-conventions.md).
+The full Maestro runtime/testing contract lives in [`docs/specs/11-maestro-runtime-and-testing-conventions.md`](../../docs/specs/11-maestro-runtime-and-testing-conventions.md).
 
-Use this runbook for the operational commands only.
+Use this file as the operational quickstart for `apps/mobile`.
 
-## Current phase boundary
+## Run location
 
-- The shared iOS development-client build foundation is implemented in this repo.
-- The committed smoke/data-smoke runner scripts still launch the current Expo Go runtime until later M10 toolkit tasks migrate them.
-- Build the shared dev client now so later M10 tasks can assume the simulator artifact already exists.
+Run commands from `apps/mobile`.
 
-## Canonical config files
+## Runtime topology
 
-- Checked-in sample: `apps/mobile/.maestro/maestro.env.sample`
-- Per-worktree local config: `apps/mobile/.maestro/maestro.env.local`
-
-Create the local config once per worktree:
-
-```bash
-cd apps/mobile
-cp .maestro/maestro.env.sample .maestro/maestro.env.local
-```
+- Per-worktree config lives in `.maestro/maestro.env.local` and starts from `.maestro/maestro.env.sample`.
+- Runtime scripts fail fast if `.maestro/maestro.env.local` is missing.
+- The shared iOS development-client build is host-local and defaults to `$HOME/.cache/boga/maestro/ios-dev-client/mobile-dev-client.app`.
+- `npm run test:e2e:ios:smoke` and `npm run test:e2e:ios:data-smoke` use the port and simulator configured for this workspace, provision/install the dev client, launch Metro, run Maestro, then tear down.
+- Run artifacts are written to `artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`.
 
 ## First-time setup
-
-Run from `apps/mobile` unless a command says otherwise.
 
 1. Install JavaScript dependencies:
 
@@ -32,79 +24,120 @@ Run from `apps/mobile` unless a command says otherwise.
 npm install
 ```
 
-2. Install CocoaPods if `pod --version` is missing:
+2. Ensure Xcode/iOS Simulator, CocoaPods, and Maestro are installed and on your `PATH`:
 
 ```bash
-brew install cocoapods
+pod --version
+xcrun simctl list devices >/dev/null
+maestro --version
 ```
 
-3. Create your local Maestro config:
+3. Create the per-worktree Maestro config:
 
 ```bash
 cp .maestro/maestro.env.sample .maestro/maestro.env.local
 ```
 
-4. Build or reuse the shared simulator dev client:
+4. Edit `.maestro/maestro.env.local` and set:
+
+```bash
+EXPO_DEV_SERVER_PORT=<unique-port-for-this-workspace>
+IOS_SIM_UDID=<dedicated-simulator-udid>
+```
+
+5. Build or reuse the shared simulator dev client:
 
 ```bash
 ./scripts/maestro-ios-dev-client-build.sh
 ```
 
-Notes:
+## Per-worktree config
 
-- The default shared build root is `$HOME/.cache/boga/maestro/ios-dev-client`.
-- The default shared `.app` path is `$HOME/.cache/boga/maestro/ios-dev-client/mobile-dev-client.app`.
-- The local build path does not require Expo/EAS login.
-- `eas.json` includes `development-simulator` only as an explicit simulator-capable EAS profile for optional future/manual EAS usage.
+The local config file is `.maestro/maestro.env.local`.
+
+Common overrides:
+
+- `TASK_ID`
+- `EXPO_DEV_SERVER_PORT`
+- `IOS_SIM_UDID`
+- `IOS_SIM_DEVICE`
+- `MAESTRO_IOS_SHARED_BUILD_ROOT`
+- `MAESTRO_IOS_DEV_CLIENT_APP_PATH`
+- `MAESTRO_KEEP_SIMULATOR_BOOTED`
+
+The sample file is a template only. It does not provide a runnable fallback on its own.
+
+When multiple worktrees share one Mac, each worktree must set:
+
+- a unique `EXPO_DEV_SERVER_PORT`
+- a unique `IOS_SIM_UDID` or at least a unique `IOS_SIM_DEVICE` name
+
+Prefer `IOS_SIM_UDID` for shared-host use because duplicate simulator names are easy to confuse.
+If `.maestro/maestro.env.local` is missing, runtime scripts fail immediately instead of silently reusing generic defaults.
+By default teardown shuts the configured simulator down after each run. Set `MAESTRO_KEEP_SIMULATOR_BOOTED=1` only if you intentionally want to keep it running for manual follow-up work.
 
 ## Shared dev-client commands
 
-Check current shared-build status without rebuilding:
+Check whether the shared build is current:
 
 ```bash
 ./scripts/maestro-ios-dev-client-build.sh --status
 ```
 
-Print the resolved `.app` path after ensuring the artifact exists:
+Print the resolved `.app` path:
 
 ```bash
 ./scripts/maestro-ios-dev-client-build.sh --print-app-path
 ```
 
-Force a rebuild even when the fingerprint matches:
+Force a rebuild:
 
 ```bash
 ./scripts/maestro-ios-dev-client-build.sh --force
 ```
 
-## Rebuild triggers
+The build is refreshed when the `.app` or build metadata is missing, when the native-input fingerprint changes, or when `--force` is passed.
 
-The shared dev client rebuilds when any of these are true:
+## Main validation commands
 
-- the `.app` artifact is missing,
-- the build metadata file is missing,
-- the native-input fingerprint changed,
-- `--force` is passed.
-
-The native-input fingerprint currently covers:
-
-- `apps/mobile/app.json`
-- `apps/mobile/eas.json`
-- `apps/mobile/package.json`
-- `apps/mobile/package-lock.json`
-
-## Existing smoke commands
-
-These commands are still valid, but they still use the current Expo Go runtime until later M10 tasks migrate them:
+Cold-start smoke lane:
 
 ```bash
-npm run test:e2e:ios:smoke
-npm run test:e2e:ios:data-smoke
+TASK_ID=T-20260301-05 npm run test:e2e:ios:smoke
 ```
 
-## Artifact locations
+Data-runtime smoke lane:
 
-- Shared dev-client root: `$HOME/.cache/boga/maestro/ios-dev-client`
-- Shared dev-client metadata: `$HOME/.cache/boga/maestro/ios-dev-client/dev-client-build.env`
-- Shared dev-client build log: `$HOME/.cache/boga/maestro/ios-dev-client/build.log`
-- Maestro run artifacts: `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`
+```bash
+TASK_ID=T-20260301-05 npm run test:e2e:ios:data-smoke
+```
+
+Repo-level slow gate:
+
+```bash
+cd ../..
+./scripts/quality-slow.sh frontend
+```
+
+## Reset rules
+
+- `smoke` uses `full reset` plus harness `teleport` to the recorder.
+- `data-smoke` uses harness `data reset` plus `teleport`.
+- Use `full reset` only when cold-install/onboarding/permission behavior is part of the objective.
+- Use `data reset` when app-owned persisted state must be cleared without reinstalling the binary.
+- Use `teleport` as the default navigation/setup method when the flow is not explicitly testing setup UI.
+
+## Artifacts and logs
+
+Each run writes `artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/` with:
+
+- `runtime.env`
+- `provision.log`
+- `launch.log`
+- `teardown.log`
+- `expo-start.log`
+- `maestro-junit.xml`
+- `maestro-output/`
+- `maestro-debug/`
+
+If a run fails, start with `runtime.env`, `launch.log`, and `expo-start.log`.

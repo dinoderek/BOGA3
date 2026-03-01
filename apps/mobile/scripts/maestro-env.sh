@@ -27,8 +27,15 @@ maestro_require_command() {
   maestro_fail "Missing required command '$command_name'."
 }
 
+maestro_require_local_env_file() {
+  [[ -f "$MAESTRO_SAMPLE_ENV_FILE" ]] || maestro_fail "Missing checked-in Maestro sample config: $MAESTRO_SAMPLE_ENV_FILE"
+  [[ -f "$MAESTRO_LOCAL_ENV_FILE" ]] || maestro_fail "Missing $MAESTRO_LOCAL_ENV_FILE. Copy $MAESTRO_SAMPLE_ENV_FILE to $MAESTRO_LOCAL_ENV_FILE and set EXPO_DEV_SERVER_PORT plus IOS_SIM_UDID or IOS_SIM_DEVICE for this workspace."
+}
+
 maestro_source_env() {
   local env_file
+
+  maestro_require_local_env_file
 
   for env_file in "$MAESTRO_SAMPLE_ENV_FILE" "$MAESTRO_LOCAL_ENV_FILE"; do
     if [[ -f "$env_file" ]]; then
@@ -42,30 +49,22 @@ maestro_source_env() {
   : "${TASK_ID:=ad-hoc}"
   : "${MAESTRO_IOS_SHARED_BUILD_ROOT:=$HOME/.cache/boga/maestro/ios-dev-client}"
   : "${MAESTRO_IOS_DEV_CLIENT_APP_PATH:=$MAESTRO_IOS_SHARED_BUILD_ROOT/mobile-dev-client.app}"
-  : "${IOS_SIM_DEVICE:=iPhone 17 Pro}"
-  : "${IOS_SIM_DEVICE_POOL:=iPhone 17 Pro,iPhone 17 Pro Max,iPhone Air}"
-  : "${IOS_SIM_UDID_POOL:=}"
-  : "${EXPO_DEV_SERVER_BASE_PORT:=8082}"
+  : "${IOS_SIM_DEVICE:=}"
+  : "${IOS_SIM_UDID:=}"
+  : "${EXPO_DEV_SERVER_PORT:=}"
   : "${EXPO_START_WAIT_SECONDS:=30}"
   : "${MAESTRO_RESET_STRATEGY:=data}"
-  : "${MAESTRO_IOS_SLOT_IDS:=slot-1,slot-2,slot-3}"
-  : "${MAESTRO_IOS_SLOT_WAIT_SECONDS:=120}"
-  : "${MAESTRO_IOS_SLOT_POLL_SECONDS:=1}"
-  : "${MAESTRO_IOS_SLOT_LOCK_ROOT:=/tmp/scaffolding2-maestro-ios-slots}"
+  : "${MAESTRO_KEEP_SIMULATOR_BOOTED:=0}"
 
   export TASK_ID
   export MAESTRO_IOS_SHARED_BUILD_ROOT
   export MAESTRO_IOS_DEV_CLIENT_APP_PATH
   export IOS_SIM_DEVICE
-  export IOS_SIM_DEVICE_POOL
-  export IOS_SIM_UDID_POOL
-  export EXPO_DEV_SERVER_BASE_PORT
+  export IOS_SIM_UDID
+  export EXPO_DEV_SERVER_PORT
   export EXPO_START_WAIT_SECONDS
   export MAESTRO_RESET_STRATEGY
-  export MAESTRO_IOS_SLOT_IDS
-  export MAESTRO_IOS_SLOT_WAIT_SECONDS
-  export MAESTRO_IOS_SLOT_POLL_SECONDS
-  export MAESTRO_IOS_SLOT_LOCK_ROOT
+  export MAESTRO_KEEP_SIMULATOR_BOOTED
 }
 
 maestro_trim() {

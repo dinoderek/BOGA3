@@ -34,9 +34,13 @@ if [[ -n "${IOS_SIM_UDID:-}" && -n "${MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID:-}" ]]; t
   xcrun simctl terminate "$IOS_SIM_UDID" "$MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID" >/dev/null 2>&1 || true
 fi
 
-if [[ -n "${MAESTRO_IOS_SLOT_ID:-}" ]]; then
-  echo "[maestro-ios-teardown] Releasing slot $MAESTRO_IOS_SLOT_ID"
-  "$SCRIPT_DIR/maestro-ios-slot-lock.sh" release "$MAESTRO_IOS_SLOT_ID" >/dev/null 2>&1 || true
+if [[ -n "${IOS_SIM_UDID:-}" ]]; then
+  if [[ "${MAESTRO_KEEP_SIMULATOR_BOOTED:-0}" == "1" ]]; then
+    echo "[maestro-ios-teardown] Keeping simulator booted: $IOS_SIM_UDID"
+  else
+    echo "[maestro-ios-teardown] Shutting down simulator $IOS_SIM_UDID"
+    xcrun simctl shutdown "$IOS_SIM_UDID" >/dev/null 2>&1 || true
+  fi
 fi
 
 echo "[maestro-ios-teardown] Teardown complete"

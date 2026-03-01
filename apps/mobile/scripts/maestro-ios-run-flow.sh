@@ -43,10 +43,6 @@ done
 maestro_require_command maestro "Install Maestro from https://maestro.mobile.dev."
 
 MAESTRO_RUNNER_PID="$$"
-MAESTRO_IOS_SLOT_OWNER_PID="$$"
-IFS=' ' read -r MAESTRO_IOS_SLOT_ID MAESTRO_IOS_SLOT_INDEX <<< "$(MAESTRO_IOS_SLOT_OWNER_PID="$MAESTRO_IOS_SLOT_OWNER_PID" "$SCRIPT_DIR/maestro-ios-slot-lock.sh" acquire)"
-
-[[ -n "$MAESTRO_IOS_SLOT_ID" && -n "$MAESTRO_IOS_SLOT_INDEX" ]] || maestro_fail "Unable to acquire an iOS Maestro slot."
 
 MAESTRO_SESSION_TIMESTAMP="$(date +"%Y%m%d-%H%M%S")-$$"
 MAESTRO_SCENARIO_NAME="$SCENARIO_NAME"
@@ -63,22 +59,19 @@ EXPO_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/expo-start.log"
 
 mkdir -p "$MAESTRO_OUTPUT_DIR" "$MAESTRO_DEBUG_DIR"
 
-slot_udid="$(maestro_slot_udid "$MAESTRO_IOS_SLOT_INDEX")"
-if [[ -n "$slot_udid" ]]; then
-  IOS_SIM_UDID="$slot_udid"
+[[ -n "${EXPO_DEV_SERVER_PORT:-}" ]] || maestro_fail "Missing EXPO_DEV_SERVER_PORT. Set it in .maestro/maestro.env.local."
+if [[ -z "${IOS_SIM_UDID:-}" && -z "${IOS_SIM_DEVICE:-}" ]]; then
+  maestro_fail "Missing simulator target. Set IOS_SIM_UDID or IOS_SIM_DEVICE in .maestro/maestro.env.local."
 fi
-IOS_SIM_DEVICE="$(maestro_slot_device "$MAESTRO_IOS_SLOT_INDEX")"
-EXPO_DEV_SERVER_PORT="$(maestro_slot_port "$MAESTRO_IOS_SLOT_INDEX")"
 
 maestro_write_runtime_env "$MAESTRO_RUNTIME_ENV_FILE"
 
 cleanup() {
   local exit_code=$?
   trap - EXIT
+  # Keep cleanup centralized so both success and failure paths terminate Metro/app state consistently.
   if [[ -f "$MAESTRO_RUNTIME_ENV_FILE" ]]; then
     "$SCRIPT_DIR/maestro-ios-teardown.sh" "$MAESTRO_RUNTIME_ENV_FILE" || true
-  elif [[ -n "${MAESTRO_IOS_SLOT_ID:-}" ]]; then
-    "$SCRIPT_DIR/maestro-ios-slot-lock.sh" release "$MAESTRO_IOS_SLOT_ID" >/dev/null 2>&1 || true
   fi
   exit "$exit_code"
 }
@@ -105,6 +98,6 @@ set -e
 
 echo "${SCENARIO_NAME} run complete."
 echo "Artifacts: $MAESTRO_ARTIFACT_ROOT"
-echo "Slot: $MAESTRO_IOS_SLOT_ID (index=$MAESTRO_IOS_SLOT_INDEX, port=$EXPO_DEV_SERVER_PORT, device=$IOS_SIM_DEVICE, udid=$IOS_SIM_UDID)"
+echo "Runtime: port=$EXPO_DEV_SERVER_PORT, device=${IOS_SIM_DEVICE:-}, udid=${IOS_SIM_UDID:-}"
 
 exit "$maestro_exit_code"

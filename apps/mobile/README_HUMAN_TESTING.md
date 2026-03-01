@@ -1,8 +1,8 @@
 # Mobile App Development Guide
 
-This guide is the human-operator entrypoint for local mobile validation.
+This file is the human-operator entrypoint for local mobile validation.
 
-For the authoritative Maestro runtime/testing policy, use [`docs/specs/11-maestro-runtime-and-testing-conventions.md`](../../docs/specs/11-maestro-runtime-and-testing-conventions.md). For the operational Maestro commands, use [`apps/mobile/README-maestro.md`](./README-maestro.md).
+For the authoritative Maestro runtime/testing policy, use [`docs/specs/11-maestro-runtime-and-testing-conventions.md`](../../docs/specs/11-maestro-runtime-and-testing-conventions.md). For the operational Maestro command surface, use [`apps/mobile/README-maestro.md`](./README-maestro.md).
 
 ## Run location
 
@@ -16,39 +16,52 @@ Run commands from `apps/mobile`.
 npm install
 ```
 
-2. Install CocoaPods if `pod --version` is missing:
+2. Ensure Xcode/iOS Simulator, CocoaPods, and Maestro are available:
 
 ```bash
-brew install cocoapods
+pod --version
+xcrun simctl list devices >/dev/null
+maestro --version
 ```
 
-3. Copy the Maestro sample config for this worktree:
+3. Create the per-worktree Maestro config:
 
 ```bash
 cp .maestro/maestro.env.sample .maestro/maestro.env.local
 ```
 
+4. Edit `.maestro/maestro.env.local` before running any Maestro command.
+   Set at minimum:
+   - `EXPO_DEV_SERVER_PORT`
+   - `IOS_SIM_UDID` or `IOS_SIM_DEVICE`
+
+5. Optional but recommended on a shared Mac: create a dedicated simulator for this workspace and use its UDID.
+
+```bash
+xcrun simctl create "Boga Human" \
+  com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro \
+  com.apple.CoreSimulator.SimRuntime.iOS-26-2
+```
+
 Notes:
 
-- The local shared dev-client build does not require Expo/EAS login.
-- If you choose to use hosted EAS builds later, log in with `npx eas-cli login`.
+- The local shared simulator dev-client build does not require Expo/EAS login.
+- Expo Go is still acceptable for quick managed-only iteration, but it is not evidence for Maestro/runtime-sensitive work and it is not the M10 automation target.
+- Maestro/runtime scripts fail fast if `.maestro/maestro.env.local` is missing.
 
-## Workflow A: Instant local loop
+## Workflow A: Normal JS/TS loop
 
-Use this for the normal JS/TS iteration loop.
+Use this for ordinary JavaScript iteration:
 
 ```bash
 npx expo start
 ```
 
-Open the app in:
+For any native-runtime or Maestro-adjacent change, switch to a development client before treating the result as verified.
 
-- Expo Go for standard managed Expo work.
-- A development client once a native dev build exists.
+## Workflow B: Shared iOS simulator dev client
 
-## Workflow B: Shared iOS dev-client foundation
-
-Use this once per machine or when native inputs changed.
+Use this when you need the simulator runtime that matches the Maestro toolchain.
 
 Build or reuse the shared simulator-compatible development client:
 
@@ -70,32 +83,87 @@ Contract summary:
 - Default `.app` path: `$HOME/.cache/boga/maestro/ios-dev-client/mobile-dev-client.app`
 - Rebuild inputs: `app.json`, `eas.json`, `package.json`, `package-lock.json`
 
-Install the shared dev client into the currently booted simulator:
+Manual install into the booted simulator:
 
 ```bash
 open -a Simulator
 xcrun simctl boot "iPhone 17 Pro" || true
-xcrun simctl install booted "$HOME/.cache/boga/maestro/ios-dev-client/mobile-dev-client.app"
+xcrun simctl install booted "$(./scripts/maestro-ios-dev-client-build.sh --print-app-path)"
 xcrun simctl launch booted com.dinoderek.mobile
 ```
 
-If you want the script to print the exact current `.app` path first:
-
-```bash
-xcrun simctl install booted "$(./scripts/maestro-ios-dev-client-build.sh --print-app-path)"
-```
-
-After the app is installed, start Metro for the dev client:
+After install, start Metro for the dev client:
 
 ```bash
 npx expo start --dev-client
 ```
 
-Then open the installed app in Simulator and connect it to the local bundler.
+Normal Maestro validation does not require you to do this manual install step first. The Maestro provision step will boot the configured simulator and install the shared dev client automatically.
 
-## Workflow C: Real iPhone dev build
+## Human vs agent isolation
 
-Use this when you need the development client on a physical device instead of the simulator.
+If you are sharing the Mac with an agent or another worktree, configure this workspace so it never targets the same Metro port or simulator:
+
+1. Pick one dedicated Metro port for this workspace.
+2. Pick one dedicated simulator for this workspace.
+3. Put both in `.maestro/maestro.env.local`.
+
+Recommended config:
+
+```bash
+TASK_ID=human-local
+EXPO_DEV_SERVER_PORT=8092
+IOS_SIM_UDID="<your-dedicated-simulator-udid>"
+```
+
+Get a simulator UDID with:
+
+```bash
+xcrun simctl list devices available
+```
+
+Notes:
+
+- Prefer `IOS_SIM_UDID` over `IOS_SIM_DEVICE` when sharing a machine.
+- If you use `IOS_SIM_DEVICE` instead, make sure the simulator name is unique to this workspace.
+- Use the same `EXPO_DEV_SERVER_PORT` value when you manually run `npx expo start --dev-client` so your manual loop matches the Maestro config.
+- The sample file is only a template; runtime scripts do not fall back to it when `.maestro/maestro.env.local` is absent.
+- By default teardown shuts the configured simulator down after each run. Set `MAESTRO_KEEP_SIMULATOR_BOOTED=1` only if you intentionally want the simulator left open.
+
+## Workflow C: Maestro validation
+
+Use these commands for the real simulator smoke lanes:
+
+```bash
+TASK_ID=ad-hoc npm run test:e2e:ios:smoke
+TASK_ID=ad-hoc npm run test:e2e:ios:data-smoke
+```
+
+What they do:
+
+- use this workspace's configured Metro port and simulator target,
+- provision/install the shared dev client,
+- launch Metro with `--dev-client`,
+- run the Maestro flow,
+- write logs and artifacts under `artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`.
+
+You do not need to manually start the simulator or install the app before these commands. If the configured simulator exists, the runner handles both.
+
+Reset policy summary:
+
+- smoke: `full reset` + `teleport`
+- data-smoke: `data reset` + `teleport`
+
+For task closeout, use the repo wrapper when the task requires the frontend slow gate:
+
+```bash
+cd ../..
+./scripts/quality-slow.sh frontend
+```
+
+## Workflow D: Real iPhone dev build
+
+Use this when you need a development client on a physical device instead of the simulator.
 
 Hosted EAS build path:
 
@@ -107,20 +175,13 @@ npx eas-cli build -p ios --profile development
 
 Notes:
 
-- `npx eas-cli init` is only needed if the app has not been linked to an EAS project yet.
+- `npx eas-cli init` is only needed if the app is not already linked to an EAS project.
 - The `development` profile builds a real-device development client; the local simulator `.app` from Workflow B cannot be installed on a phone.
-- EAS will prompt for Apple signing/device-registration setup if it is not already configured for your account/project.
+- Start Metro with `npx expo start --dev-client` before opening the installed build on the phone.
 
-When the build finishes:
+## Workflow E: Preview publish loop
 
-1. Open the build page/link from the EAS output.
-2. Install the generated iOS development build onto the phone.
-3. On the Mac, start Metro with `npx expo start --dev-client`.
-4. Open the installed dev client on the phone and connect it to the local bundler.
-
-## Workflow D: Preview publish loop
-
-Use this when you want a stable installable preview build and remote updates.
+Use this when you need a stable installable preview build plus remote updates.
 
 One-time setup:
 
@@ -147,15 +208,6 @@ Day-to-day preview update:
 
 ```bash
 npx eas-cli update --branch preview --message "ui: <short note>"
-```
-
-## Workflow E: Maestro smoke commands
-
-These commands are still on the current Expo Go runtime until later M10 tasks migrate them to the shared development client:
-
-```bash
-npm run test:e2e:ios:smoke
-npm run test:e2e:ios:data-smoke
 ```
 
 ## Local data lane-1 canary

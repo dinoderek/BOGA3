@@ -22,8 +22,8 @@ maestro_require_command xcrun "Install Xcode and the iOS simulator runtime."
 
 [[ -n "${IOS_SIM_UDID:-}" ]] || maestro_fail "Missing IOS_SIM_UDID in runtime env."
 [[ -n "${MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID:-}" ]] || maestro_fail "Missing dev-client bundle id in runtime env."
+[[ -n "${EXPO_DEV_SERVER_PORT:-}" ]] || maestro_fail "Missing EXPO_DEV_SERVER_PORT in runtime env."
 
-EXPO_DEV_SERVER_PORT="$(maestro_slot_port "${MAESTRO_IOS_SLOT_INDEX:-0}")"
 MAESTRO_IOS_DEV_CLIENT_URL="$(maestro_development_client_url "$EXPO_DEV_SERVER_PORT")"
 SCHEME="$(maestro_current_app_scheme)"
 

@@ -4,7 +4,7 @@
 
 - Milestone ID: `M10`
 - Title: Maestro parallel runtime and testing conventions revamp
-- Status: `in_progress`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03`
 
@@ -25,12 +25,16 @@
   - `apps/mobile/.maestro/flows/smoke-launch.yaml`
   - `apps/mobile/.maestro/flows/data-runtime-smoke.yaml`
   - `apps/mobile/scripts/ios-sim-boot.sh`
-  - `apps/mobile/scripts/maestro-ios-slot-lock.sh`
   - `apps/mobile/scripts/maestro-ios-smoke.sh`
   - `apps/mobile/scripts/maestro-ios-data-smoke.sh`
   - `apps/mobile/README-maestro.md`
   - `apps/mobile/README_HUMAN_TESTING.md`
   - `docs/tasks/T-20260220-01-m1-ios-maestro-ai-testing-loop.md`
+
+Completed implementation note (`2026-03-01`):
+
+- the final M10 runtime uses explicit per-worktree simulator/port config and no longer uses host-level arbitration.
+- historical references below to the previous host-locking model describe the draft-time baseline that M10 replaced.
 
 ## Milestone objective
 
@@ -48,8 +52,7 @@ Replace the current Expo Go based Maestro smoke loop with a reliable, parallel-s
   - both open `exp://127.0.0.1:<port>` on the simulator,
   - both optionally uninstall Expo Go state rather than managing a development client binary.
 - Current parallelism support is partial:
-  - `apps/mobile/scripts/maestro-ios-slot-lock.sh` provides host-level slot locking under `/tmp/scaffolding2-maestro-ios-slots`,
-  - slot mapping can derive ports and simulator pools,
+  - the draft-time implementation used host-level locking to derive ports and simulator pools,
   - but there is no per-worktree config sample, no dedicated simulator provisioning by agent identity, and no runtime state file for downstream scripts.
 - Current simulator helper `apps/mobile/scripts/ios-sim-boot.sh` only resolves and boots an existing simulator by name or UDID.
   - it does not create dedicated simulators,
@@ -206,7 +209,7 @@ Rule: because this milestone changes runtime/testing workflow and introduces a n
 2. `docs/tasks/T-20260301-02-m10-shared-dev-client-build-and-worktree-config.md` - add shared dev-client build/reuse workflow, sample config, and first-time setup rules. (`completed`)
 3. `docs/tasks/T-20260301-03-m10-parallel-ios-runtime-toolkit-and-teardown.md` - implement provision/launch/teardown toolkit and refactor runners onto it. (`completed`)
 4. `docs/tasks/T-20260301-04-m10-maestro-harness-reset-taxonomy-and-flow-migration.md` - add harness/deep-link reset utilities and migrate flows to the development-client runtime model. (`completed`)
-5. `docs/tasks/T-20260301-05-m10-maestro-docs-and-policy-integration.md` - align shared docs, runbooks, and policy docs to the implemented M10 workflow. (`planned`)
+5. `docs/tasks/T-20260301-05-m10-maestro-docs-and-policy-integration.md` - align shared docs, runbooks, and policy docs to the implemented M10 workflow. (`completed`)
 
 ## Risks / dependencies
 
@@ -219,8 +222,9 @@ Rule: because this milestone changes runtime/testing workflow and introduces a n
 ## Completion note (fill when milestone closes)
 
 - What changed:
-- Verification summary:
-- What remains:
+- What changed: M10 delivered the authoritative Maestro runtime contract, shared dev-client build/config foundation, provision/launch/teardown toolkit, harness-based reset taxonomy, and final docs/policy integration across the playbook, testing strategy, project-structure spec, and mobile runbooks.
+- Verification summary: frontend runtime/toolkit work was verified in prior M10 tasks with `./scripts/quality-fast.sh frontend` and `./scripts/quality-slow.sh frontend`; final closeout verified doc/path/command consistency, removal of stale runbook wording, and task/milestone status alignment.
+- What remains: nothing for M10; future Maestro work should start from `docs/specs/11-maestro-runtime-and-testing-conventions.md`.
 
 ## Status update checklist (mandatory during task closeout)
 

@@ -55,6 +55,16 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 - During execution sessions, run a targeted test or gate after each meaningful change, then run `./scripts/quality-fast.sh` before task closeout.
 - Run `./scripts/quality-slow.sh <area>` when the task card's risk triggers require slower local runtime/contract checks.
 
+## Maestro contract ownership (M10)
+
+- `docs/specs/11-maestro-runtime-and-testing-conventions.md` is the authoritative Maestro runtime/testing contract.
+- This document owns only the testing policy:
+  - when Maestro slow gates are required,
+  - which command wrappers are canonical,
+  - which reset terms task cards must use,
+  - where run evidence is expected.
+- Runbooks such as `apps/mobile/README-maestro.md` and `apps/mobile/README_HUMAN_TESTING.md` should stay operational and link back to the contract instead of restating it in full.
+
 ## Standard local quality-gate wrappers (M5)
 
 - Fast gate (default local closeout gate for covered workspaces):
@@ -149,30 +159,57 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 ## Project structure conventions for testing assets (M5 backend additions)
 
 - `apps/mobile/.maestro/flows` remains the canonical location for Maestro flow definitions.
+- `apps/mobile/.maestro/maestro.env.sample` is the checked-in Maestro config sample; `apps/mobile/.maestro/maestro.env.local` is the canonical per-worktree untracked config.
 - Repo-root `e2e/` is reserved for cross-stack orchestration/tests (strategy documented in M5; implementation may be added later).
 - `supabase/` is the backend root for migrations, seeds, functions, and backend-local test assets.
 - `supabase/scripts/` is the canonical location for backend local runtime/test wrappers.
 - `supabase/tests/` is the canonical location for backend-local smoke/integration test entrypoints until a dedicated helper workspace is introduced.
 - Do not couple backend foundation work to a mobile test-directory refactor (for example moving `apps/mobile/app/__tests__`) unless a dedicated task explicitly scopes that change.
 
+## Maestro runtime topology summary (M10)
+
+- Primary automation runtime:
+  - `Maestro + iOS Simulator + Expo development client`
+- Canonical command surface:
+  - `npm run test:e2e:ios:smoke`
+  - `npm run test:e2e:ios:data-smoke`
+  - `./scripts/quality-slow.sh frontend`
+- Canonical reset terms:
+  - `full reset`
+  - `data reset`
+  - `teleport`
+- Canonical artifact root:
+  - `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`
+- Minimum expected runtime artifacts:
+  - `runtime.env`
+  - `provision.log`
+  - `launch.log`
+  - `teardown.log`
+  - `expo-start.log`
+  - `maestro-junit.xml`
+- Per-worktree configuration baseline:
+  - source `.maestro/maestro.env.local` from the sample file and keep shared-build overrides there rather than hardcoding machine-specific paths in docs/tasks.
+
 ## iOS UI smoke policy (Maestro, current stage)
 
 - Jest/React Native Testing Library remains the default for component logic, state transitions, and CI-safe assertions.
 - Maestro is used for simulator/device-integrated UI smoke checks that confirm core screens are reachable and visibly intact.
-- In the standard local gate matrix, current `Maestro` checks are classified as `frontend + slow` (run via `./scripts/quality-slow.sh frontend` when task triggers require them).
+- In the standard local gate matrix, current `Maestro` checks are classified as `frontend + slow` and run via `./scripts/quality-slow.sh frontend`.
+- `./scripts/quality-slow.sh frontend` currently runs both:
+  - `npm run test:e2e:ios:smoke`
+  - `npm run test:e2e:ios:data-smoke`
 - Current required Maestro coverage is a single iOS smoke flow:
   - app launch visible state
   - session recorder visible state
 - Reset/setup policy for this flow:
-  - use `full reset` only because smoke is the cold-start coverage lane;
-  - prefer `teleport` to the recorder over tapping through setup UI once launch visibility is confirmed.
+  - use `full reset` because smoke is the cold-start coverage lane;
+  - use `teleport` to the recorder once launch visibility is confirmed.
 - Required screenshots for smoke flow:
   - `01-app-launch`
   - `02-session-recorder-visible`
-- Screenshot capture is automated by the Maestro flow and stored under:
-  - `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`
+- Screenshot capture is automated by the Maestro flow and stored under the canonical artifact root from the M10 contract.
 - Rule:
-  - if a task changes user-facing UI, run `npm run test:e2e:ios:smoke` before closeout.
+  - require `./scripts/quality-slow.sh frontend` when a task changes the committed smoke/data-smoke flows, Maestro runtime scripts, development-client/runtime handshake, harness setup behavior, or user-facing UI that needs fresh real-simulator smoke evidence.
 
 ## iOS simulator data smoke policy (Maestro, current stage)
 
@@ -190,13 +227,16 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - `apps/mobile/src/data/migrations/**` changes.
   - `apps/mobile/drizzle/**` migration artifacts or schema outputs change.
   - `apps/mobile/package.json` changes include Expo/SQLite/Drizzle dependency updates.
+  - `apps/mobile/app/maestro-harness.tsx` or `apps/mobile/src/maestro/**` changes.
+  - `apps/mobile/.maestro/**` or `apps/mobile/scripts/maestro*` changes affect data-smoke setup or runtime orchestration.
   - milestone/release closeout requires fresh native runtime data evidence.
 - Optional (recommended) when:
   - data-layer behavior changes are low risk and local runtime confidence is desired before handoff.
 - Usually not required when:
   - changes are limited to data-repository pure logic that does not alter runtime migration/bootstrap wiring and Lane 1 checks are green.
 - Evidence expectations:
-  - include command result and screenshot paths from `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`.
+  - include command result and artifact root from `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`.
+  - include screenshot paths or the screenshot filenames captured under that artifact root.
   - required screenshots for data smoke flow:
     - `03-data-runtime-smoke-start`
     - `04-data-runtime-smoke-success`
@@ -206,22 +246,18 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 - Problem:
   - parallel local agents can collide on simulator selection and Expo dev-server ports.
 - Enforcement:
-  - iOS Maestro runner scripts must acquire a shared host lock slot before booting simulator / starting Expo.
-  - slot lock root defaults to `/tmp/scaffolding2-maestro-ios-slots`.
-  - default slots are `slot-1,slot-2,slot-3` and each slot gets a deterministic Expo port (`base + slot-index`).
+  - iOS Maestro runner scripts now rely on explicit per-worktree config instead of host-level locking.
+  - each worktree must own one Metro port and one simulator target.
 - Configuration:
-  - `MAESTRO_IOS_SLOT_IDS` (default: `slot-1,slot-2,slot-3`)
-  - `MAESTRO_IOS_SLOT_WAIT_SECONDS` (default: `120`)
-  - `MAESTRO_IOS_SLOT_POLL_SECONDS` (default: `1`)
-  - `MAESTRO_IOS_SLOT_LOCK_ROOT` (default: `/tmp/scaffolding2-maestro-ios-slots`)
-  - `EXPO_DEV_SERVER_BASE_PORT` (default: `8082`)
-  - optional per-slot simulator pools:
-    - `IOS_SIM_DEVICE_POOL` (comma-separated device names)
-    - `IOS_SIM_UDID_POOL` (comma-separated UDIDs; preferred when deterministic mapping is required)
+  - `EXPO_DEV_SERVER_PORT` (default: `8082`; must be unique per workspace on a shared host)
+  - `IOS_SIM_UDID` (preferred on a shared host)
+  - `IOS_SIM_DEVICE` (fallback only when the simulator name is unique for that workspace)
 - Operational rules:
-  - parallel runs are supported up to configured slot count.
-  - if no slot is free before timeout, runner exits non-zero.
-  - manual overrides (`EXPO_DEV_SERVER_PORT`, `IOS_SIM_DEVICE`, `IOS_SIM_UDID`) are allowed but can bypass isolation; use with care in shared-host parallel runs.
+  - parallel runs are safe only when each worktree uses a unique `EXPO_DEV_SERVER_PORT` and a unique simulator target.
+  - if two worktrees point at the same simulator or port, the runners can clobber each other; there is no longer an automatic host-level lock to prevent that.
+  - direct environment overrides remain allowed, but they should match the values committed to that workspace's `.maestro/maestro.env.local`.
+- Documentation rule:
+  - keep machine-specific simulator/port overrides in `.maestro/maestro.env.local`, not in shared docs or task cards.
 
 ## Planned next phase (UI quality and appearance)
 

@@ -1,7 +1,7 @@
 ---
 task_id: T-20260301-05
 milestone_id: "M10"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs"
 runtimes: "docs"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/04-ai-development-playbook.md,docs/specs/06-testing-st
 
 - Task ID: `T-20260301-05`
 - Title: M10 Maestro docs and policy integration
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-03-01`
 - Session interaction mode: `interactive (default)`
 
@@ -31,9 +31,10 @@ docs_touched: "docs/specs/04-ai-development-playbook.md,docs/specs/06-testing-st
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ 2356e6d94b566b66928a0016a272c7cb40fe67e9`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (`git fetch origin main`; local `main` already matched `origin/main`)
 - Parent refs opened in this session:
+  - `docs/specs/README.md`
   - `docs/specs/milestones/M10-maestro-parallel-runtime-and-testing-conventions.md`
   - `docs/specs/11-maestro-runtime-and-testing-conventions.md`
   - `docs/specs/04-ai-development-playbook.md`
@@ -139,16 +140,23 @@ Finish M10 by aligning the shared docs and runbooks to the implemented runtime m
 
 ## Evidence
 
-- Summary of doc/policy alignment changes.
-- `rg` summary for stale path or Expo Go wording cleanup.
-- Summary of which Maestro docs were removed, reduced, or converted to link-first entrypoints.
-- Manual verification summary (CI absent): docs consistency and command/path sanity completed.
+- Summary of doc/policy alignment changes:
+  - updated `docs/specs/04-ai-development-playbook.md` so Maestro tasks must load the authoritative contract, declare slow-gate posture, and record runtime evidence.
+  - updated `docs/specs/06-testing-strategy.md` to define Maestro policy ownership, canonical commands, reset taxonomy, slow-gate triggers, and evidence expectations without duplicating the full runtime contract.
+  - updated `docs/specs/09-project-structure.md` to document `.maestro/maestro.env.sample`, `.maestro/maestro.env.local`, `apps/mobile/scripts/maestro-*.sh`, and `apps/mobile/artifacts/maestro/` as canonical M10 locations.
+- `rg` summary for stale path or Expo Go wording cleanup:
+  - removed stale Expo Go transition wording from `apps/mobile/README-maestro.md` and `apps/mobile/README_HUMAN_TESTING.md`.
+  - removed stale absolute workspace paths from the runbooks; no absolute machine-specific workspace paths remain in the touched Maestro docs.
+- Summary of which Maestro docs were removed, reduced, or converted to link-first entrypoints:
+  - reduced `apps/mobile/README-maestro.md` to a thin operational runbook.
+  - reduced `apps/mobile/README_HUMAN_TESTING.md` to a human workflow entrypoint that points back to the authoritative contract.
+- Manual verification summary (required when CI is absent/partial): docs consistency and command/path sanity completed via targeted file/script review, `rg` cleanup checks, and task closeout validation.
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: aligned the AI playbook, testing strategy, project-structure spec, and both mobile runbooks to the implemented M10 Maestro runtime; removed stale Expo Go transition guidance and stale absolute workspace paths; converted the runbooks into link-first operational entrypoints that defer policy to `docs/specs/11-maestro-runtime-and-testing-conventions.md`.
+- What tests ran: `./scripts/task-bootstrap.sh docs/tasks/T-20260301-05-m10-maestro-docs-and-policy-integration.md`; `git fetch origin main`; targeted `sed`/`rg` inventory review of Maestro scripts, flows, config, and docs; `./scripts/task-closeout-check.sh docs/tasks/T-20260301-05-m10-maestro-docs-and-policy-integration.md`.
+- What remains: M10 milestone closeout is complete; no follow-up work remains for this task.
 
 ## Status update checklist (mandatory at closeout)
 

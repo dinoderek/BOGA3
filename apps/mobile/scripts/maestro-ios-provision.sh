@@ -20,7 +20,6 @@ maestro_require_command xcrun "Install Xcode and the iOS simulator runtime."
 
 echo "[maestro-ios-provision] Runtime env: $RUNTIME_ENV_FILE"
 echo "[maestro-ios-provision] Artifact root: $MAESTRO_ARTIFACT_ROOT"
-echo "[maestro-ios-provision] Slot: ${MAESTRO_IOS_SLOT_ID:-unset} (index=${MAESTRO_IOS_SLOT_INDEX:-unset})"
 echo "[maestro-ios-provision] Reset strategy: ${MAESTRO_RESET_STRATEGY:-data}"
 
 MAESTRO_IOS_DEV_CLIENT_APP_PATH="$("$SCRIPT_DIR/maestro-ios-dev-client-build.sh" --print-app-path)"

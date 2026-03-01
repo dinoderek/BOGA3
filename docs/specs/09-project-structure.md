@@ -23,9 +23,9 @@ Define the canonical repository structure, path ownership, and placement convent
         ui/                      # Canonical UI tokens + primitives foundation (M8+)
       src/                       # Non-route app code (domain/data/helpers)
       drizzle/                   # Mobile local DB schema/migrations artifacts
-      .maestro/flows/            # Maestro flow definitions (canonical location)
+      .maestro/                  # Maestro flows + sample config
       scripts/                   # Mobile/maestro helper scripts
-      artifacts/maestro/         # Maestro output artifacts/screenshots
+      artifacts/maestro/         # Maestro output artifacts, runtime state, and logs
   supabase/                      # Supabase backend root (M5 local runtime + backend assets)
     migrations/                  # Postgres migrations
     seed.sql                     # Deterministic local seed fixtures
@@ -42,11 +42,16 @@ Define the canonical repository structure, path ownership, and placement convent
 ## Workspace ownership (current)
 
 - `apps/mobile/`
-  - owns the mobile app code, mobile-only tests, mobile SQLite schema artifacts, Maestro flows, and mobile test helper scripts.
+  - owns the mobile app code, mobile-only tests, mobile SQLite schema artifacts, Maestro flows/config, and mobile test helper scripts.
 - `apps/mobile/components/ui/`
   - owns the canonical mobile UI tokens + primitive components introduced in M8 for reuse across route screens and specialized shared components.
+- `apps/mobile/.maestro/`
+  - owns committed Maestro flow definitions and the checked-in sample config file (`maestro.env.sample`).
+  - the per-worktree file `apps/mobile/.maestro/maestro.env.local` is canonical but remains untracked/local-only.
 - `scripts/`
   - owns repo-level cross-workspace wrappers (for example standard local quality-gate commands).
+- `apps/mobile/artifacts/maestro/`
+  - owns generated Maestro runtime artifacts, screenshots, and lifecycle logs (`runtime.env`, `provision.log`, `launch.log`, `teardown.log`, `expo-start.log`, `maestro-junit.xml`).
 - `docs/specs/`
   - owns project policy, architecture/testing strategy, milestone specs, and templates.
 - `docs/specs/ui/`
@@ -67,6 +72,13 @@ Define the canonical repository structure, path ownership, and placement convent
   - keep UI docs under `docs/specs/ui/**` rather than `docs/brainstorms/**` once they become source-of-truth references.
 - `apps/mobile/.maestro/flows`
   - remains the canonical location for Maestro flow definitions.
+- `apps/mobile/.maestro/maestro.env.sample`
+  - checked-in sample for per-worktree Maestro configuration.
+- `apps/mobile/.maestro/maestro.env.local`
+  - canonical untracked per-worktree Maestro config file.
+- `apps/mobile/artifacts/maestro/`
+  - canonical runtime artifact root for Maestro runs.
+  - each run writes task/timestamp-scoped subdirectories plus `runtime.env` and lifecycle logs under that root.
 - `apps/mobile/components/ui/` (introduced in M8)
   - canonical location for mobile UI tokens and primitive components used by shared/screen UI code.
   - keep specialized feature components (for example navigation/session-layout components) in domain folders under `apps/mobile/components/**`; compose primitives from `apps/mobile/components/ui/**`.
@@ -76,6 +88,8 @@ Define the canonical repository structure, path ownership, and placement convent
 - `scripts/` (repo root)
   - canonical location for repo-level cross-workspace wrappers (for example `./scripts/quality-fast.sh`, `./scripts/quality-slow.sh`).
   - keep workspace-specific wrappers in the owning workspace (for example `apps/mobile/scripts/**`, `supabase/scripts/**`).
+- `apps/mobile/scripts/`
+  - keep Maestro runtime/toolkit wrappers here (`maestro-env.sh`, `maestro-ios-*.sh`) rather than introducing a separate top-level test-runtime folder.
 - Mobile test-directory refactor
   - moving tests out of `apps/mobile/app/__tests__/` is a valid follow-up improvement, but it must be done in a dedicated task (not mixed into unrelated backend work).
 

@@ -25,6 +25,7 @@ Define the minimum scaffolding required before feature development, and standard
    - `docs/specs/03-technical-architecture.md`
    - `docs/specs/06-testing-strategy.md`
    - `docs/specs/09-project-structure.md`
+   - `docs/specs/11-maestro-runtime-and-testing-conventions.md` (required for Maestro runtime/testing work)
 2. Milestone level:
    - `docs/specs/milestones/<milestone-id>.md`
 3. Task level:
@@ -74,7 +75,8 @@ Baseline gate profiles (task cards may tighten these):
    - `Supabase-local` integration/contract tests against the real gateway/auth context
 4. `Expo` mobile UI/runtime work
    - `apps/mobile` `lint` + `typecheck` + `test`
-   - Maestro smoke flows when UI/runtime-sensitive changes require them (per `docs/specs/06-testing-strategy.md`)
+   - `./scripts/quality-slow.sh frontend` when Maestro/runtime-sensitive changes require real simulator evidence
+   - treat `docs/specs/11-maestro-runtime-and-testing-conventions.md` as the authority for reset terminology, per-worktree config, and artifact/log expectations
 5. Hosted/deployed environment changes
    - relevant local gates for the changed runtime(s)
    - hosted smoke validation (manual until CI exists; task card must name owner and trigger timing)
@@ -169,11 +171,29 @@ Provide these references at execution start:
 8. Relevant `docs/specs/ui/*.md` bundle docs for the task (UI tasks only; usually `ux-rules`, `screen-map`, `navigation-contract`, `components-catalog`)
 9. `docs/specs/10-api-authn-authz-guidelines.md` (for backend API/auth work and API-consuming integration tasks)
 10. `supabase/session-sync-api-contract.md` (for session sync API work and FE/backend sync integration tasks, when present)
+11. `docs/specs/11-maestro-runtime-and-testing-conventions.md` (required for tasks that touch `apps/mobile/.maestro/**`, `apps/mobile/scripts/maestro*`, the Maestro harness/runtime helpers, or that require real iOS simulator smoke validation)
 
 Recommended bootstrap helper (optional but preferred when available):
 
 - `./scripts/task-bootstrap.sh <task-card-path>`
   - prints a start-of-session context/freshness report (git SHA/status, parent refs, missing refs, and gate snippets) to support the task card `Context Freshness` section.
+
+## Maestro task rules
+
+Apply these rules to tasks that change the mobile Maestro runtime, harness, or flows.
+
+1. Load the Maestro contract:
+   - include `docs/specs/11-maestro-runtime-and-testing-conventions.md` in the execution packet and task-card parent refs.
+2. Declare the slow-gate posture explicitly:
+   - task cards must state whether `./scripts/quality-slow.sh frontend` is required or `N/A`;
+   - default to `required` when changing `apps/mobile/.maestro/**`, `apps/mobile/scripts/maestro*`, `apps/mobile/app/maestro-harness.tsx`, `apps/mobile/src/maestro/**`, mobile data bootstrap/migrations, or native Expo/SQLite/dev-client dependencies.
+3. Use the locked reset terminology:
+   - say `full reset`, `data reset`, and `teleport`, not ad hoc equivalents.
+4. Keep the contract synthetic:
+   - put the full runtime/testing policy only in `docs/specs/11-maestro-runtime-and-testing-conventions.md`;
+   - runbooks and task cards should link back to that doc rather than duplicating the whole contract.
+5. Record runtime evidence when slow gates run:
+   - include the executed command(s) plus artifact roots under `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`.
 
 ## UI docs bundle usage (UI tasks)
 
