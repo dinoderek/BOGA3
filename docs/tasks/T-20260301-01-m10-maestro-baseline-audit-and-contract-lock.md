@@ -1,7 +1,7 @@
 ---
 task_id: T-20260301-01
 milestone_id: "M10"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs"
 runtimes: "docs"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/README.md,docs/specs/11-maestro-runtime-and-testing-co
 
 - Task ID: `T-20260301-01`
 - Title: M10 Maestro baseline audit and contract lock
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-03-01`
 - Session interaction mode: `interactive (default)`
 
@@ -31,9 +31,10 @@ docs_touched: "docs/specs/README.md,docs/specs/11-maestro-runtime-and-testing-co
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ f32623f`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes (git fetch origin; local HEAD matched origin/main @ f32623f before edits)`
 - Parent refs opened in this session:
+  - `docs/specs/README.md`
   - `docs/specs/milestones/M10-maestro-parallel-runtime-and-testing-conventions.md`
   - `docs/specs/03-technical-architecture.md`
   - `docs/specs/04-ai-development-playbook.md`
@@ -46,7 +47,7 @@ docs_touched: "docs/specs/README.md,docs/specs/11-maestro-runtime-and-testing-co
   - `apps/mobile/eas.json`
   - current runbook docs under `apps/mobile/README-maestro.md` and `apps/mobile/README_HUMAN_TESTING.md`
 - Known stale references or assumptions:
-  - current runbooks contain stale absolute workspace paths and should not be treated as authoritative until refreshed
+  - `apps/mobile/README-maestro.md` and `apps/mobile/README_HUMAN_TESTING.md` still contain stale absolute paths and remain secondary docs until later M10 cleanup
 - Optional helper command:
   - `./scripts/task-bootstrap.sh docs/tasks/T-20260301-01-m10-maestro-baseline-audit-and-contract-lock.md`
 
@@ -122,6 +123,7 @@ Create the authoritative source-of-truth Maestro runtime/testing contract for M1
 - Slow-gate triggers: `N/A`
 - Hosted/deployed smoke ownership: `N/A`
 - CI/manual posture note: no CI configured; verification is manual in-task
+- Manual verification summary (required when CI is absent/partial): verified current Maestro implementation from source files, checked cross-doc path/terminology consistency, and used the closeout helper for task-card validation
 
 ## Implementation notes
 
@@ -149,9 +151,9 @@ Create the authoritative source-of-truth Maestro runtime/testing contract for M1
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Added `docs/specs/11-maestro-runtime-and-testing-conventions.md` as the authoritative Maestro runtime/testing contract, updated `docs/specs/README.md` to link to it, aligned the M10 milestone spec to the locked config paths/toolkit surface/artifact contract/reset taxonomy, and refreshed this task card with concrete context freshness and closeout data.
+- What tests ran: `./scripts/task-bootstrap.sh docs/tasks/T-20260301-01-m10-maestro-baseline-audit-and-contract-lock.md`; code/document inventory review with `rg`, `sed`, and `nl` across `apps/mobile/.maestro/flows/**`, `apps/mobile/scripts/**`, `apps/mobile/app.json`, `apps/mobile/eas.json`, `apps/mobile/README-maestro.md`, and `apps/mobile/README_HUMAN_TESTING.md`; `git diff --check`; `./scripts/task-closeout-check.sh docs/tasks/T-20260301-01-m10-maestro-baseline-audit-and-contract-lock.md`
+- What remains: Later M10 tasks still need to implement the shared dev-client build/config/toolkit surfaces and reduce the stale app runbooks to thin entrypoints.
 
 ## Status update checklist (mandatory at closeout)
 

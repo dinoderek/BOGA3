@@ -4,7 +4,7 @@
 
 - Milestone ID: `M10`
 - Title: Maestro parallel runtime and testing conventions revamp
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03`
 
@@ -16,6 +16,7 @@
 - AI development playbook: `docs/specs/04-ai-development-playbook.md`
 - Testing strategy: `docs/specs/06-testing-strategy.md`
 - Project structure: `docs/specs/09-project-structure.md`
+- Maestro runtime/testing contract: `docs/specs/11-maestro-runtime-and-testing-conventions.md`
 - Brainstorm source: `docs/brainstorms/Maestro-Revamp`
 - Current implementation baseline:
   - `apps/mobile/package.json`
@@ -73,19 +74,28 @@ Replace the current Expo Go based Maestro smoke loop with a reliable, parallel-s
 
 1. Maestro runtime for iOS automation must move to an Expo development client based flow; Expo Go may remain available for manual development but is not the primary M10 automation target.
 2. The iOS development client binary is a shared host-local artifact, not something every worktree rebuilds for every run.
-3. Each worktree must have one canonical untracked Maestro config file plus one checked-in sample file; scripts are stateless beyond that env contract and generated runtime state files.
+3. Each worktree must use `apps/mobile/.maestro/maestro.env.local` as the canonical untracked Maestro config file and `apps/mobile/.maestro/maestro.env.sample` as the checked-in sample file; scripts are stateless beyond that env contract and generated runtime state files.
 4. Parallel isolation must work across separate repository checkouts on the same host by isolating:
    - simulator identity,
    - Expo dev-server port,
    - runtime state files,
    - cleanup ownership.
-5. Current slot locking may be retained or replaced, but the resulting contract must be deterministic, cross-worktree safe, and documented.
+5. Slot-based host arbitration is retained as the M10 baseline; later refactors may change implementation details only if they preserve deterministic, cross-worktree-safe isolation.
 6. Setup should minimize slow UI tapping:
    - use `clearState` only for true cold-start/install permission layers,
    - use app-level data reset for storage/session cleanup,
-   - use deep links or hidden harness routes to teleport to the screen/state under test.
+   - use deep links or hidden harness routes to `teleport` to the screen/state under test.
 7. Hidden Maestro/debug harness functionality must be explicitly guarded so it is only available in allowed development/test contexts.
-8. M10 must add one authoritative source-of-truth doc for Maestro runtime/testing conventions under `docs/specs/`, then align runbooks and top-level testing/playbook docs to it.
+8. `docs/specs/11-maestro-runtime-and-testing-conventions.md` is the authoritative source-of-truth doc for Maestro runtime/testing conventions; runbooks and top-level testing/playbook docs must align to it.
+9. The canonical shared-build root is `$HOME/.cache/boga/maestro/ios-dev-client`, and runtime scripts consume the resolved `.app` via `MAESTRO_IOS_DEV_CLIENT_APP_PATH`.
+10. The canonical toolkit surface is:
+   - `apps/mobile/scripts/maestro-ios-dev-client-build.sh`
+   - `apps/mobile/scripts/maestro-ios-provision.sh`
+   - `apps/mobile/scripts/maestro-ios-launch.sh`
+   - `apps/mobile/scripts/maestro-ios-teardown.sh`
+   - existing smoke/data-smoke runners stay as thin scenario entrypoints.
+11. The canonical runtime artifact root remains `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`, and future toolkit runs must emit `runtime.env`, `provision.log`, `launch.log`, and `teardown.log` there.
+12. M10 reset taxonomy uses the exact terms `full reset`, `data reset`, and `teleport`.
 
 ## In scope
 
@@ -176,10 +186,10 @@ Rule: because this milestone changes runtime/testing workflow and introduces a n
 ## Acceptance criteria
 
 1. M10 establishes one authoritative Maestro runtime/testing document under `docs/specs/` and `docs/specs/README.md` links to it.
-2. The repository has one checked-in sample config file and one documented untracked local config path for per-worktree Maestro settings.
+2. The repository has `apps/mobile/.maestro/maestro.env.sample` as the checked-in sample config file and documents `apps/mobile/.maestro/maestro.env.local` as the untracked per-worktree config path.
 3. A shared dev-client build script can create or refresh a reusable simulator `.app` artifact at a documented host-local path, and it documents when rebuilds are required.
 4. The iOS runtime toolkit can provision or resolve a dedicated simulator, install the dev client, launch Expo on an isolated port, deep-link the simulator to the correct bundle, and tear down cleanly after success or failure.
-5. The toolkit emits enough runtime state and logs for downstream scripts and debugging without relying on manual terminal state.
+5. The toolkit emits enough runtime state and logs for downstream scripts and debugging without relying on manual terminal state, with `runtime.env`, `provision.log`, `launch.log`, and `teardown.log` under the canonical artifact root.
 6. Current smoke and data-smoke flows no longer depend on `host.exp.Exponent` or raw Expo Go `exp://` assumptions.
 7. M10 documents and implements a clear reset taxonomy:
    - full reset / cold install,
@@ -192,7 +202,7 @@ Rule: because this milestone changes runtime/testing workflow and introduces a n
 
 ## Task breakdown
 
-1. `docs/tasks/T-20260301-01-m10-maestro-baseline-audit-and-contract-lock.md` - convert the verified current-state audit into an authoritative M10 contract doc and lock exact file/env/runtime conventions. (`planned`)
+1. `docs/tasks/T-20260301-01-m10-maestro-baseline-audit-and-contract-lock.md` - convert the verified current-state audit into an authoritative M10 contract doc and lock exact file/env/runtime conventions. (`completed`)
 2. `docs/tasks/T-20260301-02-m10-shared-dev-client-build-and-worktree-config.md` - add shared dev-client build/reuse workflow, sample config, and first-time setup rules. (`planned`)
 3. `docs/tasks/T-20260301-03-m10-parallel-ios-runtime-toolkit-and-teardown.md` - implement provision/launch/teardown toolkit and refactor runners onto it. (`planned`)
 4. `docs/tasks/T-20260301-04-m10-maestro-harness-reset-taxonomy-and-flow-migration.md` - add harness/deep-link reset utilities and migrate flows to the development-client runtime model. (`planned`)
