@@ -4,7 +4,7 @@
 
 - Milestone ID: `M#`
 - Title:
-- Status: `planned | in_progress | completed | blocked`
+- Status: `planned | in_progress | completed | blocked | outdated`
 
 ## Parent references
 
@@ -64,5 +64,5 @@ Rule:
 ## Status update checklist (mandatory during task closeout)
 
 - Keep milestone `Status` current as tasks progress.
-- Update task breakdown entries to reflect each task state (`planned | in_progress | completed | blocked`).
+- Update task breakdown entries to reflect each task state (`planned | in_progress | completed | blocked | outdated`).
 - If milestone remains open after a session, record why in the active task completion note and/or milestone completion note (status remains `in_progress`).

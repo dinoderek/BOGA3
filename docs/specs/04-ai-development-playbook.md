@@ -91,8 +91,8 @@ Rule: task cards must list the exact gate commands they require; this section on
 3. Break milestone spec into small task cards using `docs/specs/templates/task-card-template.md`.
 4. Execute one task card per AI session (or a tightly related pair only).
 5. Update task and milestone docs at end of session:
-   - set task `Status` (`completed` or `blocked`)
-   - move task cards marked `completed` from `docs/tasks/` to `docs/tasks/complete/`
+   - set task `Status` (`completed`, `blocked`, or `outdated`)
+   - move task cards marked `completed` or `outdated` from `docs/tasks/` to `docs/tasks/complete/`
    - fill task `Completion note`
    - update milestone `Status` and task breakdown item states
    - update decision log entries when decisions changed

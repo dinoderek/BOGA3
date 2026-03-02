@@ -4,7 +4,7 @@
 
 - Task ID: `T-20260220-05`
 - Title: M4 session list screen shell with active-session gating
-- Status: `in_progress`
+- Status: `outdated`
 - Owner: `AI + human reviewer`
 - Session date: `2026-02-20`
 - Session interaction mode: `interactive (default)`
@@ -150,5 +150,11 @@ Create the session list screen UI shell as the app home route with active/comple
   - `npm run test`
   - `TASK_ID=T-20260220-05 npm run test:e2e:ios:smoke`
 - What remains:
-  - Capture the task-card-required session-list empty-state screenshot (happy-path screenshot captured via Maestro in this session).
-  - Human review of shell copy/spacing before marking the task `completed`.
+  - None for this card. The task is being archived as `outdated` because later session-list work changed the route contract beyond the original shell-only scope.
+
+## Outdated note
+
+- Why outdated:
+  - Later M4/M7 work added DB-backed list wiring, completed-session detail navigation, and interactive completed-session actions, so this card's original disabled-row shell contract is no longer the authoritative description of the shipped behavior.
+- Archive reason:
+  - Keep the implementation history, but stop tracking this card as an active/incomplete task.

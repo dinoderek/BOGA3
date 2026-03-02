@@ -17,10 +17,10 @@ docs_touched: "comma-separated paths or none"
 
 - Task ID:
 - Title:
-- Status: `planned | in_progress | completed | blocked`
+- Status: `planned | in_progress | completed | blocked | outdated`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
-  - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed`
+  - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
 - Session date:
 - Session interaction mode: `interactive (default) | non_interactive`
 
@@ -168,8 +168,8 @@ UI task acceptance boilerplate (include/adapt when `UI Impact = yes`; remove for
 
 ## Status update checklist (mandatory at closeout)
 
-- Update `Status` to `completed` or `blocked`.
-- If `Status = completed`, move the task card to `docs/tasks/complete/` and update affected references in the same session.
+- Update `Status` to `completed`, `blocked`, or `outdated`.
+- If `Status = completed` or `outdated`, move the task card to `docs/tasks/complete/` and update affected references in the same session.
 - Ensure completion note is filled before handoff.
 - For UI/UX tasks, update the relevant `docs/specs/ui/*.md` files (or record explicit `no update` rationale) and keep entries synthetic/overview-first.
 - If significant project-structure changes were made, update `docs/specs/09-project-structure.md` and mention it in completion note.

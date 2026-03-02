@@ -4,7 +4,7 @@
 
 - Milestone ID: `M4`
 - Title: Session list home screen and local data wiring
-- Status: `in_progress`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Target window: `2026-02`
 
@@ -65,7 +65,7 @@ Ship a session list home screen that presents active and completed sessions from
 
 ## Task breakdown
 
-1. `docs/tasks/T-20260220-05-m4-session-list-screen-shell.md` - `in_progress` (implementation + verify gates complete; pending empty-state screenshot evidence and final task closeout).
+1. `docs/tasks/complete/T-20260220-05-m4-session-list-screen-shell.md` - `outdated` (superseded by later M4/M7 session-list behavior; original shell-only contract no longer matches the implemented interactive completed-session flow).
 2. `docs/tasks/complete/T-20260220-06-m4-session-list-data-wiring-and-soft-delete.md` - `completed`.
 3. `docs/tasks/complete/T-20260224-01-m4-session-recorder-ui-persistence-and-lifecycle-flush.md` - `completed`.
 
@@ -75,6 +75,16 @@ Ship a session list home screen that presents active and completed sessions from
 - If one-active enforcement requires schema constraints, migration compatibility for existing local data must be handled explicitly.
 - Soft-delete policy must remain consistent across future session-detail and sync milestones.
 - `apps/mobile/.maestro/flows/data-runtime-smoke.yaml` is stale after the M4 home-route change (still asserts `home-foundation-ready`), so native runtime data-smoke evidence needs a flow update before reuse.
+
+## Completion note
+
+- What changed:
+  - M4 established `session-list` as the home route, added the local data-backed active/completed bucket contract, and wired active-session gating plus soft-delete-aware history behavior.
+  - The original shell-only task `T-20260220-05` was archived as `outdated` because later M4/M7 work superseded its disabled completed-row constraint with interactive completed-session behavior.
+- Verification summary:
+  - M4 task-level frontend verification was completed across the shell, repository, and recorder persistence follow-up work, with the superseding session-list behavior now covered by the current route/unit test suite.
+- What remains:
+  - None for M4. Subsequent milestones own the later completed-session interaction model and any follow-on UX/runtime refinements.
 
 ## Decision log
 
