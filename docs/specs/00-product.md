@@ -32,5 +32,6 @@ A Gym Tracking application with a delightful interface, advanced analytics, AI p
 - Date: `2026-02-27`
 - Decision: Exercise/variation/mapping metadata semantics are retroactive.
 - Notes:
-  - edits to exercise and variation metadata apply across history presentation,
-  - future analytics interpretation is based on latest metadata (no versioned/snapshot metadata model in M9).
+  - history views resolve against the latest exercise catalog metadata rather than per-session snapshots,
+  - retroactive scope includes exercise labels, variation labels and key/value pairs, and exercise-to-muscle mappings,
+  - future analytics interpretation is based on the latest metadata (no versioned/snapshot metadata model in M9).

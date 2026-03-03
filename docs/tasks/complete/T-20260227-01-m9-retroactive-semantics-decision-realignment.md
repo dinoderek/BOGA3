@@ -1,7 +1,7 @@
 ---
 task_id: T-20260227-01
 milestone_id: "M9"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs"
 runtimes: "docs"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/00-product.md,docs/specs/03-technical-architecture.md,
 
 - Task ID: `T-20260227-01`
 - Title: M9 retroactive semantics decision realignment
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-02-27`
 - Session interaction mode: `interactive (default)`
 
@@ -30,19 +30,23 @@ docs_touched: "docs/specs/00-product.md,docs/specs/03-technical-architecture.md,
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ 619f5b4`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes`
 - Parent refs opened in this session (list exact files actually reviewed):
+  - `docs/specs/README.md`
   - `docs/specs/00-product.md`
   - `docs/specs/03-technical-architecture.md`
+  - `docs/specs/04-ai-development-playbook.md`
+  - `docs/specs/06-testing-strategy.md`
+  - `docs/specs/09-project-structure.md`
   - `docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md`
   - `docs/specs/milestones/M9-exercise-variations-and-fast-selection-foundation.md`
 - Code/docs inventory freshness checks run:
-  - docs link/path sanity for touched specs (`TBD at execution start`)
+  - docs link/path sanity for touched specs via `rg` across the touched files before edits
 - Known stale references or assumptions:
   - none expected
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`
 
 ## Objective
 
@@ -111,19 +115,20 @@ Align source-of-truth product and architecture docs to the newly locked M9 decis
 
 - Standard local fast gate: `N/A (docs-only)`
 - Standard local slow gate: `N/A (docs-only)`
-- Optional closeout helper: `./scripts/task-closeout-check.sh docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`
+- Optional closeout helper: `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`
 
 ## Evidence
 
 - Updated decision wording snippets from all touched source-of-truth docs.
 - `rg` output summary showing superseded wording handled in touched docs.
 - Manual verification summary (CI absent): docs consistency + link/path sanity completed.
+- Manual verification summary (required when CI is absent/partial): docs consistency + link/path sanity completed via targeted `rg` checks and diff review across all touched docs.
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Updated `docs/specs/00-product.md` and `docs/specs/03-technical-architecture.md` to lock latest-definition retroactive semantics; updated the M6 and M9 milestone docs to mark the old snapshot wording as superseded historical record and to align M9 as the canonical direction; archived this completed task card and updated the M9 task breakdown/status.
+- What tests ran: `git pull --ff-only origin main`; `./scripts/task-bootstrap.sh docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`; `rg -n "snapshot at session completion|reproducible canonical analytics|history reads resolve against the latest|latest canonical catalog definitions|historical record only|superseded by M9" docs/specs/00-product.md docs/specs/03-technical-architecture.md docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md docs/specs/milestones/M9-exercise-variations-and-fast-selection-foundation.md`; `git diff -- docs/specs/00-product.md docs/specs/03-technical-architecture.md docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md docs/specs/milestones/M9-exercise-variations-and-fast-selection-foundation.md docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md`; `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` (re-run after completion-note normalization); `git pull --ff-only origin main`.
+- What remains: No open items remain for this task; follow-on M9 implementation work continues in `T-20260227-02` through `T-20260227-05`.
 
 ## Status update checklist (mandatory at closeout)
 
@@ -131,4 +136,4 @@ Align source-of-truth product and architecture docs to the newly locked M9 decis
 - Ensure completion note is filled before handoff.
 - If significant project-structure changes were made, update `docs/specs/09-project-structure.md` and mention it in completion note.
 - Update parent milestone task breakdown/status in the same session.
-- Run `./scripts/task-closeout-check.sh docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` (or document why `N/A`) before handoff.
+- Run `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` (or document why `N/A`) before handoff.

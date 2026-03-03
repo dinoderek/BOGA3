@@ -4,7 +4,7 @@
 
 - Milestone ID: `M9`
 - Title: Exercise variations and fast selection foundation
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03` / `2026-04`
 
@@ -35,8 +35,10 @@ Introduce optional, key/value-based exercise variations while preserving a fast 
 7. Exercise metadata semantics are fully retroactive for history and future analytics interpretation:
    - no exercise/variation versioning in M9,
    - no snapshot-preserved exercise metadata semantics for analytics in M9,
+   - history reads resolve against the latest catalog metadata,
    - retroactive scope includes exercise labels, variation labels/key-values, and exercise-to-muscle mappings.
-8. Product decisions are tracked in `docs/specs/00-product.md`; technical decisions are tracked in `docs/specs/03-technical-architecture.md`.
+8. This retroactive metadata decision supersedes conflicting M6 snapshot-oriented historical wording and is the canonical direction for follow-on tasks.
+9. Product decisions are tracked in `docs/specs/00-product.md`; technical decisions are tracked in `docs/specs/03-technical-architecture.md`.
 
 ## In scope
 
@@ -83,7 +85,7 @@ Introduce optional, key/value-based exercise variations while preserving a fast 
 
 ## Task breakdown
 
-1. `docs/tasks/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` - lock retroactive history/analytics semantics and align product/architecture/milestone docs. (`planned`)
+1. `docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` - lock retroactive history/analytics semantics and align product/architecture/milestone docs. (`completed`)
 2. `docs/tasks/T-20260227-02-m9-local-variation-schema-and-session-reference-migration.md` - implement local schema + migration for key/value variations and session exercise references. (`planned`)
 3. `docs/tasks/T-20260227-03-m9-exercise-catalog-variation-management-ui.md` - implement catalog UI for per-exercise variation/key/value management. (`planned`)
 4. `docs/tasks/T-20260227-04-m9-recorder-fast-exercise-and-optional-variation-selection.md` - implement recorder UX for fast add + optional variation selection/change. (`planned`)

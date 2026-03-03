@@ -62,6 +62,7 @@ Define a practical, data-driven exercise metadata model that associates exercise
 - For M6 v1 taxonomy, chest is represented as a single group (`chest`) rather than sub-regions.
   - Reason: avoid false precision in default exercise mappings when sub-region emphasis varies meaningfully by individual and setup.
 - Historical behavior direction from M6 (`snapshot/reproducible canonical`) is superseded by M9 planning decision dated `2026-02-27`.
+  - This milestone retains the older wording as historical record only.
   - Current canonical direction is retroactive metadata semantics (latest mappings/metadata apply), with future analytics cache invalidation/recompute handling.
 
 ## Proposed exercise-to-muscle association model (v1)
@@ -165,7 +166,7 @@ Planned task cards for M6 are listed below.
 - Date: 2026-02-24
 - Decision: Defer historical mapping behavior for edited exercise muscle profiles (`TBD`).
 - Reason: This requires a broader tradeoff across data model complexity, user expectations, and analytics reproducibility.
-- Impact: Schema and follow-on analytics tasks must explicitly revisit versioning/snapshot strategy before implementation is finalized.
+- Impact: This was an intermediate M6 state only; the open question was later resolved by M9 in favor of retroactive metadata semantics.
 
 - Date: 2026-02-24
 - Decision: Treat the muscle-group taxonomy as system-defined and non-editable in M6.
@@ -180,7 +181,7 @@ Planned task cards for M6 are listed below.
 - Date: 2026-02-25
 - Decision: Lock canonical historical analytics behavior for exercise-mapping edits to a reproducible model (no drift from later edits), with `snapshot at session completion` as the default implementation target and `versioned mappings` as an escalation path.
 - Reason: Preserves user trust and analytics reproducibility while avoiding premature versioning complexity in the local-first + future sync architecture.
-- Impact: Superseded by M9 decision dated `2026-02-27`; retained here as historical record of M6 direction.
+- Impact: Superseded by M9 decision dated `2026-02-27`; retained here as historical record only and not as active guidance.
 
 - Date: 2026-02-27
 - Decision: Supersede M6 snapshot/reproducible historical-mapping direction with retroactive metadata semantics from M9 planning.
