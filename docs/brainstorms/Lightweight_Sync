@@ -1,11 +1,389 @@
-The current sync appraoch docs/specs/tech/mobile-sync-engine-overview.md to take a full snapshot and a per graph entity graph comparison is too heavyweight. In the majority of cases there will be no remote change at all. 
+# Brainstorm: Lightweight Sync
 
-I want to implement a fast path update that does not need all that complexity. 
+## Goal
 
-Sketch of how this could work (let's brainstorm the detail together)
-- Client generaters a `Sync UUID` at first start.
-- Client manages a local `Sync Watermark`. This is the last local state sent to the server. 
-- Client takes an optimistic approach and always tries to send to Backend <Sync UUID, Sync Watermark, DELTA since Watermark>
-- Backend compares UUID, Watermark with local state. If matches, it accepts the update. If it does not match, then returns the full state and current heavyweight sync reconciliation is executed. 
+Define what a meaningfully lighter sync model would be for this repo after the current M11 baseline, without breaking the local-first and aggregate-session guarantees that just landed.
 
-I would like this to be reflected in M11 and implemented before T6 and T7
+This is a brainstorm note, not source of truth.
+
+## Current leaning
+
+Based on current discussion, the strongest near-term direction is:
+
+- optimize for sync cost rather than UI/status noise,
+- assume full fallback reconciliation is acceptable because divergence should be rare,
+- prefer an optimistic token-gated fast path before true incremental pulls,
+- use server-issued `sync_version` tokens rather than any clock-based cursor,
+- use explicit local dirty-root tracking per domain.
+
+## Current baseline (`2026-03-03`)
+
+The implemented M11 sync engine currently:
+
+- is auth-gated and foreground-only,
+- runs on `bootstrap`, `resume`, `connectivity_regain`, `poll`, and `auth_change`,
+- polls every `60s`,
+- pulls the full remote dataset for `gyms`, `sessions`, `session_exercises`, and `exercise_sets`,
+- pulls the full local dataset from SQLite on each run,
+- reconciles by comparing client-managed `updatedAt`,
+- pushes session changes through aggregate `replace_session_graph`,
+- stores operational state in local `sync_state`.
+
+This is a good first engine because it is simple and deterministic, but it is not lightweight once the data shape grows.
+
+## What "lightweight" should mean here
+
+A lightweight sync design should reduce one or more of:
+
+- remote rows fetched per sync attempt,
+- local rows scanned per sync attempt,
+- poll frequency while nothing is changing,
+- user-visible churn from repeated no-op sync passes,
+- implementation surface area compared with a full persisted outbox/background system.
+
+It should not:
+
+- weaken the aggregate session-graph correctness model,
+- require background sync as a prerequisite,
+- block local app usage when auth/network/backend are unavailable.
+
+## Main constraint
+
+The current system uses client-written `updatedAt` values as the comparison field.
+
+That is acceptable for full snapshot reconciliation, but it is a weak foundation for incremental sync cursors. If two devices have skewed clocks, a pure "`updatedAt > last_cursor`" pull model can miss legitimate remote changes or replay changes unpredictably.
+
+So there are really two classes of "lightweight" options:
+
+1. lighter scheduling and lighter push heuristics without changing the server cursor model;
+2. true incremental sync, which needs a server-managed cursor/version field.
+
+## Option A: Keep M11 semantics, make scheduling lighter
+
+Smallest change set:
+
+- slow poll cadence from `60s` to something like `5m`,
+- add manual `Sync now` from the planned diagnostics route,
+- skip poll attempts when the app has been idle and the last successful sync was recent,
+- keep `resume` and `connectivity_regain` as the main freshness triggers.
+
+Pros:
+
+- almost no architecture churn,
+- preserves the current correctness model,
+- easy to test and explain.
+
+Cons:
+
+- still does full local and remote scans,
+- network cost still scales with total dataset size,
+- only solves "too chatty", not "too heavy".
+
+## Option B: Client-only lightweight push, full remote pull
+
+Keep remote pulls as full snapshots, but avoid pushing unchanged local entities.
+
+Shape:
+
+- track local dirty ids for `gyms` and `sessions`,
+- only push dirty records/graphs,
+- clear dirty state after successful authoritative push or remote replacement,
+- still do a full remote pull on each eligible sync attempt.
+
+Pros:
+
+- does not require backend contract changes,
+- reduces write traffic and avoids unnecessary RPC calls,
+- keeps reconciliation logic simple.
+
+Cons:
+
+- the expensive part eventually becomes the full remote pull, not the push path,
+- still requires local dirty-state bookkeeping,
+- only a partial win.
+
+## Option C: True lightweight incremental sync
+
+Recommended long-term lightweight direction.
+
+### Required backend change
+
+Introduce a server-managed monotonic sync cursor, for example:
+
+- a monotonic `sync_version` / logical sequence.
+
+Avoid both client-provided `updated_at` and server clock timestamps as the primary correctness cursor when a monotonic version can be used instead.
+
+### Recommended domain shape
+
+Use different granularity for the two syncable entity families:
+
+- `gyms`: incremental row sync is fine.
+- `sessions`: incremental parent-header discovery plus aggregate graph hydration.
+
+Concretely:
+
+1. Pull changed gyms since the last remote cursor.
+2. Pull changed session headers since the last remote cursor.
+3. For each changed session id, fetch the full session graph.
+4. Apply each changed graph locally via the existing aggregate replacement path.
+5. Continue using `replace_session_graph` for pushes.
+
+This keeps the session correctness model aggregate-based while still making the read path incremental.
+
+### Required client additions
+
+- persist remote cursors in `sync_state` or a dedicated sync-metadata table,
+- track local dirty gym ids and session ids,
+- clear dirty state only after successful authoritative sync outcomes,
+- keep a manual full-resync escape hatch for repair/debugging.
+
+Pros:
+
+- scales with changed records instead of total records,
+- preserves the current aggregate session invariant,
+- does not require a full outbox yet.
+
+Cons:
+
+- needs backend schema/trigger work,
+- needs local dirty tracking,
+- introduces more state-machine edge cases than the current full-snapshot engine.
+
+## Option D: Optimistic token-gated fast path with full-reconcile fallback
+
+This is a strong intermediate design if we believe the client will already be in sync most of the time.
+
+### Core idea
+
+The client keeps:
+
+- local dirty ids / dirty session graphs,
+- a persisted `lastServerToken`.
+
+On each sync round, the client sends:
+
+- `baseToken`: the token value the client believes the server is currently on for this request,
+- any local dirty payloads,
+- no full pull request unless the fast path fails.
+
+The server:
+
+1. compares `baseToken` to the current server token for that user/sync scope;
+2. if they match, applies the dirty payloads in one transaction;
+3. bumps the server token;
+4. returns the new token and any authoritative written state;
+5. if they do not match, returns `stale` and the client falls back to the current M11 full reconciliation algorithm.
+
+### `baseToken` vs `lastServerToken`
+
+These are related, but they are not the same concept.
+
+- `lastServerToken`
+  - client-side persisted state,
+  - "the last server token value we successfully observed and stored locally",
+  - survives across app launches,
+  - updates after a successful fast-path write, successful no-op handshake, or successful fallback reconciliation.
+
+- `baseToken`
+  - request-scoped value sent to the server during one sync attempt,
+  - "the token we are basing this specific optimistic write/no-op attempt on",
+  - usually equal to the current local `lastServerToken`,
+  - may be omitted / `null` during bootstrap or repair flows where the client has no trusted token yet.
+
+So in practice:
+
+- the client stores `lastServerToken`,
+- each sync request copies that value into `baseToken`,
+- the server validates `baseToken`,
+- if successful, the response returns a newer token which becomes the new persisted `lastServerToken`.
+
+### Why this is attractive
+
+- no-op sync can become almost free,
+- normal single-device sync can avoid full dataset scans,
+- divergence stays safe because the existing full-reconcile algorithm remains the escape hatch,
+- we do not need a full incremental pull system immediately.
+
+### Important design constraints
+
+- the token must be server-issued and monotonic,
+- the token should be scoped per user and per domain, not globally across all users,
+- token validation and write application must happen in the same transaction,
+- dirty session writes should remain aggregate session-graph writes, not child-row patches,
+- the client must clear dirty state only after authoritative success,
+- fallback must still update local state and refresh `lastServerToken`.
+
+### Recommended token model
+
+Prefer `sync_version`, not `server_updated_at`.
+
+Why:
+
+- `server_updated_at` is still clock-based,
+- `sync_version` has simpler correctness semantics,
+- equality / stale checks are clearer,
+- it avoids hidden reliance on timestamp ordering rules.
+
+Recommended shape:
+
+- one server-issued version per user per domain,
+- for example:
+  - `gyms_sync_version`
+  - `sessions_sync_version`
+
+Equivalent normalized storage would also be fine, for example a `user_sync_versions` table keyed by `(user_id, domain)`.
+
+### Likely protocol shape
+
+Client stores:
+
+- `lastServerToken` per domain
+- explicit dirty roots for `gyms`
+- explicit dirty roots for `sessions`
+
+Request sends:
+
+- `baseToken` for the relevant domain
+- dirty gyms for `gyms` sync
+- dirty session graphs for `sessions` sync
+
+Server responds with one of:
+
+- `noop` + current token
+- `applied` + authoritative records + new token
+- `stale`
+
+On `stale`, client:
+
+1. runs the current full reconciliation flow;
+2. stores the refreshed authoritative token;
+3. clears or rebuilds dirty state based on the reconciliation result.
+
+### Tradeoffs
+
+Pros:
+
+- probably the best near-term fit if divergence is genuinely rare,
+- much cheaper steady-state behavior,
+- preserves the current aggregate session correctness model,
+- simpler than full incremental pull architecture.
+
+Cons:
+
+- still needs a server-managed token contract,
+- still needs local dirty tracking,
+- stale/fallback handling must be carefully defined,
+- if divergence becomes common, the expensive fallback path stops being exceptional.
+
+### Recommended local dirty-state model
+
+Keep dirty tracking explicit and simple. Do not rely on clocks, and do not hide graph-root dirtiness behind implicit timestamp semantics.
+
+Recommended approach:
+
+- use a dedicated local table for dirty roots,
+- mark dirty roots in repository/domain write paths,
+- do not add sync-specific `is_dirty` columns to product tables,
+- do not rely on generic low-level DAO listeners unless the repo already has a strong event model.
+
+Suggested table shape:
+
+```text
+sync_dirty_roots
+  domain      -- `gym` | `session`
+  entity_id   -- root entity id
+  dirty_since -- optional local diagnostic field only
+```
+
+With a uniqueness rule on `(domain, entity_id)`.
+
+Recommended write rules:
+
+- when a gym write succeeds locally, mark `(gym, gym_id)` dirty in the same transaction;
+- when any session-graph write succeeds locally, mark `(session, session_id)` dirty in the same transaction;
+- when a child exercise/set is edited, the write path that knows the owning `session_id` should mark the session root dirty;
+- do not track child-row dirty state separately for sync purposes.
+
+Why this is the simplest good option:
+
+- graph membership remains domain knowledge, where it belongs;
+- sync internals stay out of core product tables;
+- dirty clearing is easy after authoritative success or fallback reconcile;
+- the model matches the current aggregate session sync contract.
+
+## Option E: Persisted outbox + background evolution
+
+This is heavier than "lightweight sync" and should be treated as a later milestone, not the next step.
+
+Only move here when one of these becomes true:
+
+- we need reliable background delivery,
+- we need much larger datasets,
+- we need stronger conflict explainability/auditability,
+- the lightweight incremental approach still causes too much churn.
+
+## Recommendation
+
+Use a phased approach.
+
+### Phase 1
+
+Land the cheap wins first:
+
+- keep the current M11 reconciliation model,
+- slow default polling materially,
+- add `Sync now`,
+- add local dirty tracking so unchanged local graphs are not re-pushed,
+- keep full remote pulls for now.
+
+This gives a simpler "lighter feel" without reopening the backend contract immediately.
+
+### Phase 2
+
+If we want a bigger win without committing to full incremental pulls yet, prefer Option D:
+
+- add server-issued per-user, per-domain `sync_version` tokens,
+- persist `lastServerToken` locally per domain,
+- add explicit local dirty-root tracking,
+- send `baseToken` plus dirty payloads on each sync attempt,
+- accept the fast path when the token matches,
+- fall back to the current full reconciliation flow when it does not.
+
+This is likely the best intermediate architecture if "already in sync most of the time" is a true assumption.
+
+### Phase 3
+
+If sync remains a meaningful cost, move to true incremental reads:
+
+- add a server-managed cursor/version,
+- pull changed gyms incrementally,
+- pull changed session headers incrementally,
+- hydrate only changed session graphs,
+- preserve aggregate `replace_session_graph` writes.
+
+This is the best balance between simplicity and scalability for the current product shape.
+
+## Guardrails
+
+- Do not regress from aggregate session-graph reconciliation to child-row last-write-wins.
+- Do not rely on client clock timestamps for remote incremental cursor correctness.
+- Do not confuse the persisted client `lastServerToken` with the per-request `baseToken`; the former is stored local state, the latter is the optimistic assertion sent for one sync round.
+- Do not introduce background-native complexity just to make foreground sync cheaper.
+- Keep a manual full-resync path even after incremental sync exists.
+
+## Open questions
+
+Resolved leaning:
+
+1. The primary motivation is sync cost, not UX noise.
+2. Full remote scans probably are not an urgent MVP problem, so fallback-heavy design is acceptable if the fast path is cheap.
+3. Prefer server-issued `sync_version` over any timestamp-based token.
+4. Prefer explicit local dirty-root tracking in a dedicated sync table, maintained by repository/domain write paths.
+5. Prefer per-domain tokens rather than one token for the entire syncable universe.
+
+Still open:
+
+1. Should the server token live on one `user_sync_versions` row per domain, or be derived from domain write journals?
+2. Should fast-path responses return only the new token on success, or also echo authoritative rows/graphs for local canonicalization?
+3. Should the fallback path reconcile both domains together as M11 does today, or only the stale domain that failed token validation?
