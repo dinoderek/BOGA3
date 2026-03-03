@@ -90,6 +90,10 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 - Known backend parity gaps entering implementation:
   - `sessions.deleted_at` exists, but `session_exercises` and `exercise_sets` have no delete/tombstone representation in the M5 contract;
   - the current M5 `PostgREST` baseline only exposes row-level `GET/POST/PATCH`, which does not yet encode full session-graph replacement or nested child removal parity.
+- Implemented parity surface (`T-20260302-02`):
+  - backend aggregate writes use `app_public.replace_session_graph`, exposed through `POST /rest/v1/rpc/replace_session_graph`;
+  - the RPC compares `p_expected_updated_at` to the current remote `sessions.updated_at` value and rejects stale writes instead of mixing divergent child rows;
+  - nested child omission in `p_exercises` is treated as deletion during replacement, so session-exercise and set parity is preserved without adding child tombstones.
 
 ## Deliverables
 
@@ -135,7 +139,7 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 ## Task breakdown
 
 1. `docs/tasks/complete/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md` - locked sync/auth behavior and conflict policy, audited backend parity gaps, and confirmed the M5 realignment. (`completed`)
-2. `docs/tasks/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md` - add backend contract parity for real frontend session-graph edits. (`planned`)
+2. `docs/tasks/complete/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md` - added aggregate backend contract parity for real frontend session-graph edits via `replace_session_graph`. (`completed`)
 3. `docs/tasks/T-20260302-03-m11-mobile-auth-session-adapter-and-sync-state-foundation.md` - add mobile auth-aware backend client plumbing and local sync-state persistence foundation. (`planned`)
 4. `docs/tasks/T-20260302-04-m11-sync-engine-triggers-retry-and-reconciliation.md` - implement sync orchestration, retries, and reconciliation behavior. (`planned`)
 5. `docs/tasks/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md` - add the sync status route and lightweight diagnostics UX. (`planned`)
@@ -176,6 +180,11 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 - Decision: M11 conflict handling is aggregate-oriented for session graphs, not child-row last-write-wins.
 - Reason: The recorder persists nested exercise/set edits by replacing the session child graph, so mixing independently "winning" child rows would not preserve real user intent.
 - Impact: Implementation and tests must use a deterministic stale-write/conflict-avoidance rule that preserves full graph parity, and backend parity work must add a child-removal mechanism.
+
+- Date: `2026-03-03`
+- Decision: M11 backend session-graph parity uses a `PostgREST RPC` (`replace_session_graph`) with compare-and-swap semantics on `sessions.updated_at`.
+- Reason: Row-level child CRUD alone could not encode whole-graph replacement or omitted-child deletion without silently merging divergent child rows.
+- Impact: Mobile sync write paths should use the aggregate RPC for session-graph pushes, while row-level `GET` routes remain valid for pulls and simpler entity reads.
 
 ## Completion note (fill when milestone closes)
 

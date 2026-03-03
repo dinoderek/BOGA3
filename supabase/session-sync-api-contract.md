@@ -2,8 +2,10 @@
 
 ## Super simple summary
 
-- Current sync API uses `Supabase PostgREST` directly on `app_public` tables (`gyms`, `sessions`, `session_exercises`, `exercise_sets`).
-- Clients call table `GET/POST/PATCH` routes with `anon` key + user JWT; backend ownership is enforced by `RLS` + DB constraints.
+- Current sync API uses a mixed `Supabase PostgREST` surface:
+  - row-level `GET/POST/PATCH` table routes on `app_public` for baseline entity CRUD and pulls,
+  - authenticated `POST /rest/v1/rpc/replace_session_graph` for aggregate session-graph writes that must preserve nested child-removal parity.
+- Clients call the sync surface with the `anon` key and, when authenticated, a user JWT; backend ownership is enforced by `RLS`, DB constraints, and explicit owner checks inside the aggregate RPC.
 - Contract behavior is validated by local Supabase integration tests in `supabase/tests/session-sync-api-contract.sh`.
 
 ## Related baseline docs (per `docs/specs/04-ai-development-playbook.md`)
@@ -12,8 +14,10 @@
 
 ## Status / scope
 
-- Status: implemented for local/backend validation in M5.
-- Chosen Supabase surface: `PostgREST` table routes against `app_public` (no custom `Edge Function` sync handlers in M5 baseline).
+- Status: implemented for local/backend validation in M5 and extended in M11 for aggregate session-graph parity.
+- Chosen Supabase surface:
+  - `PostgREST` table routes against `app_public` for row-level CRUD/list behavior,
+  - one `PostgREST RPC` (`app_public.replace_session_graph`) for whole-session graph replacement.
 - Covered entities:
   - `gyms`
   - `sessions`
@@ -21,22 +25,22 @@
   - `exercise_sets`
 - Out of scope here:
   - mobile sync-engine wiring
-  - conflict resolution policy beyond row-level last-write semantics
-  - batched multi-entity transaction orchestration
+  - cross-session batching/orchestration
+  - non-session-domain entities
 
-## M11 audit notes (Task 01)
+## M11 parity extension (`T-20260302-02`)
 
-- Current mobile edit behavior is more aggregate-oriented than this M5 baseline:
-  - session recorder saves replace the full `session_exercises` + `exercise_sets` graph for a session in local storage rather than issuing independent child-row patches;
-  - completed-session deletion currently maps to `sessions.deleted_at`, so top-level soft delete exists only for the parent session row.
-- Known parity gaps relative to that mobile behavior:
-  - there is no M5 delete/tombstone representation for `session_exercises` or `exercise_sets`;
-  - the row-level `GET/POST/PATCH` contract does not yet encode "this edited session graph no longer contains child X/Y";
-  - row-level last-write semantics alone are not sufficient to preserve whole-session intent when local and remote child graphs diverge.
-- Required follow-up for M11 implementation (`T-20260302-02`):
-  - add a backend parity mechanism for nested child removal (`delete`, tombstone, or deterministic graph-replacement equivalent);
-  - define how stale-write/conflict cases are detected or rejected so sync does not silently merge incompatible child graphs;
-  - keep auth/RLS ownership guarantees intact for any new parity surface.
+- Why it exists:
+  - the mobile recorder persists a session and its nested `session_exercises` + `exercise_sets` as one aggregate rewrite, not as unrelated child-row mutations.
+- Implemented parity mechanism:
+  - `app_public.replace_session_graph(p_session jsonb, p_exercises jsonb, p_expected_updated_at bigint)` replaces all nested exercises/sets for one session in a single transaction;
+  - omitted child rows are deleted by replacement, which preserves nested child-removal parity without introducing tombstones on `session_exercises` / `exercise_sets`;
+  - stale writes are rejected by comparing `p_expected_updated_at` with the current `sessions.updated_at` value for that session;
+  - the function returns the materialized session graph after replacement so the caller can treat the backend result as the authoritative aggregate write outcome.
+- Auth/authz posture:
+  - the RPC is callable on the public API surface, but it fails with `AUTH_REQUIRED` unless `auth.uid()` is present;
+  - cross-user access is rejected inside the function before any write occurs;
+  - row-level `RLS` and FK/check constraints remain in place for the underlying tables and for the row-level `PostgREST` routes.
 
 ## Surface choice (why `PostgREST` first)
 
@@ -48,10 +52,14 @@
 ## Auth requirements (all methods)
 
 - Use local/hosted `Supabase` API endpoint + client-safe `anon` key.
-- Send authenticated user JWT in `Authorization: Bearer <access_token>`.
+- Send authenticated user JWT in `Authorization: Bearer <access_token>` for normal sync operations.
 - For `app_public` table routes, send:
   - `Accept-Profile: app_public`
   - `Content-Profile: app_public` (writes)
+- For `app_public.replace_session_graph`, send:
+  - `POST /rest/v1/rpc/replace_session_graph`
+  - `Accept-Profile: app_public`
+  - `Content-Profile: app_public`
 
 ## Provider-neutral method catalog (M5 baseline)
 
@@ -72,6 +80,7 @@ The FE integration milestone should treat the following as the stable contract n
 | `sync.sessions.list` | Pull sessions for current user | `GET /rest/v1/sessions?...` (`app_public`) |
 | `sync.sessions.create` | Create session row | `POST /rest/v1/sessions` |
 | `sync.sessions.update` | Update session row by `id` (including status/completion fields) | `PATCH /rest/v1/sessions?id=eq.<id>` |
+| `sync.sessions.replaceGraph` | Atomically replace one session row plus its nested exercises/sets using optimistic concurrency | `POST /rest/v1/rpc/replace_session_graph` |
 
 ### `session_exercises`
 
@@ -152,7 +161,48 @@ All timestamps are epoch milliseconds (`number`), matching the current mobile/lo
 }
 ```
 
-## Example request/response mappings (M5 local `PostgREST`)
+### `SessionGraphReplaceRequest`
+
+```json
+{
+  "p_expected_updated_at": 1730000010000,
+  "p_session": {
+    "id": "session_123",
+    "gym_id": "gym_123",
+    "status": "active",
+    "started_at": 1730000010000,
+    "completed_at": null,
+    "duration_sec": null,
+    "deleted_at": null,
+    "created_at": 1730000010000,
+    "updated_at": 1730000020000
+  },
+  "p_exercises": [
+    {
+      "id": "sx_123",
+      "order_index": 0,
+      "name": "Chest Press",
+      "machine_name": "Incline Press",
+      "origin_scope_id": "private",
+      "origin_source_id": "local",
+      "created_at": 1730000015000,
+      "updated_at": 1730000020000,
+      "sets": [
+        {
+          "id": "set_123",
+          "order_index": 0,
+          "weight_value": "120",
+          "reps_value": "10",
+          "created_at": 1730000016000,
+          "updated_at": 1730000020000
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Example request/response mappings (`PostgREST` + RPC)
 
 ### Example: create gym (`sync.gyms.create`)
 
@@ -201,16 +251,69 @@ All timestamps are epoch milliseconds (`number`), matching the current mobile/lo
 - Route: `/rest/v1/session_exercises?session_id=eq.sync-session-a-1&select=id,order_index,name&order=order_index.asc`
 - Success response: `200` + ordered array of rows visible to the authenticated owner.
 
+### Example: replace a session graph (`sync.sessions.replaceGraph`)
+
+- Method: `POST`
+- Route: `/rest/v1/rpc/replace_session_graph`
+- Purpose:
+  - update the parent session row and replace all nested child rows as one aggregate write;
+  - delete any prior child rows that are omitted from `p_exercises`;
+  - reject stale writes when `p_expected_updated_at` does not match the current remote session version.
+- Body: `SessionGraphReplaceRequest`
+- Success response: `200` + JSON object:
+
+```json
+{
+  "session": {
+    "id": "session_123",
+    "gym_id": "gym_123",
+    "status": "active",
+    "started_at": 1730000010000,
+    "completed_at": null,
+    "duration_sec": null,
+    "deleted_at": null,
+    "created_at": 1730000010000,
+    "updated_at": 1730000020000
+  },
+  "exercises": [
+    {
+      "id": "sx_123",
+      "session_id": "session_123",
+      "order_index": 0,
+      "name": "Chest Press",
+      "machine_name": "Incline Press",
+      "origin_scope_id": "private",
+      "origin_source_id": "local",
+      "created_at": 1730000015000,
+      "updated_at": 1730000020000,
+      "sets": [
+        {
+          "id": "set_123",
+          "session_exercise_id": "sx_123",
+          "order_index": 0,
+          "weight_value": "120",
+          "reps_value": "10",
+          "created_at": 1730000016000,
+          "updated_at": 1730000020000
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Error/denial semantics (provider-neutral handling guidance)
 
-Current Supabase `PostgREST` behavior is intentionally preserved in M5. FE integration should normalize it into provider-neutral categories.
+Current Supabase behavior is intentionally preserved for table routes, and the M11 RPC adds explicit aggregate-sync error messages. FE integration should normalize both into provider-neutral categories.
 
-| Provider-neutral category | Typical `PostgREST` behavior (M5) | Notes |
+| Provider-neutral category | Typical `PostgREST` / RPC behavior | Notes |
 | --- | --- | --- |
-| `AUTH_REQUIRED` | non-2xx JSON error (commonly `401`) | Missing/invalid user JWT for protected `app_public` tables |
+| `AUTH_REQUIRED` | non-2xx JSON error for table routes; RPC body contains `AUTH_REQUIRED` | Missing/invalid user JWT for protected sync actions |
 | `VALIDATION_FAILED` | non-2xx JSON error (`Postgres`/`PostgREST` code in body) | Check constraints, missing required fields, type issues |
 | `NOT_FOUND_OR_DENIED` | `200` + empty array on targeted `SELECT`/`PATCH` | `RLS` hides cross-user rows instead of revealing existence |
 | `PARENT_LINK_DENIED` | non-2xx JSON error (FK violation) | Cross-user child insert/update fails FK + ownership linkage |
+| `SESSION_GRAPH_STALE` | non-2xx JSON error from `replace_session_graph` | `p_expected_updated_at` did not match the current remote `sessions.updated_at` |
+| `SESSION_GRAPH_NOT_FOUND_OR_DENIED` | non-2xx JSON error from `replace_session_graph` | Aggregate write targeted a session graph not owned by the caller |
 
 ## Contract test coverage (local Supabase)
 
@@ -222,7 +325,11 @@ The local integration/contract suite for this task lives at:
 Coverage includes:
 
 - success create/read/update/list flows for each entity family
+- success create + replace flow for `sync.sessions.replaceGraph`
+- stale-write rejection for aggregate session-graph replacement
+- nested child-removal parity for session-graph replacement
 - validation failures for each entity family
 - unauthenticated request denial
 - cross-user read/update denial
 - cross-user parent/child ownership mismatch denial
+- cross-user denial for aggregate session-graph replacement

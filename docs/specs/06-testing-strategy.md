@@ -68,6 +68,7 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 - For nested aggregate domains such as session graphs:
   - cover stale-write/conflict handling at the aggregate level, not only isolated row updates;
   - cover child-row removal parity when the mobile edit model rewrites nested collections (for example session exercises/sets removed from an edited session).
+  - when backend contract uses an aggregate RPC or equivalent, cover authenticated create/replace success, stale compare-and-swap rejection, unauthenticated denial, and cross-user denial for that aggregate surface.
 - Use mocks/fakes for the broader scenario matrix, then add at least one real cross-stack proof path with `Maestro` + local `Supabase` once the sync engine exists.
 
 ## Maestro contract ownership (M10)

@@ -1,7 +1,7 @@
 ---
 task_id: T-20260302-02
 milestone_id: "M11"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "backend,docs"
 runtimes: "supabase,docs"
@@ -16,8 +16,8 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-str
 
 - Task ID: `T-20260302-02`
 - Title: M11 backend sync contract parity for session graphs
-- Status: `planned`
-- Session date: `2026-03-02`
+- Status: `completed`
+- Session date: `2026-03-03`
 - Session interaction mode: `interactive (default)`
 
 ## Parent references (required)
@@ -32,20 +32,24 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-str
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ 484d5518e382485a3aee6a2818defa375b5b1d31`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (`git fetch origin`; `HEAD...origin/main = 0 0`)
 - Parent refs opened in this session:
+  - `docs/specs/README.md`
+  - `docs/specs/00-product.md`
   - `docs/specs/milestones/M11-frontend-backend-sync-integration.md`
   - `docs/specs/03-technical-architecture.md`
+  - `docs/specs/04-ai-development-playbook.md`
   - `docs/specs/06-testing-strategy.md`
+  - `docs/specs/09-project-structure.md`
   - `docs/specs/10-api-authn-authz-guidelines.md`
   - `supabase/session-sync-api-contract.md`
 - Code/docs inventory freshness checks run:
-  - compare mobile session-edit/delete behavior with current API contract and backend schema
+  - compare mobile session-edit/delete behavior with current API contract, backend schema, and backend contract tests
 - Known stale references or assumptions:
-  - parity mechanism is not locked until this task decides delete/tombstone vs equivalent graph approach
+  - local backend runtime verification is blocked unless Docker/OrbStack is available on the workstation
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/complete/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md`
 
 ## Objective
 
@@ -120,20 +124,21 @@ Ensure the backend contract can faithfully represent the real frontend session-g
 
 - Standard local fast gate: `./scripts/quality-fast.sh backend`
 - Standard local slow gate: `./scripts/quality-slow.sh backend`
-- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md`
+- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md`
 
 ## Evidence
 
 - Final parity mechanism summary.
 - Backend contract test results summary.
-- Manual verification summary: local backend contract suites executed because CI is absent.
+- Manual verification summary: local backend contract suites are still required because CI is absent; this session could only perform static validation because Docker/OrbStack was unavailable.
 - Deferred/manual hosted checks summary: hosted smoke remains owned by a future cloud-environment milestone.
 
 ## Completion note
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Added `supabase/migrations/20260303113000_m11_session_graph_replace_rpc.sql` with `app_public.replace_session_graph`, an authenticated aggregate session-graph replace RPC that enforces owner checks, rejects stale writes with `p_expected_updated_at`, and deletes omitted nested child rows during replacement; extended `supabase/tests/session-sync-api-contract.sh` to cover aggregate create/replace parity, stale-write rejection, unauthenticated denial, and cross-user denial; updated the sync contract, M11 milestone, and project-level architecture/testing docs to document the adopted RPC-based parity model.
+- What tests ran: `git fetch origin`; `git rev-list --left-right --count HEAD...origin/main`; `bash -n supabase/tests/session-sync-api-contract.sh supabase/scripts/test-sync-api-contract.sh scripts/quality-fast.sh scripts/quality-slow.sh`; `./supabase/scripts/test-sync-api-contract.sh`; `./scripts/quality-fast.sh backend`; `./scripts/quality-slow.sh backend`.
+- What remains: the remaining M11 tasks still need to wire the mobile auth adapter, sync engine, sync UI, broader mock-backend coverage, and the cross-stack `Maestro` proof path.
+- Manual verification summary (required when CI is absent/partial): static shell validation passed, `./scripts/task-closeout-check.sh` passed, and the real local Supabase runtime suites passed after starting OrbStack, including the direct sync contract suite plus the standard backend fast and slow wrappers.
 
 ## Status update checklist
 
