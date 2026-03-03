@@ -115,6 +115,13 @@ Guardrail command:
 2. If the change is route-path/param/transition related, update `navigation-contract.md` in the same task.
 3. If the change is component/primitives API related, update `components-catalog.md` in the same task.
 
+### 11. Sync diagnostics semantics
+
+1. Sync health is exposed through read-only surfaces, not blocking modals or mandatory prompts.
+2. The `session-list` sync card is a lightweight entry/indicator surface; it should stay compact and navigational.
+3. Routine paused states such as offline or auth-missing should use calm informational language rather than danger-heavy failure styling.
+4. Backend-unavailable retry states may use a warning tone, but they still must reinforce that local logging continues.
+
 ## Pending / planned (not current behavior)
 
 1. Additional primitive extraction (for example state panels, modal surfaces, row cards, form fields) remains pending to reduce route-local style duplication beyond the token convergence completed in Task `T-20260226-06`.

@@ -23,6 +23,8 @@ Brief entrypoint inventory of the current reusable UI component set.
   - shared exercise-catalog editing UI reused across route and recorder flows
 - `apps/mobile/components/session-recorder/`
   - shared session-recorder/session-detail UI composition components and supporting UI modules
+- `apps/mobile/components/sync/`
+  - shared sync-status presentation UI reused across route-level diagnostics surfaces
 
 ## Current component set (authoritative)
 
@@ -70,6 +72,11 @@ Brief entrypoint inventory of the current reusable UI component set.
 - File: `apps/mobile/components/session-recorder/session-content-layout.tsx`
 - Purpose:
   - shared layout scaffold for session exercise/set content used by `session-recorder` and completed-session detail screens
+
+4. `SyncStatusCard`
+- File: `apps/mobile/components/sync/sync-status-card.tsx`
+- Purpose:
+  - shared summary card for persisted sync-state diagnostics, reused by `session-list` and `/sync-status`
 
 ### UI-supporting shared module (non-visual)
 

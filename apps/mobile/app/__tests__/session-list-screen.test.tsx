@@ -165,6 +165,18 @@ describe('SessionListScreenShell', () => {
     expect(screen.getByTestId('session-summary-db-completed-1-gym').props.children).toBe('Garage Gym');
   });
 
+  it('shows a sync status entry point and opens the sync route', async () => {
+    render(<SessionListRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-list-sync-status-card')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('session-list-sync-status-card'));
+
+    expect(mockPush).toHaveBeenCalledWith('/sync-status');
+  });
+
   it('reloads DB-backed route data when the list screen regains focus', async () => {
     let phase: 'initial' | 'updated' = 'initial';
 

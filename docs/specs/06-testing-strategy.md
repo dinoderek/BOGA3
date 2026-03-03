@@ -77,6 +77,9 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - cover the implemented foreground trigger surface (`bootstrap`, `resume`, connectivity regain, and periodic polling while active);
   - cover retry backoff plus paused/error reason persistence for auth-missing/expired, offline, and backend-unavailable cases;
   - cover the chosen deterministic reconciliation rule for session aggregates, including stale-write fallback against the aggregate RPC when applicable.
+- For user-facing sync diagnostics UI:
+  - cover at least one healthy route state and one paused/error or unavailable route state;
+  - if a lightweight in-app summary indicator exists, cover that it stays navigational/non-blocking rather than modal or destructive.
 - Use mocks/fakes for the broader scenario matrix, then add at least one real cross-stack proof path with `Maestro` + local `Supabase` once the sync engine exists.
 
 ## Maestro contract ownership (M10)

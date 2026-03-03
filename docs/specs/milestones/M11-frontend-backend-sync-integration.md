@@ -103,6 +103,10 @@ Integrate the mobile app with the existing local/backend sync foundation for the
   - the engine pauses quietly with persisted reasons when auth is missing/expired, the backend is unconfigured, or the device is offline, and uses exponential backoff for backend-unavailable failures without blocking local usage;
   - each sync attempt reconciles the current M11 domain (`gyms` plus full session graphs) by comparing local and remote aggregate `updatedAt` values, treating the newer aggregate as authoritative;
   - session graph pushes use `replace_session_graph`, and `SESSION_GRAPH_STALE` falls back to a remote re-read before either pulling the fresher remote aggregate or retrying one more compare-and-swap push with the newer remote version.
+- Implemented sync diagnostics UI (`T-20260302-05`):
+  - the app now exposes a dedicated `/sync-status` route that reads persisted `sync_state` metadata and shows current status, pause reason, and recent attempt/success/failure timestamps;
+  - `session-list` now includes a lightweight sync-status entry card so degraded sync is discoverable without becoming a blocking banner or modal;
+  - routine paused states such as offline or auth-missing use calm informational copy, while backend-unavailable retry states use a warning tone without changing local-recording behavior.
 
 ## Deliverables
 
@@ -151,7 +155,7 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 2. `docs/tasks/complete/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md` - added aggregate backend contract parity for real frontend session-graph edits via `replace_session_graph`. (`completed`)
 3. `docs/tasks/complete/T-20260302-03-m11-mobile-auth-session-adapter-and-sync-state-foundation.md` - added the mobile auth-session adapter, public backend client wiring, and persisted local sync-state foundation. (`completed`)
 4. `docs/tasks/complete/T-20260302-04-m11-sync-engine-triggers-retry-and-reconciliation.md` - implemented foreground sync orchestration, retries, and deterministic reconciliation behavior. (`completed`)
-5. `docs/tasks/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md` - add the sync status route and lightweight diagnostics UX. (`planned`)
+5. `docs/tasks/complete/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md` - added the sync status route and lightweight diagnostics UX. (`completed`)
 6. `docs/tasks/T-20260302-06-m11-sync-mock-backend-scenarios-and-regression-coverage.md` - add mock-backend sync scenario coverage and regressions. (`planned`)
 7. `docs/tasks/T-20260302-07-m11-maestro-local-backend-sync-e2e-smoke.md` - add the first local-Supabase cross-stack sync `E2E` smoke. (`planned`)
 
@@ -204,6 +208,11 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 - Decision: The first M11 sync engine uses full-snapshot foreground reconciliation plus deterministic aggregate `updatedAt` winner rules instead of a persisted outbox.
 - Reason: The scoped M11 domain is still small enough for full reconciliation, and this keeps the first engine simpler while the backend aggregate RPC already protects nested session parity.
 - Impact: Sync attempts compare local and remote domain snapshots on each eligible foreground run, session-graph divergence is resolved at the aggregate level, and any future outbox/background evolution must be a deliberate follow-up rather than assumed current behavior.
+
+- Date: `2026-03-03`
+- Decision: User-facing sync diagnostics remain read-only and calm: `/sync-status` is the detailed surface, and `session-list` exposes only a lightweight entry/indicator card.
+- Reason: M11 needs discoverable sync health information without making routine offline or auth-paused periods feel like blockers.
+- Impact: UI copy distinguishes paused/waiting from delayed states, and future sync controls or account-management actions remain separate follow-up work.
 
 ## Completion note (fill when milestone closes)
 

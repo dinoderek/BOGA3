@@ -21,8 +21,11 @@ import {
   reopenCompletedSessionDraft,
   setSessionDeletedState,
 } from '@/src/data';
+import { SyncStatusCard } from '@/components/sync/sync-status-card';
 import { TopLevelTabs } from '@/components/navigation/top-level-tabs';
 import { uiColors } from '@/components/ui';
+import { getSyncStatusPresentation } from '@/src/sync/status-presentation';
+import { useSyncStateSnapshot, type SyncStateReader } from '@/src/sync/use-sync-state-snapshot';
 
 export type SessionListItem = {
   id: string;
@@ -84,6 +87,7 @@ export type SessionListScreenShellProps = {
   initialSessions?: SessionListItem[];
   dataClient?: SessionListDataClient;
   reloadToken?: number;
+  syncStateRepository?: SyncStateReader;
 };
 
 type CompletedSessionMenuState = {
@@ -256,6 +260,7 @@ export function SessionListScreenShell({
   initialSessions = DEFAULT_SESSION_LIST_ITEMS,
   dataClient,
   reloadToken = 0,
+  syncStateRepository,
 }: SessionListScreenShellProps) {
   const router = useRouter();
   const [sessions, setSessions] = useState<SessionListItem[]>(dataClient ? [] : initialSessions);
@@ -271,6 +276,15 @@ export function SessionListScreenShell({
   const [deletingCompletedSessionId, setDeletingCompletedSessionId] = useState<string | null>(null);
   const [optimisticallyHiddenCompletedSessionIds, setOptimisticallyHiddenCompletedSessionIds] = useState<string[]>([]);
   const deletingCompletedRowOpacity = useRef(new Animated.Value(1)).current;
+  const {
+    snapshot: syncSnapshot,
+    isLoading: isLoadingSyncStatus,
+    errorMessage: syncStatusErrorMessage,
+  } = useSyncStateSnapshot({
+    repository: syncStateRepository,
+    refreshToken: reloadToken,
+    pollIntervalMs: 30_000,
+  });
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -604,6 +618,26 @@ export function SessionListScreenShell({
               </View>
             </View>
           )}
+
+          {syncSnapshot ? (
+            <SyncStatusCard
+              onPress={() => router.push('/sync-status')}
+              presentation={getSyncStatusPresentation(syncSnapshot)}
+              testID="session-list-sync-status-card"
+            />
+          ) : (
+            <Pressable
+              accessibilityLabel="Open sync status"
+              accessibilityRole="button"
+              onPress={() => router.push('/sync-status')}
+              style={[styles.syncStatusFallbackCard, syncStatusErrorMessage ? styles.syncStatusFallbackCardWarning : null]}
+              testID="session-list-sync-status-card">
+              <Text style={styles.syncStatusFallbackTitle}>Sync status</Text>
+              <Text style={styles.syncStatusFallbackBody}>
+                {isLoadingSyncStatus ? 'Loading current sync state...' : 'Open sync status details.'}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.historyRegion}>
@@ -876,6 +910,29 @@ const styles = StyleSheet.create({
   pinnedTopRegion: {
     gap: 8,
     flexShrink: 0,
+  },
+  syncStatusFallbackCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: uiColors.actionPrimarySubtleBorder,
+    backgroundColor: uiColors.surfaceInfo,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  syncStatusFallbackCardWarning: {
+    borderColor: uiColors.borderWarning,
+    backgroundColor: uiColors.surfaceWarning,
+  },
+  syncStatusFallbackTitle: {
+    color: uiColors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  syncStatusFallbackBody: {
+    color: uiColors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
   },
   historyRegion: {
     flex: 1,

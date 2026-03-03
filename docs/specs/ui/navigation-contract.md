@@ -58,6 +58,13 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
 - Query params:
   - `intent` (optional; `edit` redirects to `session-recorder` completed-edit mode)
 
+6. `/sync-status`
+- File: `apps/mobile/app/sync-status.tsx`
+- Params:
+  - none
+- Behavior:
+  - reads persisted local `sync_state` metadata and refreshes it when the route regains focus
+
 ## Allowed route transitions (current high-level flows)
 
 1. `/` -> `/session-list`
@@ -82,6 +89,8 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
    - exercise picker `Manage` action
 11. `/exercise-catalog?source=session-recorder...` -> `/session-recorder`
    - explicit back action or post-save return (`router.back()`)
+12. `/session-list` -> `/sync-status`
+   - non-blocking sync-status entry card opens the detailed diagnostics route
 
 Note:
 
@@ -90,7 +99,7 @@ Note:
 
 ## Header titles (current, high level)
 
-- Static titles for `index`, `session-list`, `session-recorder`, `exercise-catalog` are set in `apps/mobile/app/_layout.tsx`
+- Static titles for `index`, `session-list`, `session-recorder`, `exercise-catalog`, and `sync-status` are set in `apps/mobile/app/_layout.tsx`
 - `completed-session/[sessionId]` sets its title inside the route file (current title: `View Session`)
 
 ## Documentation boundary

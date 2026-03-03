@@ -1,13 +1,13 @@
 ---
 task_id: T-20260302-05
 milestone_id: "M11"
-status: planned
+status: completed
 ui_impact: "yes"
 areas: "frontend,docs"
 runtimes: "node,expo,maestro"
 gates_fast: "./scripts/quality-fast.sh frontend"
 gates_slow: "./scripts/quality-slow.sh frontend"
-docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-strategy.md,docs/specs/milestones/M11-frontend-backend-sync-integration.md,docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/components-catalog.md,docs/specs/ui/ux-rules.md"
+docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-strategy.md,docs/specs/milestones/M11-frontend-backend-sync-integration.md,docs/specs/tech/mobile-sync-engine-overview.md,docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/components-catalog.md,docs/specs/ui/ux-rules.md"
 ---
 
 # Task Card
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-str
 
 - Task ID: `T-20260302-05`
 - Title: M11 sync status route and diagnostics UI
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-03-02`
 - Session interaction mode: `interactive (default)`
 
@@ -36,9 +36,10 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-str
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ e57e98e`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (`git fetch origin main`; no remote drift)
 - Parent refs opened in this session:
+  - `docs/specs/README.md`
   - `docs/specs/milestones/M11-frontend-backend-sync-integration.md`
   - `docs/specs/03-technical-architecture.md`
   - `docs/specs/06-testing-strategy.md`
@@ -50,10 +51,11 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-str
   - `docs/specs/ui/ux-rules.md`
 - Code/docs inventory freshness checks run:
   - route inventory and current top-level navigation affordances
+  - current `sync_state` read path and sync-engine persisted status semantics
 - Known stale references or assumptions:
-  - route entry affordance for the new sync-status screen may need a small navigation addition
+  - none
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/complete/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md`
 
 ## Objective
 
@@ -173,7 +175,7 @@ Add a small settings/profile-style screen that exposes sync status and recent sy
 
 - Standard local fast gate: `./scripts/quality-fast.sh frontend`
 - Standard local slow gate: `./scripts/quality-slow.sh frontend` when trigger conditions apply
-- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md`
+- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260302-05-m11-sync-status-route-and-diagnostics-ui.md`
 
 ## Evidence
 
@@ -184,8 +186,15 @@ Add a small settings/profile-style screen that exposes sync status and recent sy
 ## Completion note
 
 - What changed:
+  - Added `apps/mobile/app/sync-status.tsx` as a read-only sync diagnostics route showing current status, pause reason, and recent attempt/success/failure timestamps from persisted `sync_state`.
+  - Added `apps/mobile/components/sync/sync-status-card.tsx` plus shared sync-status presentation/read helpers so `session-list` can expose a lightweight, non-blocking sync-status entry card with the same semantics as the detailed route.
+  - Updated project-level architecture/testing docs, the M11 milestone spec, the sync-engine deep dive, and the authoritative UI docs bundle to reflect the new route and calm diagnostics semantics.
 - What tests ran:
+  - `apps/mobile`: `npm test -- --runInBand app/__tests__/sync-status-screen.test.tsx app/__tests__/session-list-screen.test.tsx`
+  - `apps/mobile`: `npm run typecheck`
 - What remains:
+  - `T-20260302-06` still needs broader mock-backend sync scenario coverage.
+  - `T-20260302-07` still needs the first local-Supabase cross-stack sync `Maestro` proof path.
 
 ## Status update checklist
 

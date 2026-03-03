@@ -70,13 +70,22 @@ Brief entrypoint map of the current mobile screens.
   - `session-recorder` (edit)
   - dismisses to `/` after successful reopen
 
+6. `/sync-status`
+- File: `apps/mobile/app/sync-status.tsx`
+- Purpose:
+  - read-only sync diagnostics screen for current state, pause reason, and recent sync timestamps
+- Key states (high level):
+  - loading / unavailable fallback / healthy / paused-or-delayed status states
+- Key exits:
+  - back to prior screen via stack navigation
+
 ## Route shell (not a user-facing screen)
 
 1. `apps/mobile/app/_layout.tsx`
 - Purpose:
   - root stack registration and local data bootstrap on app mount
 - Notes:
-  - static titles for main routes are declared here
+  - static titles for main routes, including `sync-status`, are declared here
   - completed-session route sets its title inside the route file
 
 ## Documentation boundary

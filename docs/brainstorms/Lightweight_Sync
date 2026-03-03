@@ -7,3 +7,5 @@ Sketch of how this could work (let's brainstorm the detail together)
 - Client manages a local `Sync Watermark`. This is the last local state sent to the server. 
 - Client takes an optimistic approach and always tries to send to Backend <Sync UUID, Sync Watermark, DELTA since Watermark>
 - Backend compares UUID, Watermark with local state. If matches, it accepts the update. If it does not match, then returns the full state and current heavyweight sync reconciliation is executed. 
+
+I would like this to be reflected in M11 and implemented before T6 and T7
