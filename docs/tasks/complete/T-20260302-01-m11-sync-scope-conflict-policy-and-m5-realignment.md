@@ -1,13 +1,13 @@
 ---
 task_id: T-20260302-01
 milestone_id: "M11"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs,backend,cross-stack"
 runtimes: "docs,supabase"
 gates_fast: "N/A"
 gates_slow: "N/A"
-docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/04-ai-development-playbook.md,docs/specs/06-testing-strategy.md,docs/specs/milestones/M5-backend-foundation-authz-and-sync-api.md,docs/specs/milestones/M11-frontend-backend-sync-integration.md,docs/tasks/complete/T-20260220-09-m5-backend-deployment-strategy-and-environments.md,supabase/session-sync-api-contract.md"
+docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/06-testing-strategy.md,docs/specs/milestones/M11-frontend-backend-sync-integration.md,supabase/session-sync-api-contract.md"
 ---
 
 # Task Card
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/04-ai-developm
 
 - Task ID: `T-20260302-01`
 - Title: M11 sync scope, conflict policy, and M5 realignment
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-03-02`
 - Session interaction mode: `interactive (default)`
 
@@ -35,23 +35,26 @@ docs_touched: "docs/specs/03-technical-architecture.md,docs/specs/04-ai-developm
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ 619f5b4`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (`git fetch origin`; `HEAD...origin/main = 0 0`)
 - Parent refs opened in this session:
+  - `docs/specs/README.md`
+  - `docs/specs/00-product.md`
   - `docs/specs/milestones/M11-frontend-backend-sync-integration.md`
   - `docs/specs/milestones/M5-backend-foundation-authz-and-sync-api.md`
   - `docs/specs/03-technical-architecture.md`
   - `docs/specs/04-ai-development-playbook.md`
   - `docs/specs/06-testing-strategy.md`
+  - `docs/specs/09-project-structure.md`
   - `docs/specs/10-api-authn-authz-guidelines.md`
   - `supabase/session-sync-api-contract.md`
 - Code/docs inventory freshness checks run:
-  - backend contract audit against current mobile session-edit behavior
+  - backend contract audit against current mobile session-edit behavior and nested child-removal semantics
   - active milestone/task inventory for M5/M11 planning
 - Known stale references or assumptions:
-  - assumes M11 remains scoped to the M5 session domain unless this task explicitly broadens it
+  - M5 realignment was already mostly landed before this closeout; this task confirmed that `T-20260220-09` was already archived as `outdated` and cleaned up the remaining active-task drift
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/complete/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`
 
 ## Objective
 
@@ -131,7 +134,7 @@ Lock the M11 sync/auth behavior and conflict-policy contract, audit the current 
 
 - Standard local fast gate: `N/A (docs/planning task)`
 - Standard local slow gate: `N/A`
-- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`
+- Optional closeout validation helper: `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`
 
 ## Evidence
 
@@ -142,9 +145,10 @@ Lock the M11 sync/auth behavior and conflict-policy contract, audit the current 
 
 ## Completion note
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Locked the M11 written contract in the milestone and project-level docs; added explicit aggregate-session conflict/parity audit notes to `supabase/session-sync-api-contract.md`; confirmed the M5 realignment had already landed and archived this task card so the milestone no longer points at an active placeholder.
+- What tests ran: `./scripts/task-bootstrap.sh docs/tasks/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`; `git fetch origin`; `git rev-list --left-right --count HEAD...origin/main`; `rg`/`sed` audits across `M11`, `M5`, project-level sync/testing docs, and `supabase/session-sync-api-contract.md`; `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md`
+- What remains: `T-20260302-02` still needs to implement the backend parity mechanism for nested child removals and stale-write/conflict handling, and the remaining M11 tasks still need to add the mobile auth/session adapter, sync engine, diagnostics UI, mock-backend coverage, and cross-stack `Maestro` proof path.
+- Manual verification summary (required when CI is absent/partial): Performed manual doc/task coherence review, verified `main` was synced with `origin/main`, confirmed no stale active reference to `T-20260220-09` remained in the touched sync docs, and re-ran the task closeout checker after archiving this card.
 
 ## Status update checklist
 

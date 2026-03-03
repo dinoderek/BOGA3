@@ -4,7 +4,7 @@
 
 - Milestone ID: `M11`
 - Title: Frontend/backend sync integration and sync status UX
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03`
 
@@ -71,6 +71,26 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 - Hard multi-device enforcement, remote device management, or explicit device-switch UX.
 - Sync for frontend data not yet represented by backend APIs (for example exercise-catalog metadata) unless a dedicated follow-up task expands backend scope first.
 
+## Locked sync contract (Task 01)
+
+- Auth gating:
+  - sync remains paused when no authenticated session exists or when auth expires;
+  - local recording, autosave, and history behavior continue without backend access.
+- Trigger model:
+  - first sync attempt occurs opportunistically on app bootstrap/open when an authenticated session exists;
+  - additional attempts occur on app foreground/resume, connectivity regain, and periodic polling while the app remains open;
+  - M11 does not guarantee OS-level background delivery.
+- Scope boundary:
+  - only the current M5-backed session domain is syncable in M11: `gyms`, `sessions`, `session_exercises`, and `exercise_sets`;
+  - exercise-catalog metadata and other post-M5 frontend-only entities remain local-only.
+- Conflict policy:
+  - treat a session and its nested exercises/sets as one sync aggregate for correctness purposes;
+  - do not treat independent child-row last-write wins as sufficient for recorder edits, because the current mobile save path rewrites the nested graph as a whole;
+  - if both sides diverge, implementation must prefer an explicit stale-write/conflict path or another deterministic aggregate-level reconciliation rule rather than silently mixing child rows from different versions.
+- Known backend parity gaps entering implementation:
+  - `sessions.deleted_at` exists, but `session_exercises` and `exercise_sets` have no delete/tombstone representation in the M5 contract;
+  - the current M5 `PostgREST` baseline only exposes row-level `GET/POST/PATCH`, which does not yet encode full session-graph replacement or nested child removal parity.
+
 ## Deliverables
 
 1. M11 sync behavior contract documented across milestone docs and promoted to project-level architecture/testing/process docs where behavior becomes stable.
@@ -96,7 +116,9 @@ Integrate the mobile app with the existing local/backend sync foundation for the
   - `lastAttemptedSyncAt`
   - current sync status / paused reason
 5. Conflict resolution policy is explicitly documented and implemented for the scoped domain, with tests covering the relevant rare-conflict path or conflict-avoidance model.
+  - session graphs are reconciled as aggregates, not as unrelated child-row winners.
 6. Backend contract supports the frontend's real edit model for the scoped domain, including delete/tombstone or equivalent parity where needed.
+  - nested exercise/set removals caused by full graph rewrites are preserved correctly.
 7. Backend-unavailable, offline, and auth-missing/expired states are handled gracefully without crashing the app or surfacing noisy errors during normal use.
 8. A new settings/profile-style route exposes sync status and last successful sync information.
 9. Mock-backend tests cover the relevant scenario matrix:
@@ -112,7 +134,7 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 
 ## Task breakdown
 
-1. `docs/tasks/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md` - lock sync/auth behavior and conflict policy, audit backend parity gaps, and realign M5 docs. (`planned`)
+1. `docs/tasks/complete/T-20260302-01-m11-sync-scope-conflict-policy-and-m5-realignment.md` - locked sync/auth behavior and conflict policy, audited backend parity gaps, and confirmed the M5 realignment. (`completed`)
 2. `docs/tasks/T-20260302-02-m11-backend-sync-contract-parity-for-session-graphs.md` - add backend contract parity for real frontend session-graph edits. (`planned`)
 3. `docs/tasks/T-20260302-03-m11-mobile-auth-session-adapter-and-sync-state-foundation.md` - add mobile auth-aware backend client plumbing and local sync-state persistence foundation. (`planned`)
 4. `docs/tasks/T-20260302-04-m11-sync-engine-triggers-retry-and-reconciliation.md` - implement sync orchestration, retries, and reconciliation behavior. (`planned`)
@@ -149,6 +171,11 @@ Integrate the mobile app with the existing local/backend sync foundation for the
 - Decision: M11 sync scope is limited to the current M5-backed session domain.
 - Reason: The existing backend baseline only covers `gyms`, `sessions`, `session_exercises`, and `exercise_sets`; expanding beyond that would mix backend scope expansion with sync-engine delivery.
 - Impact: Other frontend data remains local-only until a separate backend-expansion milestone/task introduces the necessary APIs.
+
+- Date: `2026-03-02`
+- Decision: M11 conflict handling is aggregate-oriented for session graphs, not child-row last-write-wins.
+- Reason: The recorder persists nested exercise/set edits by replacing the session child graph, so mixing independently "winning" child rows would not preserve real user intent.
+- Impact: Implementation and tests must use a deterministic stale-write/conflict-avoidance rule that preserves full graph parity, and backend parity work must add a child-removal mechanism.
 
 ## Completion note (fill when milestone closes)
 

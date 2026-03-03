@@ -24,6 +24,20 @@
   - conflict resolution policy beyond row-level last-write semantics
   - batched multi-entity transaction orchestration
 
+## M11 audit notes (Task 01)
+
+- Current mobile edit behavior is more aggregate-oriented than this M5 baseline:
+  - session recorder saves replace the full `session_exercises` + `exercise_sets` graph for a session in local storage rather than issuing independent child-row patches;
+  - completed-session deletion currently maps to `sessions.deleted_at`, so top-level soft delete exists only for the parent session row.
+- Known parity gaps relative to that mobile behavior:
+  - there is no M5 delete/tombstone representation for `session_exercises` or `exercise_sets`;
+  - the row-level `GET/POST/PATCH` contract does not yet encode "this edited session graph no longer contains child X/Y";
+  - row-level last-write semantics alone are not sufficient to preserve whole-session intent when local and remote child graphs diverge.
+- Required follow-up for M11 implementation (`T-20260302-02`):
+  - add a backend parity mechanism for nested child removal (`delete`, tombstone, or deterministic graph-replacement equivalent);
+  - define how stale-write/conflict cases are detected or rejected so sync does not silently merge incompatible child graphs;
+  - keep auth/RLS ownership guarantees intact for any new parity surface.
+
 ## Surface choice (why `PostgREST` first)
 
 - The sync-domain CRUD contract maps 1:1 to user-owned tables already protected by `RLS`.

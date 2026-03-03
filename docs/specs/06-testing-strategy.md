@@ -65,6 +65,9 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - offline or backend-unavailable retry/recovery behavior,
   - conflict resolution or conflict-avoidance path,
   - delete/tombstone parity when sync scope includes removable entities.
+- For nested aggregate domains such as session graphs:
+  - cover stale-write/conflict handling at the aggregate level, not only isolated row updates;
+  - cover child-row removal parity when the mobile edit model rewrites nested collections (for example session exercises/sets removed from an edited session).
 - Use mocks/fakes for the broader scenario matrix, then add at least one real cross-stack proof path with `Maestro` + local `Supabase` once the sync engine exists.
 
 ## Maestro contract ownership (M10)
@@ -166,7 +169,7 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - no backend Node/TS helper workspace was introduced in `T-20260220-08`, so FE-style `npm` gates are `N/A` here.
   - runtime-specific Supabase local gates above are the required baseline until a backend workspace/test harness is added.
 - Hosted/deployed smoke command path:
-  - deferred to `T-20260220-09` (manual by default until CI exists).
+  - deferred to a future cloud-environment milestone (manual by default until CI exists).
 
 ## Project structure conventions for testing assets (M5 backend additions)
 
