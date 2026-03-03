@@ -1,4 +1,24 @@
 export {
+  exerciseVariationAttributes,
+  type ExerciseVariationAttribute,
+  type NewExerciseVariationAttribute,
+} from './exercise-variation-attributes';
+export {
+  exerciseVariationKeys,
+  type ExerciseVariationKey,
+  type NewExerciseVariationKey,
+} from './exercise-variation-keys';
+export {
+  exerciseVariationValues,
+  type ExerciseVariationValue,
+  type NewExerciseVariationValue,
+} from './exercise-variation-values';
+export {
+  exerciseVariations,
+  type ExerciseVariation,
+  type NewExerciseVariation,
+} from './exercise-variations';
+export {
   exerciseDefinitions,
   type ExerciseDefinition,
   type NewExerciseDefinition,

@@ -29,6 +29,52 @@ const buildSessionRecord = (overrides: Partial<SessionPersistenceRecord> = {}): 
   ...overrides,
 });
 
+const buildStoredExercise = (
+  overrides: Partial<{
+    id: string;
+    sessionId: string;
+    orderIndex: number;
+    name: string;
+    machineName: string | null;
+    exerciseDefinitionId: string | null;
+    exerciseVariationId: string | null;
+    variationLabel: string | null;
+    variationAttributes: {
+      id: string;
+      orderIndex: number;
+      variationKeyId: string;
+      variationKeySlug: string;
+      variationKeyDisplayName: string;
+      variationValueId: string;
+      variationValueSlug: string;
+      variationValueDisplayName: string;
+    }[];
+    originScopeId: string;
+    originSourceId: string;
+    sets: {
+      id: string;
+      sessionExerciseId: string;
+      orderIndex: number;
+      repsValue: string;
+      weightValue: string;
+    }[];
+  }> = {}
+) => ({
+  id: 'exercise-1',
+  sessionId: 'session-1',
+  orderIndex: 0,
+  name: 'Bench Press',
+  machineName: null,
+  exerciseDefinitionId: null,
+  exerciseVariationId: null,
+  variationLabel: null,
+  variationAttributes: [],
+  originScopeId: 'private',
+  originSourceId: 'local',
+  sets: [],
+  ...overrides,
+});
+
 describe('session draft repository', () => {
   it('creates/persists draft snapshots through the store API with active default status', async () => {
     const store = createMockStore();
@@ -64,14 +110,25 @@ describe('session draft repository', () => {
     store.loadLatestDraftGraph.mockResolvedValue({
       session: buildSessionRecord({ status: 'active', id: 'session-restore' }),
       exercises: [
-        {
+        buildStoredExercise({
           id: 'exercise-1',
           sessionId: 'session-restore',
-          orderIndex: 0,
-          name: 'Bench Press',
           machineName: 'Flat Bench',
-          originScopeId: 'private',
-          originSourceId: 'local',
+          exerciseDefinitionId: 'exercise-def-1',
+          exerciseVariationId: 'exercise-var-1',
+          variationLabel: 'Flat Bench',
+          variationAttributes: [
+            {
+              id: 'variation-attr-1',
+              orderIndex: 0,
+              variationKeyId: 'var-key-machine',
+              variationKeySlug: 'machine',
+              variationKeyDisplayName: 'Machine',
+              variationValueId: 'var-value-flat-bench',
+              variationValueSlug: 'flat_bench',
+              variationValueDisplayName: 'Flat Bench',
+            },
+          ],
           sets: [
             {
               id: 'set-1',
@@ -81,7 +138,7 @@ describe('session draft repository', () => {
               weightValue: '225',
             },
           ],
-        },
+        }),
       ],
     });
 
@@ -94,6 +151,9 @@ describe('session draft repository', () => {
         exercises: [
           expect.objectContaining({
             name: 'Bench Press',
+            exerciseDefinitionId: 'exercise-def-1',
+            exerciseVariationId: 'exercise-var-1',
+            variationLabel: 'Flat Bench',
             sets: [expect.objectContaining({ repsValue: '5', weightValue: '225' })],
           }),
         ],
@@ -113,14 +173,10 @@ describe('session draft repository', () => {
         durationSec: 2700,
       }),
       exercises: [
-        {
+        buildStoredExercise({
           id: 'exercise-1',
           sessionId: 'session-completed',
-          orderIndex: 0,
-          name: 'Bench Press',
           machineName: 'Flat Bench',
-          originScopeId: 'private',
-          originSourceId: 'local',
           sets: [
             {
               id: 'set-1',
@@ -137,15 +193,12 @@ describe('session draft repository', () => {
               weightValue: '225',
             },
           ],
-        },
-        {
+        }),
+        buildStoredExercise({
           id: 'exercise-2',
           sessionId: 'session-completed',
           orderIndex: 1,
           name: 'Incline DB Press',
-          machineName: null,
-          originScopeId: 'private',
-          originSourceId: 'local',
           sets: [
             {
               id: 'set-3',
@@ -155,7 +208,7 @@ describe('session draft repository', () => {
               weightValue: '70',
             },
           ],
-        },
+        }),
       ],
     });
 

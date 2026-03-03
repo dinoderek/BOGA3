@@ -7,6 +7,10 @@ describe('domain schema and runtime migrations', () => {
       muscleGroups: expect.any(Object),
       exerciseDefinitions: expect.any(Object),
       exerciseMuscleMappings: expect.any(Object),
+      exerciseVariationKeys: expect.any(Object),
+      exerciseVariationValues: expect.any(Object),
+      exerciseVariations: expect.any(Object),
+      exerciseVariationAttributes: expect.any(Object),
       gyms: expect.any(Object),
       syncState: expect.any(Object),
       sessions: expect.any(Object),
@@ -23,6 +27,10 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain('CREATE TABLE `muscle_groups`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_definitions`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_muscle_mappings`');
+    expect(migrationSql).toContain('CREATE TABLE `exercise_variation_keys`');
+    expect(migrationSql).toContain('CREATE TABLE `exercise_variation_values`');
+    expect(migrationSql).toContain('CREATE TABLE `exercise_variations`');
+    expect(migrationSql).toContain('CREATE TABLE `exercise_variation_attributes`');
 
     expect(migrationSql).toContain('CREATE TABLE `gyms`');
     expect(migrationSql).toContain('CREATE TABLE `sync_state`');
@@ -45,6 +53,8 @@ describe('domain schema and runtime migrations', () => {
 
     expect(migrationSql).toContain('`is_editable` integer DEFAULT 0 NOT NULL');
     expect(migrationSql).toContain('`weight` real NOT NULL');
+    expect(migrationSql).toContain('`exercise_definition_id` text');
+    expect(migrationSql).toContain('`exercise_variation_id` text');
 
     expect(migrationSql).toContain(
       'CREATE UNIQUE INDEX `session_exercises_session_id_order_index_unique` ON `session_exercises` (`session_id`,`order_index`)'
@@ -54,6 +64,15 @@ describe('domain schema and runtime migrations', () => {
     );
     expect(migrationSql).toContain(
       'CREATE UNIQUE INDEX `exercise_muscle_mappings_exercise_id_muscle_group_id_unique` ON `exercise_muscle_mappings` (`exercise_definition_id`,`muscle_group_id`)'
+    );
+    expect(migrationSql).toContain(
+      'CREATE UNIQUE INDEX `exercise_variation_values_key_id_slug_unique` ON `exercise_variation_values` (`variation_key_id`,`slug`)'
+    );
+    expect(migrationSql).toContain(
+      'CREATE UNIQUE INDEX `exercise_variations_exercise_id_descriptor_unique` ON `exercise_variations` (`exercise_definition_id`,`descriptor`)'
+    );
+    expect(migrationSql).toContain(
+      'CREATE UNIQUE INDEX `exercise_variation_attributes_variation_id_key_id_unique` ON `exercise_variation_attributes` (`exercise_variation_id`,`variation_key_id`)'
     );
     expect(migrationSql).toContain('CREATE INDEX `sessions_deleted_at_idx` ON `sessions` (`deleted_at`)');
     expect(migrationSql).toContain('`last_successful_sync_at` integer');
@@ -68,6 +87,9 @@ describe('domain schema and runtime migrations', () => {
     );
     expect(migrationSql).toContain(
       'CONSTRAINT "exercise_muscle_mappings_weight_positive" CHECK("exercise_muscle_mappings"."weight" > 0)'
+    );
+    expect(migrationSql).toContain(
+      'CONSTRAINT "exercise_variation_keys_is_system_boolean_guard" CHECK("exercise_variation_keys"."is_system" in (0, 1))'
     );
     expect(migrationSql).toContain(
       'CONSTRAINT "muscle_groups_non_editable_guard" CHECK("muscle_groups"."is_editable" = 0)'

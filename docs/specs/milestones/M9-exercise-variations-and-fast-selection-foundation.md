@@ -86,7 +86,7 @@ Introduce optional, key/value-based exercise variations while preserving a fast 
 ## Task breakdown
 
 1. `docs/tasks/complete/T-20260227-01-m9-retroactive-semantics-decision-realignment.md` - lock retroactive history/analytics semantics and align product/architecture/milestone docs. (`completed`)
-2. `docs/tasks/T-20260227-02-m9-local-variation-schema-and-session-reference-migration.md` - implement local schema + migration for key/value variations and session exercise references. (`planned`)
+2. `docs/tasks/complete/T-20260227-02-m9-local-variation-schema-and-session-reference-migration.md` - implement local schema + migration for key/value variations and session exercise references. (`completed`)
 3. `docs/tasks/T-20260227-03-m9-exercise-catalog-variation-management-ui.md` - implement catalog UI for per-exercise variation/key/value management. (`planned`)
 4. `docs/tasks/T-20260227-04-m9-recorder-fast-exercise-and-optional-variation-selection.md` - implement recorder UX for fast add + optional variation selection/change. (`planned`)
 5. `docs/tasks/T-20260227-05-m9-machine-backfill-history-resolution-and-regression-coverage.md` - finalize migration fallback behavior, retroactive history resolution, and regression coverage. (`planned`)
@@ -110,6 +110,11 @@ Introduce optional, key/value-based exercise variations while preserving a fast 
 - Decision: Exercise/variation/mapping metadata semantics are retroactive for history and future analytics interpretation; no versioning/snapshot semantics in M9.
 - Reason: user intent favors “edit once, apply everywhere” and avoids high model complexity before analytics features exist.
 - Impact: prior snapshot-oriented historical wording from M6 must be superseded; future precomputed analytics must support invalidation/recompute on metadata edits.
+
+- Date: 2026-03-03
+- Decision: Legacy session backfill only assigns exercise references when exercise-name matching is exact and unique; unresolved rows keep legacy `name`/`machineName` fallback fields with null refs.
+- Reason: preserves deterministic, idempotent migration behavior while the recorder still writes the legacy free-form payload.
+- Impact: boot-time backfill creates machine variations only when a canonical exercise definition can be resolved; recorder/catalog follow-up tasks can adopt explicit refs without breaking older local data.
 
 ## Completion note (fill when milestone closes)
 

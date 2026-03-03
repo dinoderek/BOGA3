@@ -2,6 +2,8 @@ import { asc, inArray } from 'drizzle-orm';
 
 import { exerciseDefinitions, exerciseMuscleMappings, muscleGroups } from './schema';
 import type { LocalDatabase } from './bootstrap';
+import { backfillLegacySessionExerciseReferences } from './session-exercise-reference-backfill';
+import { seedSystemExerciseVariationMetadata } from './exercise-variation-seeds';
 
 export type MuscleGroupSeed = {
   id: string;
@@ -707,6 +709,9 @@ export const seedSystemExerciseCatalog = (database: LocalDatabase, now: Date = n
         .run();
     }
   });
+
+  seedSystemExerciseVariationMetadata(database, now);
+  backfillLegacySessionExerciseReferences(database, now);
 
   const verification = verifySeededSystemExerciseCatalog(database);
 

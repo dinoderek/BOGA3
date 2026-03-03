@@ -50,6 +50,13 @@
       "when": 1772538794922,
       "tag": "0006_ordinary_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1772543998782,
+      "tag": "0007_good_the_professor",
+      "breakpoints": true
     }
   ]
 }

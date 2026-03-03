@@ -1,7 +1,17 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
-import { exerciseSets, sessionExercises, sessions } from './schema';
+import { resolveSessionExerciseReferences } from './session-exercise-reference-backfill';
+import {
+  exerciseDefinitions,
+  exerciseSets,
+  exerciseVariationAttributes,
+  exerciseVariationKeys,
+  exerciseVariationValues,
+  exerciseVariations,
+  sessionExercises,
+  sessions,
+} from './schema';
 
 export type SessionDraftStatus = 'active';
 
@@ -15,6 +25,8 @@ export type SessionDraftExerciseInput = {
   id?: string;
   name: string;
   machineName?: string | null;
+  exerciseDefinitionId?: string | null;
+  exerciseVariationId?: string | null;
   originScopeId?: string;
   originSourceId?: string;
   sets: SessionDraftSetInput[];
@@ -56,6 +68,19 @@ export type SessionDraftExerciseSnapshot = {
   id: string;
   name: string;
   machineName: string | null;
+  exerciseDefinitionId?: string | null;
+  exerciseVariationId?: string | null;
+  variationLabel?: string | null;
+  variationAttributes?: {
+    id: string;
+    orderIndex: number;
+    variationKeyId: string;
+    variationKeySlug: string;
+    variationKeyDisplayName: string;
+    variationValueId: string;
+    variationValueSlug: string;
+    variationValueDisplayName: string;
+  }[];
   originScopeId: string;
   originSourceId: string;
   sets: SessionDraftSetSnapshot[];
@@ -148,6 +173,19 @@ type StoredDraftExerciseRecord = {
   orderIndex: number;
   name: string;
   machineName: string | null;
+  exerciseDefinitionId: string | null;
+  exerciseVariationId: string | null;
+  variationLabel: string | null;
+  variationAttributes: {
+    id: string;
+    orderIndex: number;
+    variationKeyId: string;
+    variationKeySlug: string;
+    variationKeyDisplayName: string;
+    variationValueId: string;
+    variationValueSlug: string;
+    variationValueDisplayName: string;
+  }[];
   originScopeId: string;
   originSourceId: string;
 };
@@ -279,6 +317,10 @@ const mapDraftSnapshot = (graph: StoredDraftGraph): SessionDraftSnapshot => ({
     id: exercise.id,
     name: exercise.name,
     machineName: exercise.machineName,
+    exerciseDefinitionId: exercise.exerciseDefinitionId,
+    exerciseVariationId: exercise.exerciseVariationId,
+    variationLabel: exercise.variationLabel,
+    variationAttributes: exercise.variationAttributes,
     originScopeId: exercise.originScopeId,
     originSourceId: exercise.originSourceId,
     sets: exercise.sets.map((set) => ({
@@ -303,6 +345,10 @@ const mapSessionGraphSnapshot = (graph: StoredDraftGraph): SessionGraphSnapshot 
     id: exercise.id,
     name: exercise.name,
     machineName: exercise.machineName,
+    exerciseDefinitionId: exercise.exerciseDefinitionId,
+    exerciseVariationId: exercise.exerciseVariationId,
+    variationLabel: exercise.variationLabel,
+    variationAttributes: exercise.variationAttributes,
     originScopeId: exercise.originScopeId,
     originSourceId: exercise.originSourceId,
     sets: exercise.sets.map((set) => ({
@@ -327,6 +373,20 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
     .all();
 
   const exerciseIds = exerciseRows.map((exercise) => exercise.id);
+  const exerciseDefinitionIds = Array.from(
+    new Set(
+      exerciseRows
+        .map((exercise) => exercise.exerciseDefinitionId)
+        .filter((exerciseDefinitionId): exerciseDefinitionId is string => typeof exerciseDefinitionId === 'string')
+    )
+  );
+  const exerciseVariationIds = Array.from(
+    new Set(
+      exerciseRows
+        .map((exercise) => exercise.exerciseVariationId)
+        .filter((exerciseVariationId): exerciseVariationId is string => typeof exerciseVariationId === 'string')
+    )
+  );
   const setRows =
     exerciseIds.length > 0
       ? database
@@ -334,6 +394,69 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
           .from(exerciseSets)
           .where(inArray(exerciseSets.sessionExerciseId, exerciseIds))
           .orderBy(asc(exerciseSets.orderIndex))
+          .all()
+      : [];
+  const exerciseDefinitionRows =
+    exerciseDefinitionIds.length > 0
+      ? database
+          .select({
+            id: exerciseDefinitions.id,
+            name: exerciseDefinitions.name,
+          })
+          .from(exerciseDefinitions)
+          .where(inArray(exerciseDefinitions.id, exerciseDefinitionIds))
+          .all()
+      : [];
+  const exerciseVariationRows =
+    exerciseVariationIds.length > 0
+      ? database
+          .select({
+            id: exerciseVariations.id,
+            label: exerciseVariations.label,
+          })
+          .from(exerciseVariations)
+          .where(inArray(exerciseVariations.id, exerciseVariationIds))
+          .all()
+      : [];
+  const variationAttributeRows =
+    exerciseVariationIds.length > 0
+      ? database
+          .select({
+            id: exerciseVariationAttributes.id,
+            exerciseVariationId: exerciseVariationAttributes.exerciseVariationId,
+            variationKeyId: exerciseVariationAttributes.variationKeyId,
+            variationValueId: exerciseVariationAttributes.variationValueId,
+            orderIndex: exerciseVariationAttributes.orderIndex,
+          })
+          .from(exerciseVariationAttributes)
+          .where(inArray(exerciseVariationAttributes.exerciseVariationId, exerciseVariationIds))
+          .orderBy(asc(exerciseVariationAttributes.orderIndex))
+          .all()
+      : [];
+  const variationKeyIds = Array.from(new Set(variationAttributeRows.map((row) => row.variationKeyId)));
+  const variationValueIds = Array.from(new Set(variationAttributeRows.map((row) => row.variationValueId)));
+  const variationKeyRows =
+    variationKeyIds.length > 0
+      ? database
+          .select({
+            id: exerciseVariationKeys.id,
+            slug: exerciseVariationKeys.slug,
+            displayName: exerciseVariationKeys.displayName,
+          })
+          .from(exerciseVariationKeys)
+          .where(inArray(exerciseVariationKeys.id, variationKeyIds))
+          .all()
+      : [];
+  const variationValueRows =
+    variationValueIds.length > 0
+      ? database
+          .select({
+            id: exerciseVariationValues.id,
+            slug: exerciseVariationValues.slug,
+            displayName: exerciseVariationValues.displayName,
+          })
+          .from(exerciseVariationValues)
+          .where(inArray(exerciseVariationValues.id, variationValueIds))
           .all()
       : [];
 
@@ -349,6 +472,45 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
     acc.set(row.sessionExerciseId, current);
     return acc;
   }, new Map<string, StoredDraftSetRecord[]>());
+  const exerciseDefinitionNameById = new Map(exerciseDefinitionRows.map((row) => [row.id, row.name]));
+  const variationLabelById = new Map(exerciseVariationRows.map((row) => [row.id, row.label]));
+  const variationKeyById = new Map(variationKeyRows.map((row) => [row.id, row]));
+  const variationValueById = new Map(variationValueRows.map((row) => [row.id, row]));
+  const variationAttributesByVariationId = variationAttributeRows.reduce<
+    Map<
+      string,
+      {
+        id: string;
+        orderIndex: number;
+        variationKeyId: string;
+        variationKeySlug: string;
+        variationKeyDisplayName: string;
+        variationValueId: string;
+        variationValueSlug: string;
+        variationValueDisplayName: string;
+      }[]
+    >
+  >((acc, row) => {
+    const variationKey = variationKeyById.get(row.variationKeyId);
+    const variationValue = variationValueById.get(row.variationValueId);
+    if (!variationKey || !variationValue) {
+      return acc;
+    }
+
+    const current = acc.get(row.exerciseVariationId) ?? [];
+    current.push({
+      id: row.id,
+      orderIndex: row.orderIndex,
+      variationKeyId: row.variationKeyId,
+      variationKeySlug: variationKey.slug,
+      variationKeyDisplayName: variationKey.displayName,
+      variationValueId: row.variationValueId,
+      variationValueSlug: variationValue.slug,
+      variationValueDisplayName: variationValue.displayName,
+    });
+    acc.set(row.exerciseVariationId, current);
+    return acc;
+  }, new Map());
 
   return {
     session: mapSessionRow(sessionRow),
@@ -356,8 +518,18 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
       id: exercise.id,
       sessionId: exercise.sessionId,
       orderIndex: exercise.orderIndex,
-      name: exercise.name,
-      machineName: exercise.machineName,
+      name: exercise.exerciseDefinitionId
+        ? (exerciseDefinitionNameById.get(exercise.exerciseDefinitionId) ?? exercise.name)
+        : exercise.name,
+      machineName: exercise.exerciseVariationId
+        ? (variationLabelById.get(exercise.exerciseVariationId) ?? exercise.machineName)
+        : exercise.machineName,
+      exerciseDefinitionId: exercise.exerciseDefinitionId,
+      exerciseVariationId: exercise.exerciseVariationId,
+      variationLabel: exercise.exerciseVariationId ? (variationLabelById.get(exercise.exerciseVariationId) ?? null) : null,
+      variationAttributes: exercise.exerciseVariationId
+        ? (variationAttributesByVariationId.get(exercise.exerciseVariationId) ?? [])
+        : [],
       originScopeId: exercise.originScopeId,
       originSourceId: exercise.originSourceId,
       sets: setsByExerciseId.get(exercise.id) ?? [],
@@ -365,7 +537,7 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
   };
 };
 
-type SessionGraphWriteTx = Pick<LocalDatabase, 'select' | 'insert' | 'delete'>;
+type SessionGraphWriteTx = Pick<LocalDatabase, 'select' | 'insert' | 'update' | 'delete'>;
 
 const replaceSessionExerciseGraph = (
   tx: SessionGraphWriteTx,
@@ -389,6 +561,13 @@ const replaceSessionExerciseGraph = (
 
   input.exercises.forEach((exercise, exerciseIndex) => {
     const sessionExerciseId = exercise.id?.trim() || createLocalEntityId('exercise');
+    const resolvedReferences = resolveSessionExerciseReferences(tx, {
+      name: exercise.name,
+      machineName: exercise.machineName,
+      exerciseDefinitionId: exercise.exerciseDefinitionId,
+      exerciseVariationId: exercise.exerciseVariationId,
+      now: input.now,
+    });
 
     tx.insert(sessionExercises)
       .values({
@@ -397,6 +576,8 @@ const replaceSessionExerciseGraph = (
         orderIndex: exerciseIndex,
         name: exercise.name,
         machineName: exercise.machineName ?? null,
+        exerciseDefinitionId: resolvedReferences.exerciseDefinitionId,
+        exerciseVariationId: resolvedReferences.exerciseVariationId,
         originScopeId: exercise.originScopeId ?? 'private',
         originSourceId: exercise.originSourceId ?? 'local',
         createdAt: input.now,

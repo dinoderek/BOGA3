@@ -1,7 +1,7 @@
 ---
 task_id: T-20260227-02
 milestone_id: "M9"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "frontend"
 runtimes: "node,expo,sql,maestro"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M9-exercise-variations-and-fast-selection-f
 
 - Task ID: `T-20260227-02`
 - Title: M9 local variation schema and session reference migration
-- Status: `planned`
+- Status: `completed`
 - Session date: `2026-02-27`
 - Session interaction mode: `interactive (default)`
 
@@ -30,8 +30,8 @@ docs_touched: "docs/specs/milestones/M9-exercise-variations-and-fast-selection-f
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `TBD at execution start`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `TBD`
+- Verified current branch + HEAD commit: `main @ 6568181`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (`git pull --ff-only origin main` -> already up to date)
 - Parent refs opened in this session:
   - `docs/specs/milestones/M9-exercise-variations-and-fast-selection-foundation.md`
   - `docs/specs/03-technical-architecture.md`
@@ -41,7 +41,7 @@ docs_touched: "docs/specs/milestones/M9-exercise-variations-and-fast-selection-f
   - schema inventory under `apps/mobile/src/data/schema/**`
   - migration inventory under `apps/mobile/drizzle/**`
 - Known stale references or assumptions:
-  - recorder currently still contains legacy preset path; variation reference adoption depends on recorder integration tasks
+  - recorder still writes legacy `name` + optional `machineName`; this task preserves that path and adds deterministic reference resolution/backfill beneath it
 - Optional helper command:
   - `./scripts/task-bootstrap.sh docs/tasks/T-20260227-02-m9-local-variation-schema-and-session-reference-migration.md`
 
@@ -134,12 +134,13 @@ Implement the local data contract for key/value exercise variations and migrate 
 - Backfill behavior summary with edge-case outcomes.
 - Local gate results summary (`quality-fast` + `quality-slow frontend`).
 - Manual verification summary (CI absent).
+- Manual verification summary (required when CI is absent/partial): migration diff review, targeted repository/backfill test review, and Maestro artifact-path verification completed locally.
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Added variation metadata schema (`exercise_variation_keys`, `exercise_variation_values`, `exercise_variations`, `exercise_variation_attributes`) and generated `apps/mobile/drizzle/0006_flowery_bulldozer.sql`; seeded system variation keys/values plus boot-time deterministic legacy backfill for `session_exercises`; updated exercise catalog/session draft repositories to expose variation metadata APIs and to read/write stable exercise/variation refs while retaining `name`/`machineName` as the compatibility fallback for unresolved legacy rows.
+- What tests ran: `git pull --ff-only origin main`; `./scripts/task-bootstrap.sh docs/tasks/T-20260227-02-m9-local-variation-schema-and-session-reference-migration.md`; `npm test -- --runInBand app/__tests__/exercise-catalog-repository.test.ts app/__tests__/session-drafts-repository.test.ts app/__tests__/exercise-variation-seeds.test.ts app/__tests__/session-exercise-reference-backfill.test.ts`; `npm test -- --runInBand app/__tests__/domain-schema-migrations.test.ts`; `npm run db:generate`; `./scripts/quality-fast.sh frontend`; `./scripts/quality-slow.sh frontend`.
+- What remains: Catalog UI still needs key/value + variation authoring flows, and recorder UI still needs to pass/select explicit variation refs instead of relying on the legacy `machineName` bridge.
 
 ## Status update checklist (mandatory at closeout)
 

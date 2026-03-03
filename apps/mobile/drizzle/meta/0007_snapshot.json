@@ -1,0 +1,1337 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "9a9d53ae-6adf-4fb0-be41-8fb68dbc66b6",
+  "prevId": "0ed067e2-acd4-4ea3-b8db-b184a296f141",
+  "tables": {
+    "exercise_definitions": {
+      "name": "exercise_definitions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_definitions_name_idx": {
+          "name": "exercise_definitions_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "exercise_definitions_deleted_at_idx": {
+          "name": "exercise_definitions_deleted_at_idx",
+          "columns": [
+            "deleted_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_definitions_name_non_empty": {
+          "name": "exercise_definitions_name_non_empty",
+          "value": "\"exercise_definitions\".\"name\" <> ''"
+        }
+      }
+    },
+    "exercise_muscle_mappings": {
+      "name": "exercise_muscle_mappings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "exercise_definition_id": {
+          "name": "exercise_definition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "muscle_group_id": {
+          "name": "muscle_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_muscle_mappings_exercise_definition_id_idx": {
+          "name": "exercise_muscle_mappings_exercise_definition_id_idx",
+          "columns": [
+            "exercise_definition_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_muscle_mappings_muscle_group_id_idx": {
+          "name": "exercise_muscle_mappings_muscle_group_id_idx",
+          "columns": [
+            "muscle_group_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_muscle_mappings_exercise_id_muscle_group_id_unique": {
+          "name": "exercise_muscle_mappings_exercise_id_muscle_group_id_unique",
+          "columns": [
+            "exercise_definition_id",
+            "muscle_group_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "exercise_muscle_mappings_exercise_definition_id_exercise_definitions_id_fk": {
+          "name": "exercise_muscle_mappings_exercise_definition_id_exercise_definitions_id_fk",
+          "tableFrom": "exercise_muscle_mappings",
+          "tableTo": "exercise_definitions",
+          "columnsFrom": [
+            "exercise_definition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "exercise_muscle_mappings_muscle_group_id_muscle_groups_id_fk": {
+          "name": "exercise_muscle_mappings_muscle_group_id_muscle_groups_id_fk",
+          "tableFrom": "exercise_muscle_mappings",
+          "tableTo": "muscle_groups",
+          "columnsFrom": [
+            "muscle_group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_muscle_mappings_weight_positive": {
+          "name": "exercise_muscle_mappings_weight_positive",
+          "value": "\"exercise_muscle_mappings\".\"weight\" > 0"
+        },
+        "exercise_muscle_mappings_role_guard": {
+          "name": "exercise_muscle_mappings_role_guard",
+          "value": "\"exercise_muscle_mappings\".\"role\" is null or \"exercise_muscle_mappings\".\"role\" in ('primary', 'secondary', 'stabilizer')"
+        }
+      }
+    },
+    "exercise_sets": {
+      "name": "exercise_sets",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "session_exercise_id": {
+          "name": "session_exercise_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "weight_value": {
+          "name": "weight_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "reps_value": {
+          "name": "reps_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_sets_session_exercise_id_idx": {
+          "name": "exercise_sets_session_exercise_id_idx",
+          "columns": [
+            "session_exercise_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_sets_session_exercise_id_order_index_unique": {
+          "name": "exercise_sets_session_exercise_id_order_index_unique",
+          "columns": [
+            "session_exercise_id",
+            "order_index"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "exercise_sets_session_exercise_id_session_exercises_id_fk": {
+          "name": "exercise_sets_session_exercise_id_session_exercises_id_fk",
+          "tableFrom": "exercise_sets",
+          "tableTo": "session_exercises",
+          "columnsFrom": [
+            "session_exercise_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_sets_order_index_non_negative": {
+          "name": "exercise_sets_order_index_non_negative",
+          "value": "\"exercise_sets\".\"order_index\" >= 0"
+        }
+      }
+    },
+    "exercise_variation_attributes": {
+      "name": "exercise_variation_attributes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "exercise_variation_id": {
+          "name": "exercise_variation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "variation_key_id": {
+          "name": "variation_key_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "variation_value_id": {
+          "name": "variation_value_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_variation_attributes_exercise_variation_id_idx": {
+          "name": "exercise_variation_attributes_exercise_variation_id_idx",
+          "columns": [
+            "exercise_variation_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_variation_attributes_variation_key_id_idx": {
+          "name": "exercise_variation_attributes_variation_key_id_idx",
+          "columns": [
+            "variation_key_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_variation_attributes_variation_value_id_idx": {
+          "name": "exercise_variation_attributes_variation_value_id_idx",
+          "columns": [
+            "variation_value_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_variation_attributes_variation_id_order_index_unique": {
+          "name": "exercise_variation_attributes_variation_id_order_index_unique",
+          "columns": [
+            "exercise_variation_id",
+            "order_index"
+          ],
+          "isUnique": true
+        },
+        "exercise_variation_attributes_variation_id_key_id_unique": {
+          "name": "exercise_variation_attributes_variation_id_key_id_unique",
+          "columns": [
+            "exercise_variation_id",
+            "variation_key_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "exercise_variation_attributes_exercise_variation_id_exercise_variations_id_fk": {
+          "name": "exercise_variation_attributes_exercise_variation_id_exercise_variations_id_fk",
+          "tableFrom": "exercise_variation_attributes",
+          "tableTo": "exercise_variations",
+          "columnsFrom": [
+            "exercise_variation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "exercise_variation_attributes_variation_key_id_exercise_variation_keys_id_fk": {
+          "name": "exercise_variation_attributes_variation_key_id_exercise_variation_keys_id_fk",
+          "tableFrom": "exercise_variation_attributes",
+          "tableTo": "exercise_variation_keys",
+          "columnsFrom": [
+            "variation_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "exercise_variation_attributes_variation_value_id_exercise_variation_values_id_fk": {
+          "name": "exercise_variation_attributes_variation_value_id_exercise_variation_values_id_fk",
+          "tableFrom": "exercise_variation_attributes",
+          "tableTo": "exercise_variation_values",
+          "columnsFrom": [
+            "variation_value_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_variation_attributes_order_index_non_negative": {
+          "name": "exercise_variation_attributes_order_index_non_negative",
+          "value": "\"exercise_variation_attributes\".\"order_index\" >= 0"
+        }
+      }
+    },
+    "exercise_variation_keys": {
+      "name": "exercise_variation_keys",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_system": {
+          "name": "is_system",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_variation_keys_slug_unique": {
+          "name": "exercise_variation_keys_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_variation_keys_slug_non_empty": {
+          "name": "exercise_variation_keys_slug_non_empty",
+          "value": "\"exercise_variation_keys\".\"slug\" <> ''"
+        },
+        "exercise_variation_keys_display_name_non_empty": {
+          "name": "exercise_variation_keys_display_name_non_empty",
+          "value": "\"exercise_variation_keys\".\"display_name\" <> ''"
+        },
+        "exercise_variation_keys_is_system_boolean_guard": {
+          "name": "exercise_variation_keys_is_system_boolean_guard",
+          "value": "\"exercise_variation_keys\".\"is_system\" in (0, 1)"
+        }
+      }
+    },
+    "exercise_variation_values": {
+      "name": "exercise_variation_values",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "variation_key_id": {
+          "name": "variation_key_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "is_system": {
+          "name": "is_system",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_variation_values_variation_key_id_idx": {
+          "name": "exercise_variation_values_variation_key_id_idx",
+          "columns": [
+            "variation_key_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_variation_values_key_id_slug_unique": {
+          "name": "exercise_variation_values_key_id_slug_unique",
+          "columns": [
+            "variation_key_id",
+            "slug"
+          ],
+          "isUnique": true
+        },
+        "exercise_variation_values_key_id_id_unique": {
+          "name": "exercise_variation_values_key_id_id_unique",
+          "columns": [
+            "variation_key_id",
+            "id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "exercise_variation_values_variation_key_id_exercise_variation_keys_id_fk": {
+          "name": "exercise_variation_values_variation_key_id_exercise_variation_keys_id_fk",
+          "tableFrom": "exercise_variation_values",
+          "tableTo": "exercise_variation_keys",
+          "columnsFrom": [
+            "variation_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_variation_values_slug_non_empty": {
+          "name": "exercise_variation_values_slug_non_empty",
+          "value": "\"exercise_variation_values\".\"slug\" <> ''"
+        },
+        "exercise_variation_values_display_name_non_empty": {
+          "name": "exercise_variation_values_display_name_non_empty",
+          "value": "\"exercise_variation_values\".\"display_name\" <> ''"
+        },
+        "exercise_variation_values_is_system_boolean_guard": {
+          "name": "exercise_variation_values_is_system_boolean_guard",
+          "value": "\"exercise_variation_values\".\"is_system\" in (0, 1)"
+        }
+      }
+    },
+    "exercise_variations": {
+      "name": "exercise_variations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "exercise_definition_id": {
+          "name": "exercise_definition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "descriptor": {
+          "name": "descriptor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "exercise_variations_exercise_definition_id_idx": {
+          "name": "exercise_variations_exercise_definition_id_idx",
+          "columns": [
+            "exercise_definition_id"
+          ],
+          "isUnique": false
+        },
+        "exercise_variations_deleted_at_idx": {
+          "name": "exercise_variations_deleted_at_idx",
+          "columns": [
+            "deleted_at"
+          ],
+          "isUnique": false
+        },
+        "exercise_variations_exercise_id_descriptor_unique": {
+          "name": "exercise_variations_exercise_id_descriptor_unique",
+          "columns": [
+            "exercise_definition_id",
+            "descriptor"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "exercise_variations_exercise_definition_id_exercise_definitions_id_fk": {
+          "name": "exercise_variations_exercise_definition_id_exercise_definitions_id_fk",
+          "tableFrom": "exercise_variations",
+          "tableTo": "exercise_definitions",
+          "columnsFrom": [
+            "exercise_definition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "exercise_variations_label_non_empty": {
+          "name": "exercise_variations_label_non_empty",
+          "value": "\"exercise_variations\".\"label\" <> ''"
+        },
+        "exercise_variations_descriptor_non_empty": {
+          "name": "exercise_variations_descriptor_non_empty",
+          "value": "\"exercise_variations\".\"descriptor\" <> ''"
+        }
+      }
+    },
+    "gyms": {
+      "name": "gyms",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "origin_scope_id": {
+          "name": "origin_scope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'private'"
+        },
+        "origin_source_id": {
+          "name": "origin_source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'local'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "gyms_name_idx": {
+          "name": "gyms_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "gyms_origin_scope_id_idx": {
+          "name": "gyms_origin_scope_id_idx",
+          "columns": [
+            "origin_scope_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "muscle_groups": {
+      "name": "muscle_groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "family_name": {
+          "name": "family_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "is_editable": {
+          "name": "is_editable",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "muscle_groups_family_name_idx": {
+          "name": "muscle_groups_family_name_idx",
+          "columns": [
+            "family_name"
+          ],
+          "isUnique": false
+        },
+        "muscle_groups_sort_order_idx": {
+          "name": "muscle_groups_sort_order_idx",
+          "columns": [
+            "sort_order"
+          ],
+          "isUnique": false
+        },
+        "muscle_groups_display_name_idx": {
+          "name": "muscle_groups_display_name_idx",
+          "columns": [
+            "display_name"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "muscle_groups_sort_order_non_negative": {
+          "name": "muscle_groups_sort_order_non_negative",
+          "value": "\"muscle_groups\".\"sort_order\" >= 0"
+        },
+        "muscle_groups_is_editable_boolean_guard": {
+          "name": "muscle_groups_is_editable_boolean_guard",
+          "value": "\"muscle_groups\".\"is_editable\" in (0, 1)"
+        },
+        "muscle_groups_non_editable_guard": {
+          "name": "muscle_groups_non_editable_guard",
+          "value": "\"muscle_groups\".\"is_editable\" = 0"
+        }
+      }
+    },
+    "session_exercises": {
+      "name": "session_exercises",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order_index": {
+          "name": "order_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "exercise_definition_id": {
+          "name": "exercise_definition_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "exercise_variation_id": {
+          "name": "exercise_variation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "machine_name": {
+          "name": "machine_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "origin_scope_id": {
+          "name": "origin_scope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'private'"
+        },
+        "origin_source_id": {
+          "name": "origin_source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'local'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "session_exercises_session_id_idx": {
+          "name": "session_exercises_session_id_idx",
+          "columns": [
+            "session_id"
+          ],
+          "isUnique": false
+        },
+        "session_exercises_exercise_definition_id_idx": {
+          "name": "session_exercises_exercise_definition_id_idx",
+          "columns": [
+            "exercise_definition_id"
+          ],
+          "isUnique": false
+        },
+        "session_exercises_exercise_variation_id_idx": {
+          "name": "session_exercises_exercise_variation_id_idx",
+          "columns": [
+            "exercise_variation_id"
+          ],
+          "isUnique": false
+        },
+        "session_exercises_session_id_order_index_unique": {
+          "name": "session_exercises_session_id_order_index_unique",
+          "columns": [
+            "session_id",
+            "order_index"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "session_exercises_session_id_sessions_id_fk": {
+          "name": "session_exercises_session_id_sessions_id_fk",
+          "tableFrom": "session_exercises",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "session_exercises_exercise_definition_id_exercise_definitions_id_fk": {
+          "name": "session_exercises_exercise_definition_id_exercise_definitions_id_fk",
+          "tableFrom": "session_exercises",
+          "tableTo": "exercise_definitions",
+          "columnsFrom": [
+            "exercise_definition_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "session_exercises_exercise_variation_id_exercise_variations_id_fk": {
+          "name": "session_exercises_exercise_variation_id_exercise_variations_id_fk",
+          "tableFrom": "session_exercises",
+          "tableTo": "exercise_variations",
+          "columnsFrom": [
+            "exercise_variation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "session_exercises_order_index_non_negative": {
+          "name": "session_exercises_order_index_non_negative",
+          "value": "\"session_exercises\".\"order_index\" >= 0"
+        }
+      }
+    },
+    "sessions": {
+      "name": "sessions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(lower(hex(randomblob(16))))"
+        },
+        "gym_id": {
+          "name": "gym_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "duration_sec": {
+          "name": "duration_sec",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "sessions_status_idx": {
+          "name": "sessions_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        },
+        "sessions_completed_at_idx": {
+          "name": "sessions_completed_at_idx",
+          "columns": [
+            "completed_at"
+          ],
+          "isUnique": false
+        },
+        "sessions_deleted_at_idx": {
+          "name": "sessions_deleted_at_idx",
+          "columns": [
+            "deleted_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "sessions_gym_id_gyms_id_fk": {
+          "name": "sessions_gym_id_gyms_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "gyms",
+          "columnsFrom": [
+            "gym_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "sessions_status_guard": {
+          "name": "sessions_status_guard",
+          "value": "\"sessions\".\"status\" in ('active', 'completed')"
+        },
+        "sessions_duration_non_negative": {
+          "name": "sessions_duration_non_negative",
+          "value": "\"sessions\".\"duration_sec\" is null or \"sessions\".\"duration_sec\" >= 0"
+        }
+      }
+    },
+    "sync_state": {
+      "name": "sync_state",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'device'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'never_initialized'"
+        },
+        "paused_reason": {
+          "name": "paused_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_successful_sync_at": {
+          "name": "last_successful_sync_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_failed_sync_at": {
+          "name": "last_failed_sync_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_attempted_sync_at": {
+          "name": "last_attempted_sync_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "sync_state_status_idx": {
+          "name": "sync_state_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "sync_state_status_guard": {
+          "name": "sync_state_status_guard",
+          "value": "\"sync_state\".\"status\" in ('never_initialized', 'idle', 'syncing', 'paused', 'error')"
+        },
+        "sync_state_paused_reason_guard": {
+          "name": "sync_state_paused_reason_guard",
+          "value": "\"sync_state\".\"paused_reason\" is null or \"sync_state\".\"paused_reason\" in ('auth_missing', 'auth_expired', 'backend_unconfigured', 'offline', 'backend_unavailable')"
+        }
+      }
+    },
+    "smoke_records": {
+      "name": "smoke_records",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
