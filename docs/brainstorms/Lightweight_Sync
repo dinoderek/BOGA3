@@ -1,0 +1,9 @@
+The current sync appraoch docs/specs/tech/mobile-sync-engine-overview.md to take a full snapshot and a per graph entity graph comparison is too heavyweight. In the majority of cases there will be no remote change at all. 
+
+I want to implement a fast path update that does not need all that complexity. 
+
+Sketch of how this could work (let's brainstorm the detail together)
+- Client generaters a `Sync UUID` at first start.
+- Client manages a local `Sync Watermark`. This is the last local state sent to the server. 
+- Client takes an optimistic approach and always tries to send to Backend <Sync UUID, Sync Watermark, DELTA since Watermark>
+- Backend compares UUID, Watermark with local state. If matches, it accepts the update. If it does not match, then returns the full state and current heavyweight sync reconciliation is executed. 
