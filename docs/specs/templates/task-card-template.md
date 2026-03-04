@@ -11,6 +11,13 @@ gates_slow: "./scripts/quality-slow.sh <area>|N/A"
 docs_touched: "comma-separated paths or none"
 ---
 
+# Filename naming
+`docs/tasks/<task-id>.md`
+
+Where `<task-id>` is: `<Milestone ID>-<Task Sequence>-<Task short name>`
+
+So for example: `M33-04-Do_Something.md`
+
 # Task Card Template
 
 ## Task metadata

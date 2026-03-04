@@ -9,13 +9,6 @@ Completed task cards must be moved to `docs/tasks/complete/` as part of closeout
 Canonical naming and metadata shape are defined in:
 - `docs/specs/templates/task-card-template.md`
 
-Example:
-`M14-T03-Build This.md`
-
-Legacy naming (historical only):
-- `T-YYYYMMDD-01-<short-name>.md`
-- `T-YYYYMMDD-02-<short-name>.md`
-
 ## Lifecycle
 
 - `docs/tasks/`
