@@ -225,6 +225,18 @@ describe('SessionListScreenShell', () => {
     expect(screen.getByTestId('session-summary-active-stale-gym').props.children).toBe('Westside Barbell Club');
   });
 
+  it('routes to settings from the shared top-level navigation surface', async () => {
+    render(<SessionListRoute />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Open Settings')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByLabelText('Open Settings'));
+
+    expect(mockPush).toHaveBeenCalledWith('/settings');
+  });
+
   it('shows deleted completed sessions after toggling Show deleted in the DB-backed route flow', async () => {
     mockListSessionListBuckets.mockImplementation(
       async ({ includeDeleted }: { includeDeleted?: boolean } = {}) => ({

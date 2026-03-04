@@ -59,7 +59,7 @@ Brief entrypoint inventory of the current reusable UI component set.
 1. `TopLevelTabs`
 - File: `apps/mobile/components/navigation/top-level-tabs.tsx`
 - Purpose:
-  - app-specific top-level Sessions/Exercises tab strip used on `session-list` and `exercise-catalog`
+  - app-specific top-level Sessions/Exercises tab strip with a right-side `Settings` utility action, used on `session-list` and `exercise-catalog`
 
 2. `ExerciseEditorModal`
 - File: `apps/mobile/components/exercise-catalog/exercise-editor-modal.tsx`

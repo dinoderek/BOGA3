@@ -163,9 +163,9 @@ This milestone is intentionally limited to auth and profile UX. It does **not** 
 ## Task breakdown
 
 1. `docs/tasks/complete/T-20260304-01-m11-auth-client-session-bootstrap.md` - add mobile auth client wiring, session restore, and auth-state service. (`completed`)
-2. `docs/tasks/T-20260304-02-m11-settings-and-profile-navigation.md` - add settings entrypoint, settings surface, and profile screen route/navigation. (`planned`)
+2. `docs/tasks/complete/T-20260304-02-m11-settings-and-profile-navigation.md` - add settings entrypoint, settings surface, and profile screen route/navigation. (`completed`)
 3. `docs/tasks/T-20260304-03-m11-profile-backend-model-and-update-flows.md` - add `user_profiles`, profile load/save, and authenticated email/password update flows. (`planned`)
-4. `docs/tasks/T-20260304-04-m11-auth-profile-tests-and-doc-updates.md` - add test coverage, Maestro proof path, and required UI/auth doc updates. (`planned`)
+4. `docs/tasks/T-20260304-04-m11-auth-profile-tests-and-doc-updates.md` - add remaining auth/profile coverage, Maestro proof path, and any final M11 doc cleanup. (`planned`)
 
 Rule:
 

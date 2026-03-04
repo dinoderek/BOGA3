@@ -59,7 +59,30 @@ Brief entrypoint map of the current mobile screens.
   - `session-recorder` after save when opened from recorder-origin manage flow
   - `session-list` via top-level tabs
 
-5. `/completed-session/[sessionId]`
+5. `/settings`
+- File: `apps/mobile/app/settings.tsx`
+- Purpose:
+  - minimal account/settings entry screen for the M11 auth/profile flow
+- Key states (high level):
+  - one tappable account/profile card
+- Key exits:
+  - `profile`
+  - back to the previous route via stack navigation
+
+6. `/profile`
+- File: `apps/mobile/app/profile.tsx`
+- Purpose:
+  - auth-aware account route for sign-in, signed-in summary, and sign-out
+- Key states (high level):
+  - restoring/auth-bootstrap banner
+  - auth-disabled warning when client config is missing
+  - signed-out email/password form with inline auth error feedback
+  - signed-in account summary + placeholder profile-management shell + secondary sign-out
+- Key exits:
+  - in-place rerender between signed-out and signed-in states
+  - back to `settings` (or previous route) via stack navigation
+
+7. `/completed-session/[sessionId]`
 - File: `apps/mobile/app/completed-session/[sessionId].tsx`
 - Purpose:
   - completed session detail viewer with edit/reopen/delete actions
@@ -76,7 +99,7 @@ Brief entrypoint map of the current mobile screens.
 - Purpose:
   - root stack registration and local data bootstrap on app mount
 - Notes:
-  - static titles for main routes are declared here
+  - static titles for main routes are declared here, including `settings` and `profile`
   - completed-session route sets its title inside the route file
 
 ## Documentation boundary

@@ -1,7 +1,7 @@
 ---
 task_id: T-20260304-02
 milestone_id: "M11"
-status: planned
+status: completed
 ui_impact: "yes"
 areas: "frontend,docs"
 runtimes: "docs,expo,node"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,
 
 - Task ID: `T-20260304-02`
 - Title: M11 settings and profile navigation
-- Status: `planned`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -64,7 +64,7 @@ docs_touched: "docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,
 - Known stale references or assumptions (must be explicit; write `none` if none):
   - assumes task `T-20260304-01` provides the shared auth-state surface consumed here
 - Optional helper command (recommended):
-  - `./scripts/task-bootstrap.sh docs/tasks/T-20260304-02-m11-settings-and-profile-navigation.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/complete/T-20260304-02-m11-settings-and-profile-navigation.md`
 
 ## Objective
 
@@ -152,7 +152,7 @@ Add the M11 user-facing navigation and screen structure: a settings entrypoint f
   - `docs/specs/ui/screen-map.md` - add settings/profile route purpose and high-level states
   - `docs/specs/ui/navigation-contract.md` - document new routes and transitions from current primary screens
   - `docs/specs/ui/ux-rules.md` - record any new auth-form and settings-navigation UI semantics
-  - `docs/specs/ui/components-catalog.md` - update only if the task introduces a reusable navigation or form primitive
+  - `docs/specs/ui/components-catalog.md` - document the expanded `TopLevelTabs` responsibility now that it includes the shared settings affordance
 - Rule:
   - milestone/task docs are not substitutes for project-level or canonical UI docs when behavior/contracts become shared project knowledge
 - If `UI Impact = yes`, complete all of the following:
@@ -162,10 +162,10 @@ Add the M11 user-facing navigation and screen structure: a settings entrypoint f
   - `docs/specs/ui/screen-map.md` - route inventory grows with settings/profile screens
   - `docs/specs/ui/navigation-contract.md` - route paths/transitions change
   - `docs/specs/ui/ux-rules.md` - action semantics and auth-form feedback semantics change
-  - `docs/specs/ui/components-catalog.md` - only if a new reusable nav affordance or auth form primitive is introduced
+  - `docs/specs/ui/components-catalog.md` - `TopLevelTabs` role changes because it now exposes the shared settings affordance
   - Tokens/primitives compliance statement (required for UI tasks):
-    - Reuse plan: start from `UiButton`, `UiSurface`, `UiText`, `uiTokens`, and existing navigation composition before adding anything new
-    - Exceptions (raw literals or screen-local one-offs), if any: `none planned`
+    - Reuse plan: reused `UiButton`, `UiSurface`, `UiText`, `uiBorder`, `uiColors`, `uiRadius`, `uiSpace`, and existing `TopLevelTabs` composition
+    - Exceptions (raw literals or screen-local one-offs), if any: `none introduced`
   - UI artifacts/screenshots expectation (required to state for UI tasks):
     - Required by `docs/specs/08-ux-delivery-standard.md` or task scope?: `yes`
     - Planned captures/artifacts (if required): settings entrypoint visible from a primary screen, settings screen with `Profile`, profile logged-out state, profile logged-in state
@@ -220,25 +220,30 @@ Add the M11 user-facing navigation and screen structure: a settings entrypoint f
 - Standard local fast gate: `./scripts/quality-fast.sh frontend`
 - Standard local slow gate: `N/A` (final Maestro auth/profile proof is deferred to `T-20260304-04`)
 - If a standard gate is `N/A`, document the reason and list the runtime-specific replacement gate(s).
-- Optional closeout validation helper (recommended before handoff): `./scripts/task-closeout-check.sh docs/tasks/T-20260304-02-m11-settings-and-profile-navigation.md`
+- Optional closeout validation helper (recommended before handoff): `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260304-02-m11-settings-and-profile-navigation.md`
 - Additional gate(s), if any:
   - targeted settings/profile route Jest command(s)
 
 ## Evidence (follow `docs/specs/04-ai-development-playbook.md` and `docs/specs/08-ux-delivery-standard.md` for UI tasks)
 
-- Navigation/route change summary.
-- Sign-in/sign-out UI test summary.
-- Screenshot/capture evidence for the planned settings/profile states.
-- Manual verification summary (required when CI is absent/partial):
-  - record at least one manual navigation pass across settings -> profile in both logged-out and logged-in states
+- Navigation/route change summary:
+  - extended `TopLevelTabs` with a right-side `Settings` action on `session-list` and `exercise-catalog`
+  - added explicit stack-registered `/settings` and `/profile` routes
+  - `/settings` now contains the single `Profile` destination for the M11 account flow
+- Sign-in/sign-out UI test summary:
+  - targeted Jest coverage verifies settings -> profile navigation, logged-out profile form rendering, sign-in submission, inline auth error display, signed-in account summary rendering, and sign-out invocation
+- Screenshot/capture evidence for the planned settings/profile states:
+  - updated `apps/mobile/app/__tests__/__snapshots__/ui-primitives.test.tsx.snap` captures the shared top-level navigation surface with the new settings affordance
+  - route-state captures are currently assertion-based in `apps/mobile/app/__tests__/settings-profile-navigation.test.tsx`
+- Manual verification summary (required when CI is absent/partial): not run in a simulator during this split task; real-device/simulator auth-path proof remains intentionally deferred to `T-20260304-04`
 - Deferred/manual hosted checks summary (owner + trigger timing), if applicable:
   - `N/A`
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: added a shared `Settings` affordance to the existing top-level navigation surface, added `/settings` and `/profile` with explicit stack titles, implemented auth-aware profile UI for restoring/auth-disabled/signed-out/signed-in states using the shared auth service, and updated the authoritative UI docs plus the M11 milestone task breakdown.
+- What tests ran: `cd apps/mobile && npm test -- --runTestsByPath app/__tests__/ui-primitives.test.tsx app/__tests__/root-layout-auth-bootstrap.test.tsx app/__tests__/session-list-screen.test.tsx app/__tests__/settings-profile-navigation.test.tsx --updateSnapshot`; `./scripts/quality-fast.sh frontend`.
+- What remains: `T-20260304-03` still owns backend `user_profiles` plus editable profile-management flows, and `T-20260304-04` still owns real simulator/Maestro auth proof plus any final M11 doc cleanup after those flows land.
 
 ## Status update checklist (mandatory at closeout)
 
@@ -248,4 +253,4 @@ Add the M11 user-facing navigation and screen structure: a settings entrypoint f
 - For UI/UX tasks, update the relevant `docs/specs/ui/*.md` files and keep entries synthetic/overview-first.
 - If significant project-structure changes were made, update `docs/specs/09-project-structure.md` and mention it in completion note.
 - Update parent milestone task breakdown/status in the same session.
-- Run `./scripts/task-closeout-check.sh docs/tasks/T-20260304-02-m11-settings-and-profile-navigation.md` (or document why `N/A`) before handoff.
+- Run `./scripts/task-closeout-check.sh docs/tasks/complete/T-20260304-02-m11-settings-and-profile-navigation.md` (or document why `N/A`) before handoff.

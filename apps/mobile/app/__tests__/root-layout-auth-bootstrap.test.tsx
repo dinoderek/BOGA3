@@ -57,5 +57,7 @@ describe('RootLayout auth bootstrap wiring', () => {
     });
     expect(mockBootstrapAuthState).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('root-stack')).toBeTruthy();
+    expect(screen.getByTestId('screen-settings')).toBeTruthy();
+    expect(screen.getByTestId('screen-profile')).toBeTruthy();
   });
 });

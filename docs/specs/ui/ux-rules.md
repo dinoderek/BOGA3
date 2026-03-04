@@ -42,6 +42,8 @@ Document app-specific UI semantics and guardrails for the current mobile app.
      - remove destructive menu actions
 4. Tab actions (`TopLevelTabs`) are navigation controls, not generic primary actions.
    - They use tab semantics (`accessibilityRole="tab"` / tablist) and active-state visuals.
+5. The right-side `Settings` affordance inside `TopLevelTabs` is a utility action, not a third tab.
+   - It remains visually lighter than the active Sessions/Exercises tabs and opens the stack-based settings flow.
 
 ### 2. Modal and overlay semantics
 
@@ -75,6 +77,9 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 2. Exercise catalog uses explicit field labels + inline validation/error messages and is the strongest current form pattern reference.
 3. `session-recorder` completed-edit mode includes start/end validation and an autosave-paused notice when timestamps are invalid.
 4. Validation/error feedback should remain near the relevant field/control whenever possible.
+5. The M11 profile sign-in form keeps auth failure messaging inline inside the same card as the email/password inputs.
+6. When auth config is unavailable, the profile route shows a warning state and disables sign-in rather than failing only after submit.
+7. The M11 profile sign-in form performs basic client-side email-shape validation before attempting the auth request.
 
 ### 6. Loading, empty, error, and feedback state handling
 
@@ -84,6 +89,11 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 2. In-section state panels are used inside `session-list` history region (loading/error/empty).
 3. Inline helper/success/error text is used for form feedback and post-action feedback (`exercise-catalog`, completed-session action bar).
 4. State presentation style varies by screen today; refactors may unify visuals, but the semantic distinction (whole-screen vs in-section vs inline) should remain explicit.
+5. The profile route uses:
+   - an inline restoring banner during auth bootstrap,
+   - inline warning messaging when auth config is missing,
+   - inline error cards for sign-in/sign-out failures,
+   - in-place signed-out/signed-in rerendering instead of a redirect loop.
 
 ### 7. Completed-session detail screen semantics
 

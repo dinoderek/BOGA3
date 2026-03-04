@@ -51,7 +51,23 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
 - Behavior:
   - when opened from recorder, saving an exercise returns via `router.back()`
 
-5. `/completed-session/[sessionId]`
+5. `/settings`
+- File: `apps/mobile/app/settings.tsx`
+- Params:
+  - none
+- Behavior:
+  - reached from the shared top-level navigation utility action on `session-list` and `exercise-catalog`
+  - routes to `/profile` from the `Profile` destination row
+
+6. `/profile`
+- File: `apps/mobile/app/profile.tsx`
+- Params:
+  - none
+- Behavior:
+  - renders in-place logged-out vs signed-in account states from the shared auth provider snapshot
+  - sign-in/sign-out change route state without redirecting away from `/profile`
+
+7. `/completed-session/[sessionId]`
 - File: `apps/mobile/app/completed-session/[sessionId].tsx`
 - Path params:
   - `sessionId` (required dynamic segment)
@@ -82,6 +98,14 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
    - exercise picker `Manage` action
 11. `/exercise-catalog?source=session-recorder...` -> `/session-recorder`
    - explicit back action or post-save return (`router.back()`)
+12. `/session-list` -> `/settings`
+   - shared top-level navigation utility action
+13. `/exercise-catalog` -> `/settings`
+   - shared top-level navigation utility action
+14. `/settings` -> `/profile`
+   - settings destination row
+15. `/profile` -> `/profile`
+   - in-place auth-state rerender on sign-in/sign-out; no route replacement
 
 Note:
 
@@ -91,6 +115,7 @@ Note:
 ## Header titles (current, high level)
 
 - Static titles for `index`, `session-list`, `session-recorder`, `exercise-catalog` are set in `apps/mobile/app/_layout.tsx`
+- Static titles for `settings` and `profile` are also set in `apps/mobile/app/_layout.tsx`
 - `completed-session/[sessionId]` sets its title inside the route file (current title: `View Session`)
 
 ## Documentation boundary
