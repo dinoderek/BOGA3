@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { check, index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+import { exerciseDefinitions } from './exercise-definitions';
 import { sessions } from './sessions';
 
 export const sessionExercises = sqliteTable(
@@ -13,6 +14,9 @@ export const sessionExercises = sqliteTable(
     sessionId: text('session_id')
       .notNull()
       .references(() => sessions.id, { onDelete: 'cascade' }),
+    exerciseDefinitionId: text('exercise_definition_id').references(() => exerciseDefinitions.id, {
+      onDelete: 'no action',
+    }),
     orderIndex: integer('order_index').notNull(),
     name: text('name').notNull(),
     machineName: text('machine_name'),
@@ -27,6 +31,7 @@ export const sessionExercises = sqliteTable(
   },
   (table) => ({
     sessionIdx: index('session_exercises_session_id_idx').on(table.sessionId),
+    exerciseDefinitionIdx: index('session_exercises_exercise_definition_id_idx').on(table.exerciseDefinitionId),
     sessionOrderUnique: uniqueIndex('session_exercises_session_id_order_index_unique').on(
       table.sessionId,
       table.orderIndex

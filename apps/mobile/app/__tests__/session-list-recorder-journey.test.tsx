@@ -9,6 +9,7 @@ type DraftStore = {
   gymId: string | null;
   exercises: {
     id: string;
+    exerciseDefinitionId: string;
     name: string;
     machineName: string | null;
     sets: { id: string; repsValue: string; weightValue: string }[];
@@ -82,6 +83,7 @@ jest.mock('@/src/data', () => ({
       updatedAt: mockDraftStore.startedAt,
       exercises: mockDraftStore.exercises.map((exercise) => ({
         id: exercise.id,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
         name: exercise.name,
         machineName: exercise.machineName,
         originScopeId: 'private',
@@ -103,6 +105,7 @@ jest.mock('@/src/data', () => ({
       gymId: input.gymId ?? null,
       exercises: (input.exercises ?? []).map((exercise: any) => ({
         id: exercise.id ?? `exercise-${Math.random().toString(36).slice(2, 8)}`,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
         name: exercise.name,
         machineName: exercise.machineName ?? null,
         sets: (exercise.sets ?? []).map((set: any) => ({

@@ -40,6 +40,7 @@ describe('session draft repository', () => {
       startedAt: new Date('2026-02-20T10:00:00.000Z'),
       exercises: [
         {
+          exerciseDefinitionId: 'sys_barbell_bench_press',
           name: 'Bench Press',
           machineName: '',
           sets: [{ repsValue: '5', weightValue: '225' }],
@@ -53,6 +54,7 @@ describe('session draft repository', () => {
         sessionId: undefined,
         gymId: 'gym-1',
         status: 'active',
+        exercises: [expect.objectContaining({ exerciseDefinitionId: 'sys_barbell_bench_press' })],
       })
     );
   });
@@ -67,6 +69,7 @@ describe('session draft repository', () => {
         {
           id: 'exercise-1',
           sessionId: 'session-restore',
+          exerciseDefinitionId: 'sys_barbell_bench_press',
           orderIndex: 0,
           name: 'Bench Press',
           machineName: 'Flat Bench',
@@ -93,6 +96,7 @@ describe('session draft repository', () => {
         status: 'active',
         exercises: [
           expect.objectContaining({
+            exerciseDefinitionId: 'sys_barbell_bench_press',
             name: 'Bench Press',
             sets: [expect.objectContaining({ repsValue: '5', weightValue: '225' })],
           }),
@@ -116,6 +120,7 @@ describe('session draft repository', () => {
         {
           id: 'exercise-1',
           sessionId: 'session-completed',
+          exerciseDefinitionId: 'sys_barbell_bench_press',
           orderIndex: 0,
           name: 'Bench Press',
           machineName: 'Flat Bench',
@@ -141,6 +146,7 @@ describe('session draft repository', () => {
         {
           id: 'exercise-2',
           sessionId: 'session-completed',
+          exerciseDefinitionId: 'sys_incline_dumbbell_press',
           orderIndex: 1,
           name: 'Incline DB Press',
           machineName: null,
@@ -190,6 +196,7 @@ describe('session draft repository', () => {
         exercises: [
           {
             id: 'exercise-1',
+            exerciseDefinitionId: 'sys_barbell_bench_press',
             name: 'Bench Press',
             sets: [{ id: 'set-1', repsValue: '5', weightValue: '225' }],
           },
@@ -212,6 +219,7 @@ describe('session draft repository', () => {
       exercises: [
         {
           id: 'exercise-1',
+          exerciseDefinitionId: 'sys_barbell_bench_press',
           name: 'Bench Press',
           sets: [{ id: 'set-1', repsValue: '5', weightValue: '225' }],
         },

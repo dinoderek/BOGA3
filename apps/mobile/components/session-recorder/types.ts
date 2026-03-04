@@ -6,6 +6,7 @@ export type SessionSet = {
 
 export type SessionExercise = {
   id: string;
+  exerciseDefinitionId: string;
   name: string;
   machineName: string;
   sets: SessionSet[];

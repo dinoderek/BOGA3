@@ -6,8 +6,10 @@ describe('domain schema and runtime migrations', () => {
     expect(schema).toMatchObject({
       muscleGroups: expect.any(Object),
       exerciseDefinitions: expect.any(Object),
+      exerciseTagDefinitions: expect.any(Object),
       exerciseMuscleMappings: expect.any(Object),
       gyms: expect.any(Object),
+      sessionExerciseTags: expect.any(Object),
       sessions: expect.any(Object),
       sessionExercises: expect.any(Object),
       exerciseSets: expect.any(Object),
@@ -21,11 +23,13 @@ describe('domain schema and runtime migrations', () => {
 
     expect(migrationSql).toContain('CREATE TABLE `muscle_groups`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_definitions`');
+    expect(migrationSql).toContain('CREATE TABLE `exercise_tag_definitions`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_muscle_mappings`');
 
     expect(migrationSql).toContain('CREATE TABLE `gyms`');
     expect(migrationSql).toContain('CREATE TABLE `sessions`');
     expect(migrationSql).toContain('CREATE TABLE `session_exercises`');
+    expect(migrationSql).toContain('CREATE TABLE `session_exercise_tags`');
     expect(migrationSql).toContain('CREATE TABLE `exercise_sets`');
 
     expect(migrationSql).toContain('`started_at` integer NOT NULL');
@@ -53,7 +57,14 @@ describe('domain schema and runtime migrations', () => {
     expect(migrationSql).toContain(
       'CREATE UNIQUE INDEX `exercise_muscle_mappings_exercise_id_muscle_group_id_unique` ON `exercise_muscle_mappings` (`exercise_definition_id`,`muscle_group_id`)'
     );
+    expect(migrationSql).toContain(
+      'CREATE UNIQUE INDEX `exercise_tag_definitions_exercise_id_normalized_name_unique` ON `exercise_tag_definitions` (`exercise_definition_id`,`normalized_name`)'
+    );
+    expect(migrationSql).toContain(
+      'CREATE UNIQUE INDEX `session_exercise_tags_session_exercise_id_tag_definition_unique` ON `session_exercise_tags` (`session_exercise_id`,`exercise_tag_definition_id`)'
+    );
     expect(migrationSql).toContain('CREATE INDEX `sessions_deleted_at_idx` ON `sessions` (`deleted_at`)');
+    expect(migrationSql).toContain('CREATE INDEX `session_exercises_exercise_definition_id_idx` ON `session_exercises` (`exercise_definition_id`)');
     expect(migrationSql).toContain(
       'CONSTRAINT "exercise_muscle_mappings_weight_positive" CHECK("exercise_muscle_mappings"."weight" > 0)'
     );
@@ -62,6 +73,12 @@ describe('domain schema and runtime migrations', () => {
     );
     expect(migrationSql).toContain(
       'CONSTRAINT "exercise_definitions_name_non_empty" CHECK("exercise_definitions"."name" <> \'\')'
+    );
+    expect(migrationSql).toContain(
+      'CONSTRAINT "exercise_tag_definitions_name_non_empty" CHECK("exercise_tag_definitions"."name" <> \'\')'
+    );
+    expect(migrationSql).toContain(
+      'CONSTRAINT "exercise_tag_definitions_normalized_name_non_empty" CHECK("exercise_tag_definitions"."normalized_name" <> \'\')'
     );
     expect(migrationSql).toContain('CREATE INDEX `exercise_definitions_deleted_at_idx` ON `exercise_definitions` (`deleted_at`)');
 

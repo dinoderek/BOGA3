@@ -13,6 +13,7 @@ export type SessionDraftSetInput = {
 
 export type SessionDraftExerciseInput = {
   id?: string;
+  exerciseDefinitionId: string;
   name: string;
   machineName?: string | null;
   originScopeId?: string;
@@ -54,6 +55,7 @@ export type SessionDraftSetSnapshot = {
 
 export type SessionDraftExerciseSnapshot = {
   id: string;
+  exerciseDefinitionId: string;
   name: string;
   machineName: string | null;
   originScopeId: string;
@@ -145,6 +147,7 @@ type StoredDraftSetRecord = {
 type StoredDraftExerciseRecord = {
   id: string;
   sessionId: string;
+  exerciseDefinitionId: string;
   orderIndex: number;
   name: string;
   machineName: string | null;
@@ -277,6 +280,7 @@ const mapDraftSnapshot = (graph: StoredDraftGraph): SessionDraftSnapshot => ({
   updatedAt: graph.session.updatedAt,
   exercises: graph.exercises.map((exercise) => ({
     id: exercise.id,
+    exerciseDefinitionId: exercise.exerciseDefinitionId,
     name: exercise.name,
     machineName: exercise.machineName,
     originScopeId: exercise.originScopeId,
@@ -301,6 +305,7 @@ const mapSessionGraphSnapshot = (graph: StoredDraftGraph): SessionGraphSnapshot 
   updatedAt: graph.session.updatedAt,
   exercises: graph.exercises.map((exercise) => ({
     id: exercise.id,
+    exerciseDefinitionId: exercise.exerciseDefinitionId,
     name: exercise.name,
     machineName: exercise.machineName,
     originScopeId: exercise.originScopeId,
@@ -352,16 +357,23 @@ const loadDraftGraphBySessionId = (database: LocalDatabase, sessionId: string): 
 
   return {
     session: mapSessionRow(sessionRow),
-    exercises: exerciseRows.map((exercise) => ({
-      id: exercise.id,
-      sessionId: exercise.sessionId,
-      orderIndex: exercise.orderIndex,
-      name: exercise.name,
-      machineName: exercise.machineName,
-      originScopeId: exercise.originScopeId,
-      originSourceId: exercise.originSourceId,
-      sets: setsByExerciseId.get(exercise.id) ?? [],
-    })),
+    exercises: exerciseRows.map((exercise) => {
+      if (!exercise.exerciseDefinitionId) {
+        throw new Error(`Session exercise ${exercise.id} is missing exerciseDefinitionId`);
+      }
+
+      return {
+        id: exercise.id,
+        sessionId: exercise.sessionId,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
+        orderIndex: exercise.orderIndex,
+        name: exercise.name,
+        machineName: exercise.machineName,
+        originScopeId: exercise.originScopeId,
+        originSourceId: exercise.originSourceId,
+        sets: setsByExerciseId.get(exercise.id) ?? [],
+      };
+    }),
   };
 };
 
@@ -389,11 +401,17 @@ const replaceSessionExerciseGraph = (
 
   input.exercises.forEach((exercise, exerciseIndex) => {
     const sessionExerciseId = exercise.id?.trim() || createLocalEntityId('exercise');
+    const exerciseDefinitionId = exercise.exerciseDefinitionId.trim();
+
+    if (!exerciseDefinitionId) {
+      throw new Error(`Exercise definition id is required for exercise at index ${exerciseIndex}`);
+    }
 
     tx.insert(sessionExercises)
       .values({
         id: sessionExerciseId,
         sessionId: input.sessionId,
+        exerciseDefinitionId,
         orderIndex: exerciseIndex,
         name: exercise.name,
         machineName: exercise.machineName ?? null,

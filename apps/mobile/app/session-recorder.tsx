@@ -87,6 +87,7 @@ function mapDraftSnapshotToSession(snapshot: SessionDraftSnapshot): Session {
     locationId: snapshot.gymId,
     exercises: snapshot.exercises.map((exercise) => ({
       id: exercise.id,
+      exerciseDefinitionId: exercise.exerciseDefinitionId,
       name: exercise.name,
       machineName: exercise.machineName ?? '',
       sets: exercise.sets.map((set) => ({
@@ -104,6 +105,7 @@ function mapSessionGraphSnapshotToSession(snapshot: SessionGraphSnapshot): Sessi
     locationId: snapshot.gymId,
     exercises: snapshot.exercises.map((exercise) => ({
       id: exercise.id,
+      exerciseDefinitionId: exercise.exerciseDefinitionId,
       name: exercise.name,
       machineName: exercise.machineName ?? '',
       sets: exercise.sets.map((set) => ({
@@ -189,6 +191,7 @@ function hasPersistableSessionContent(session: Session): boolean {
 const toPersistDraftExercises = (session: Session) =>
   session.exercises.map((exercise) => ({
     id: exercise.id,
+    exerciseDefinitionId: exercise.exerciseDefinitionId,
     name: exercise.name,
     machineName: exercise.machineName || null,
     sets: exercise.sets.map((set) => ({
@@ -240,9 +243,10 @@ function createEmptySet(): SessionSet {
   };
 }
 
-function createExercise(name: string): SessionExercise {
+function createExercise(exerciseDefinitionId: string, name: string): SessionExercise {
   return {
     id: createExerciseId(),
+    exerciseDefinitionId,
     name,
     machineName: '',
     sets: [createEmptySet()],
@@ -842,10 +846,10 @@ export default function SessionRecorderScreen() {
       return;
     }
 
-    applySelectedExerciseName(selectedExercisePreset.name);
+    applySelectedExerciseSelection(selectedExercisePreset.id, selectedExercisePreset.name);
   };
 
-  const applySelectedExerciseName = (exerciseName: string) => {
+  const applySelectedExerciseSelection = (exerciseDefinitionId: string, exerciseName: string) => {
     setState((current) => ({
       ...current,
       session: {
@@ -853,10 +857,10 @@ export default function SessionRecorderScreen() {
         exercises: current.exerciseSelectionTargetId
           ? current.session.exercises.map((exercise) =>
               exercise.id === current.exerciseSelectionTargetId
-                ? { ...exercise, name: exerciseName }
+                ? { ...exercise, exerciseDefinitionId, name: exerciseName }
                 : exercise
             )
-          : [...current.session.exercises, createExercise(exerciseName)],
+          : [...current.session.exercises, createExercise(exerciseDefinitionId, exerciseName)],
       },
       exercisePickerVisible: false,
       exerciseSelectionTargetId: null,
@@ -902,7 +906,7 @@ export default function SessionRecorderScreen() {
       return [...withoutSaved, exercise].sort((left, right) => left.name.localeCompare(right.name));
     });
     setIsExerciseCreateModalVisible(false);
-    applySelectedExerciseName(exercise.name);
+    applySelectedExerciseSelection(exercise.id, exercise.name);
   };
 
   const openExerciseActionMenu = (exerciseId: string) => {

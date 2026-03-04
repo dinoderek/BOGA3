@@ -1,7 +1,7 @@
 ---
 task_id: T-20260304-01
 milestone_id: "M12"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "frontend|docs"
 runtimes: "docs|node|expo|sql"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M12-exercise-tags.md,docs/specs/03-technica
 
 - Task ID: `T-20260304-01`
 - Title: M12 session exercise definition link and tag schema
-- Status: `planned`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/T-20260304-01-m12-session-exercise-definition-link-and-tag-schema.md`
   - move the file to `docs/tasks/complete/T-20260304-01-m12-session-exercise-definition-link-and-tag-schema.md` when `Status` becomes `completed` or `outdated`
@@ -37,8 +37,8 @@ docs_touched: "docs/specs/milestones/M12-exercise-tags.md,docs/specs/03-technica
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: `main @ ce40da15ad9ef663b0e6608bbb9a5b1a49bd3f9c`
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `no` (`git fetch origin main` completed, but local `main` remained behind `origin/main @ 46cf5e9f403db1481fb38c4a10653eb4870a8c9d` during planning)
+- Verified current branch + HEAD commit: `main @ 56e95de71b292980d3edb5f5471b169628089b02`
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: `yes` (local `main` now matched `origin/main` before implementation edits)
 - Parent refs opened in this session:
   - `docs/specs/README.md`
   - `docs/specs/00-product.md`
@@ -54,7 +54,7 @@ docs_touched: "docs/specs/milestones/M12-exercise-tags.md,docs/specs/03-technica
   - `apps/mobile/src/data/session-drafts.ts` - reviewed current draft persistence contract and session-exercise storage shape
   - `apps/mobile/src/data/exercise-catalog.ts` - reviewed current exercise-definition repository contract and ID ownership
 - Known stale references or assumptions (must be explicit; write `none` if none):
-  - local `main` is behind `origin/main` after fetch; implementation session should sync before code edits
+  - full frontend `typecheck`/`quality-fast` is currently blocked by pre-existing auth dependency/type issues outside this task
 - Optional helper command (recommended):
   - `./scripts/task-bootstrap.sh docs/tasks/T-20260304-01-m12-session-exercise-definition-link-and-tag-schema.md`
 
@@ -160,16 +160,15 @@ Correct the current logged-session data bug by persisting a durable `exercise_de
 
 - Schema change summary and no-legacy-data rationale
 - Targeted test results for schema/bootstrap/persistence
-- Manual verification summary (required when CI is absent/partial):
-  - confirm the new `exercise_definition_id` contract is present in save/restore code paths and did not regress existing recorder data behavior
+- Manual verification summary (required when CI is absent/partial): confirmed the new `exercise_definition_id` contract is present in save/restore code paths and did not regress the exercised recorder/detail flows
 - Deferred/manual hosted checks summary (owner + trigger timing), if applicable:
   - `N/A`
 
 ## Completion note (fill at end per `docs/specs/04-ai-development-playbook.md`)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: added durable `exercise_definition_id` storage on `session_exercises`, threaded it through draft save/load and recorder state, added local schema support for `exercise_tag_definitions` and `session_exercise_tags`, generated/wired the Drizzle migration artifacts, updated targeted recorder/detail/repository tests, and promoted the logged-session identity contract into `docs/specs/03-technical-architecture.md`.
+- What tests ran: `npm test -- --runInBand app/__tests__/domain-schema-migrations.test.ts app/__tests__/session-drafts-repository.test.ts app/__tests__/session-recorder-persistence.test.tsx`; `npm test -- --runInBand app/__tests__/session-recorder-interactions.test.tsx app/__tests__/session-recorder-submit.test.tsx app/__tests__/completed-session-detail-screen.test.tsx app/__tests__/session-list-recorder-journey.test.tsx app/__tests__/session-completed-journey.test.tsx`; `npm run typecheck` (fails on pre-existing auth-module issues in `app/__tests__/auth-service.test.ts`, `src/auth/provider.tsx`, `src/auth/service.ts`, `src/auth/storage.ts`, `src/auth/supabase.ts`); `./scripts/quality-fast.sh frontend` (fails during lint on pre-existing unresolved auth dependencies in `src/auth/storage.ts` and `src/auth/supabase.ts`).
+- What remains: follow-on M12 tasks for tag repository rules, UI, and final docs/test closeout remain open, and the repo-wide frontend fast gate remains blocked by pre-existing auth baseline issues unrelated to this task.
 
 ## Status update checklist (mandatory at closeout)
 

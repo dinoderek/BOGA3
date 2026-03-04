@@ -84,6 +84,7 @@ const buildCompletedEditSnapshot = (overrides: Partial<any> = {}) => ({
   exercises: [
     {
       id: 'exercise-1',
+      exerciseDefinitionId: 'sys_barbell_bench_press',
       name: 'Bench Press',
       machineName: null,
       originScopeId: 'private',

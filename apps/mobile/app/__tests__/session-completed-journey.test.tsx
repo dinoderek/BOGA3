@@ -13,6 +13,7 @@ type MockSet = {
 
 type MockExercise = {
   id: string;
+  exerciseDefinitionId: string;
   name: string;
   machineName: string | null;
   sets: MockSet[];
@@ -97,6 +98,7 @@ const buildSession = (overrides: Partial<MockSession> & { sessionId: string }): 
     [
       {
         id: 'exercise-1',
+        exerciseDefinitionId: 'sys_barbell_bench_press',
         name: 'Bench Press',
         machineName: 'Flat Bench',
         sets: [{ id: 'set-1', repsValue: '5', weightValue: '225' }],
@@ -188,6 +190,7 @@ jest.mock('@/src/data', () => ({
       updatedAt: active.updatedAt,
       exercises: cloneExercises(active.exercises).map((exercise) => ({
         id: exercise.id,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
         name: exercise.name,
         machineName: exercise.machineName,
         originScopeId: 'private',
@@ -218,6 +221,7 @@ jest.mock('@/src/data', () => ({
       updatedAt: new Date(session.updatedAt),
       exercises: cloneExercises(session.exercises).map((exercise) => ({
         id: exercise.id,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
         name: exercise.name,
         machineName: exercise.machineName,
         originScopeId: 'private',
@@ -248,6 +252,7 @@ jest.mock('@/src/data', () => ({
     session.updatedAt = new Date();
     session.exercises = (input.exercises ?? []).map((exercise: any) => ({
       id: exercise.id ?? `exercise-${Math.random().toString(36).slice(2, 8)}`,
+      exerciseDefinitionId: exercise.exerciseDefinitionId,
       name: exercise.name,
       machineName: exercise.machineName ?? null,
       sets: (exercise.sets ?? []).map((set: any) => ({
@@ -279,6 +284,7 @@ jest.mock('@/src/data', () => ({
       updatedAt: new Date(),
       exercises: (input.exercises ?? []).map((exercise: any) => ({
         id: exercise.id ?? `exercise-${Math.random().toString(36).slice(2, 8)}`,
+        exerciseDefinitionId: exercise.exerciseDefinitionId,
         name: exercise.name,
         machineName: exercise.machineName ?? null,
         sets: (exercise.sets ?? []).map((set: any) => ({
