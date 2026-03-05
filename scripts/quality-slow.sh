@@ -12,7 +12,7 @@ Usage:
 Runs local slow quality gates.
 - no args: runs all available slow gates (frontend + backend)
 - frontend: runs Maestro-based frontend runtime smoke checks
-- backend: runs backend auth/RLS + sync API contract suites
+- backend: runs backend auth/RLS + sync API contract suites (shared Supabase runtime baseline enforced by wrappers)
 
 Note: task cards decide when slow gates are mandatory.
 EOF

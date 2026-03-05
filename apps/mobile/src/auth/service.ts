@@ -5,6 +5,7 @@ import {
   getRequiredSupabaseMobileClient,
   __resetSupabaseMobileClientForTests,
 } from './supabase';
+import { __resetAuthStorageAdapterForTests } from './storage';
 
 export type AuthBootstrapStatus = 'idle' | 'restoring' | 'ready';
 
@@ -266,6 +267,7 @@ export const __resetAuthForTests = () => {
   authSubscription = null;
   authBootstrapPromise = null;
   __resetSupabaseMobileClientForTests();
+  __resetAuthStorageAdapterForTests();
 
   const runtimeConfig = getMobileAuthRuntimeConfig();
 

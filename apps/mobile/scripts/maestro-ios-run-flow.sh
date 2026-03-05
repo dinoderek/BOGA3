@@ -56,6 +56,7 @@ PROVISION_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/provision.log"
 LAUNCH_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/launch.log"
 TEARDOWN_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/teardown.log"
 EXPO_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/expo-start.log"
+SIMULATOR_SYSTEM_LOG_FILE="$MAESTRO_ARTIFACT_ROOT/simulator-system.log"
 
 mkdir -p "$MAESTRO_OUTPUT_DIR" "$MAESTRO_DEBUG_DIR"
 
@@ -95,6 +96,15 @@ maestro test "$MAESTRO_FLOW_FILE" \
   --test-output-dir "$MAESTRO_OUTPUT_DIR"
 maestro_exit_code=$?
 set -e
+
+if [[ -n "${IOS_SIM_UDID:-}" ]]; then
+  echo "[maestro-ios-run-flow] Capturing simulator system logs to $SIMULATOR_SYSTEM_LOG_FILE"
+  maestro_capture_simulator_logs \
+    "$IOS_SIM_UDID" \
+    "${MAESTRO_IOS_DEV_CLIENT_EXECUTABLE:-}" \
+    "$SIMULATOR_SYSTEM_LOG_FILE" \
+    "30m" || true
+fi
 
 echo "${SCENARIO_NAME} run complete."
 echo "Artifacts: $MAESTRO_ARTIFACT_ROOT"

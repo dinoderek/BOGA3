@@ -179,11 +179,21 @@ USER_A_UUID="$(load_fixture_uuid "${USER_A_FIXTURE_KEY}")"
 USER_B_UUID="$(load_fixture_uuid "${USER_B_FIXTURE_KEY}")"
 
 BASE_MS="$(($(date +%s) * 1000))"
+RUN_TAG="${SYNC_API_RUN_TAG:-$(date +%s)-$$-$RANDOM}"
+RUN_TAG="$(printf '%s' "${RUN_TAG}" | tr -c 'a-zA-Z0-9-' '-')"
 
-GYM_A_ID="sync-gym-a-1"
-SESSION_A_ID="sync-session-a-1"
-SX_A_ID="sync-sx-a-1"
-SET_A_ID="sync-set-a-1"
+GYM_A_ID="sync-gym-a-${RUN_TAG}"
+SESSION_A_ID="sync-session-a-${RUN_TAG}"
+SX_A_ID="sync-sx-a-${RUN_TAG}"
+SET_A_ID="sync-set-a-${RUN_TAG}"
+ANON_GYM_ID="sync-gym-anon-${RUN_TAG}"
+GYM_INVALID_ID="sync-gym-a-invalid-${RUN_TAG}"
+SESSION_INVALID_STATUS_ID="sync-session-a-invalid-status-${RUN_TAG}"
+SX_INVALID_ID="sync-sx-a-invalid-${RUN_TAG}"
+SX_CROSS_OWNER_ID="sync-sx-cross-owner-${RUN_TAG}"
+SET_INVALID_ID="sync-set-a-invalid-${RUN_TAG}"
+SET_CROSS_OWNER_ID="sync-set-cross-owner-${RUN_TAG}"
+SESSION_SPOOF_ID="sync-session-spoof-${RUN_TAG}"
 
 echo "[sync-api] unauthorized requests return error payloads"
 postgrest_select "gyms" "select=id&limit=1" "${ANON_KEY}"
@@ -191,7 +201,7 @@ assert_non_2xx "anon select gyms"
 assert_body_contains "message" "anon select gyms error payload"
 
 postgrest_insert "gyms" "${ANON_KEY}" "$(jq -nc \
-  --arg id "sync-gym-anon" \
+  --arg id "${ANON_GYM_ID}" \
   --arg name "Anon Gym" \
   --argjson now "${BASE_MS}" \
   '{id: $id, name: $name, created_at: $now, updated_at: $now}')"
@@ -224,7 +234,7 @@ assert_json_expr --arg id "${GYM_A_ID}" 'map(.id) | index($id) != null' "user_a 
 
 echo "[sync-api] gyms validation + ownership denial"
 postgrest_insert "gyms" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "sync-gym-a-invalid" \
+  --arg id "${GYM_INVALID_ID}" \
   --argjson now "$((BASE_MS + 2))" \
   '{id: $id, name: "   ", created_at: $now, updated_at: $now}')"
 assert_non_2xx "gym blank name validation"
@@ -266,7 +276,7 @@ assert_json_expr --arg id "${SESSION_A_ID}" 'map(.id) | index($id) != null' "use
 
 echo "[sync-api] sessions validation + ownership denial"
 postgrest_insert "sessions" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "sync-session-a-invalid-status" \
+  --arg id "${SESSION_INVALID_STATUS_ID}" \
   --arg gym_id "${GYM_A_ID}" \
   --argjson now "$((BASE_MS + 20))" \
   '{id: $id, gym_id: $gym_id, status: "bad_status", started_at: $now, created_at: $now, updated_at: $now}')"
@@ -308,7 +318,7 @@ assert_json_expr --arg id "${SX_A_ID}" 'length == 1 and .[0].id == $id' "user_a 
 
 echo "[sync-api] session_exercises validation + ownership denial"
 postgrest_insert "session_exercises" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "sync-sx-a-invalid" \
+  --arg id "${SX_INVALID_ID}" \
   --arg session_id "${SESSION_A_ID}" \
   --argjson now "$((BASE_MS + 32))" \
   '{id: $id, session_id: $session_id, order_index: 1, name: "   ", created_at: $now, updated_at: $now}')"
@@ -320,7 +330,7 @@ assert_status "200" "user_b cross-user session_exercise update"
 assert_json_expr 'length == 0' "user_b cross-user session_exercise update denied"
 
 postgrest_insert "session_exercises" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "sync-sx-cross-owner" \
+  --arg id "${SX_CROSS_OWNER_ID}" \
   --arg session_id "${SESSION_A_ID}" \
   --argjson now "$((BASE_MS + 33))" \
   '{id: $id, session_id: $session_id, order_index: 9, name: "Bad Link", created_at: $now, updated_at: $now}')"
@@ -354,7 +364,7 @@ assert_json_expr --arg id "${SET_A_ID}" 'length == 1 and .[0].id == $id' "user_a
 
 echo "[sync-api] exercise_sets validation + ownership denial"
 postgrest_insert "exercise_sets" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "sync-set-a-invalid" \
+  --arg id "${SET_INVALID_ID}" \
   --arg session_exercise_id "${SX_A_ID}" \
   --argjson now "$((BASE_MS + 42))" \
   '{id: $id, session_exercise_id: $session_exercise_id, order_index: -1, weight_value: "100", reps_value: "8", created_at: $now, updated_at: $now}')"
@@ -366,7 +376,7 @@ assert_status "200" "user_b cross-user exercise_set update"
 assert_json_expr 'length == 0' "user_b cross-user exercise_set update denied"
 
 postgrest_insert "exercise_sets" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "sync-set-cross-owner" \
+  --arg id "${SET_CROSS_OWNER_ID}" \
   --arg session_exercise_id "${SX_A_ID}" \
   --argjson now "$((BASE_MS + 43))" \
   '{id: $id, session_exercise_id: $session_exercise_id, order_index: 9, weight_value: "200", reps_value: "3", created_at: $now, updated_at: $now}')"
@@ -375,7 +385,7 @@ assert_body_contains "foreign key" "cross-user exercise_set parent link error"
 
 echo "[sync-api] owner spoofing is denied across write methods"
 postgrest_insert "sessions" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "sync-session-spoof" \
+  --arg id "${SESSION_SPOOF_ID}" \
   --arg owner "${USER_A_UUID}" \
   --argjson now "$((BASE_MS + 50))" \
   '{id: $id, owner_user_id: $owner, status: "draft", started_at: $now, created_at: $now, updated_at: $now}')"

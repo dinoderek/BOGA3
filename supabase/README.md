@@ -80,6 +80,18 @@ Combined fast backend-local check (current baseline for this task):
 ./supabase/scripts/test-fast.sh
 ```
 
+Shared runtime baseline preflight for real-instance contract/E2E flows:
+
+```bash
+./supabase/scripts/ensure-local-runtime-baseline.sh
+```
+
+Behavior:
+
+1. If local Supabase is not running, it starts the stack, resets/seeds DB, and provisions deterministic auth fixtures.
+2. If local Supabase is already running, it reuses that instance as-is (no reset), verifies baseline seed fixtures, and reprovisions auth fixtures idempotently.
+3. Bootstrap/reset path is lock-protected so concurrent callers on one machine do not race startup.
+
 Current coverage:
 
 - local stack bring-up
@@ -134,6 +146,8 @@ Run the M5 auth/authz baseline suite:
 ./supabase/scripts/test-auth-authz.sh
 ```
 
+This wrapper enforces the shared runtime baseline first (`ensure-local-runtime-baseline.sh`) and then runs the contract suite.
+
 Coverage includes:
 
 - password auth success/failure
@@ -161,7 +175,14 @@ Local sync API contract suite:
 ./supabase/scripts/test-sync-api-contract.sh
 ```
 
+This wrapper enforces the shared runtime baseline first (`ensure-local-runtime-baseline.sh`) and then runs the sync contract suite.
+
 Coverage includes success read/write flows, validation failures, unauthenticated denial, and cross-user denial across all sync-domain entities.
+
+Parallel-run note:
+
+- the sync/auth contract suites now use per-run unique record IDs, so multiple runs can execute concurrently against one shared local Supabase instance without key collisions.
+- tests require the deterministic fixture baseline to exist but do not require empty app tables.
 
 ## Accessing `app_public` via REST (local/manual testing)
 

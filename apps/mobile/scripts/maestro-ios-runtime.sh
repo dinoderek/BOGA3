@@ -29,8 +29,10 @@ IOS_SIM_UDID
 EXPO_DEV_SERVER_PORT
 MAESTRO_IOS_DEV_CLIENT_APP_PATH
 MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID
+MAESTRO_IOS_DEV_CLIENT_EXECUTABLE
 MAESTRO_IOS_DEV_CLIENT_URL
 EXPO_PID
+SIMULATOR_SYSTEM_LOG_FILE
 EOF
 }
 
@@ -168,6 +170,14 @@ maestro_dev_client_bundle_id() {
     || maestro_fail "Unable to read CFBundleIdentifier from $app_path/Info.plist"
 }
 
+maestro_dev_client_executable_name() {
+  local app_path="$1"
+  [[ -f "$app_path/Info.plist" ]] || maestro_fail "Missing Info.plist under dev client app path: $app_path"
+
+  plutil -extract CFBundleExecutable raw -o - "$app_path/Info.plist" 2>/dev/null \
+    || maestro_fail "Unable to read CFBundleExecutable from $app_path/Info.plist"
+}
+
 maestro_simulator_name_for_udid() {
   local udid="$1"
 
@@ -212,4 +222,24 @@ maestro_prepare_flow_copy() {
     }
     fs.writeFileSync(targetPath, `${next.join("\n").replace(/\n?$/, "\n")}`);
   ' "$source_flow" "$target_flow" "$bundle_id"
+}
+
+maestro_capture_simulator_logs() {
+  local udid="$1"
+  local executable_name="$2"
+  local output_file="$3"
+  local lookback="${4:-20m}"
+
+  mkdir -p "$(dirname -- "$output_file")"
+
+  if [[ -n "$executable_name" ]]; then
+    if xcrun simctl spawn "$udid" log show \
+      --style compact \
+      --last "$lookback" \
+      --predicate "process == \"$executable_name\"" >"$output_file" 2>&1; then
+      return 0
+    fi
+  fi
+
+  xcrun simctl spawn "$udid" log show --style compact --last "$lookback" >"$output_file" 2>&1
 }

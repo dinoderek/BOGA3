@@ -24,6 +24,7 @@ echo "[maestro-ios-provision] Reset strategy: ${MAESTRO_RESET_STRATEGY:-data}"
 
 MAESTRO_IOS_DEV_CLIENT_APP_PATH="$("$SCRIPT_DIR/maestro-ios-dev-client-build.sh" --print-app-path)"
 MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID="$(maestro_dev_client_bundle_id "$MAESTRO_IOS_DEV_CLIENT_APP_PATH")"
+MAESTRO_IOS_DEV_CLIENT_EXECUTABLE="$(maestro_dev_client_executable_name "$MAESTRO_IOS_DEV_CLIENT_APP_PATH")"
 
 if [[ -n "${IOS_SIM_UDID:-}" ]]; then
   echo "[maestro-ios-provision] Booting configured simulator UDID: $IOS_SIM_UDID"

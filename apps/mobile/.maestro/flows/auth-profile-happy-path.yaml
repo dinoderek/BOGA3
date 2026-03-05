@@ -42,10 +42,19 @@ appId: com.dinoderek.mobile
 - takeScreenshot: "06-auth-profile-signed-in"
 - tapOn:
     id: "profile-username-input"
+- eraseText: 120
 - inputText: "${MAESTRO_AUTH_PROFILE_USERNAME}"
 - tapOn:
+    id: "profile-signed-in-card"
+- tapOn:
     id: "profile-username-save-button"
+- assertVisible:
+    id: "profile-username-feedback"
 - assertVisible: "Username saved."
+- scrollUntilVisible:
+    element:
+      id: "profile-sign-out-button"
+    direction: DOWN
 - tapOn:
     id: "profile-sign-out-button"
 - assertVisible:

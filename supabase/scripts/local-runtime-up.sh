@@ -8,6 +8,31 @@ source "${SCRIPT_DIR}/_common.sh"
 
 ensure_tmp_dir
 
+sync_mobile_supabase_env() {
+  local mobile_dir="${REPO_ROOT}/apps/mobile"
+  local env_file="${mobile_dir}/.env.local"
+  local tmp_file
+
+  if [[ ! -d "${mobile_dir}" ]]; then
+    echo "[supabase] skipping mobile env sync: ${mobile_dir} not found"
+    return 0
+  fi
+
+  tmp_file="$(mktemp)"
+
+  if [[ -f "${env_file}" ]]; then
+    awk '!/^EXPO_PUBLIC_SUPABASE_URL=|^EXPO_PUBLIC_SUPABASE_ANON_KEY=/' "${env_file}" >"${tmp_file}"
+  fi
+
+  {
+    printf 'EXPO_PUBLIC_SUPABASE_URL=%s\n' "${API_URL}"
+    printf 'EXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "${ANON_KEY}"
+  } >>"${tmp_file}"
+
+  mv "${tmp_file}" "${env_file}"
+  echo "[supabase] synced mobile Supabase env: ${env_file}"
+}
+
 echo "[supabase] starting local stack (CLI ${SUPABASE_CLI_VERSION})"
 run_supabase start
 
@@ -16,6 +41,7 @@ HEALTH_URL="$(health_url)"
 
 if curl_health --max-time 2 >/dev/null; then
   echo "[supabase] health function already responding at ${HEALTH_URL}"
+  sync_mobile_supabase_env
   exit 0
 fi
 
@@ -56,6 +82,8 @@ until curl_health --max-time 2 >/dev/null; do
   fi
   sleep 1
 done
+
+sync_mobile_supabase_env
 
 echo "[supabase] local runtime ready"
 echo "  api: ${API_URL}"

@@ -145,6 +145,7 @@ Rules:
   - `maestro-output/`
   - `maestro-debug/`
   - `expo-start.log`
+  - `simulator-system.log`
   - `maestro-junit.xml`
 - Verified against:
   - `apps/mobile/scripts/maestro-ios-run-flow.sh`
@@ -296,6 +297,8 @@ M10 runtime scripts must emit:
 - `provision.log`
 - `launch.log`
 - `teardown.log`
+- `expo-start.log`
+- `simulator-system.log`
 - `maestro-junit.xml`
 - `maestro-output/`
 - `maestro-debug/`
@@ -319,7 +322,7 @@ Minimum `runtime.env` fields:
 Implementation note:
 
 - the current toolkit also emits `expo-start.log` as the raw Expo process log;
-- `simulator.log` is no longer part of the canonical runtime artifact surface;
+- the current toolkit also emits `simulator-system.log` via `simctl log show` for post-failure native/runtime diagnostics;
 - the lifecycle contract is now implemented rather than merely planned.
 
 ### 7. Parallel isolation contract

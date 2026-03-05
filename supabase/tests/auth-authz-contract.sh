@@ -178,20 +178,36 @@ USER_B_TOKEN="$(printf '%s' "${REQUEST_BODY}" | jq -r '.access_token')"
 USER_A_UUID="$(load_fixture_uuid "${USER_A_FIXTURE_KEY}")"
 USER_B_UUID="$(load_fixture_uuid "${USER_B_FIXTURE_KEY}")"
 
+RUN_TAG="${AUTH_AUTHZ_RUN_TAG:-$(date +%s)-$$-$RANDOM}"
+RUN_TAG="$(printf '%s' "${RUN_TAG}" | tr -c 'a-zA-Z0-9-' '-')"
+USERNAME_A="alpha-lifter-${RUN_TAG}"
+USERNAME_B="beta-lifter-${RUN_TAG}"
+
+GYM_A_ID="gym-user-a-${RUN_TAG}"
+SESSION_A_ID="session-user-a-${RUN_TAG}"
+SX_A_ID="sx-user-a-${RUN_TAG}"
+SET_A_ID="set-user-a-${RUN_TAG}"
+GYM_B_ID="gym-user-b-${RUN_TAG}"
+GYM_SPOOF_ID="gym-spoof-${RUN_TAG}"
+SX_CROSS_OWNER_ID="sx-user-b-cross-${RUN_TAG}"
+
 echo "[auth-test] verifying user_profiles ownership and lazy creation path"
 postgrest_select "user_profiles" "id=eq.${USER_A_UUID}&select=id,username" "${USER_A_TOKEN}"
-assert_status "200" "user_a select empty user_profile before provisioning"
-printf '%s' "${REQUEST_BODY}" | jq -e 'length == 0' >/dev/null
+assert_status "200" "user_a select user_profile"
+USER_A_PROFILE_COUNT="$(printf '%s' "${REQUEST_BODY}" | jq -r 'length')"
+if [[ "${USER_A_PROFILE_COUNT}" == "0" ]]; then
+  postgrest_insert "user_profiles" "${USER_A_TOKEN}" "$(jq -nc \
+    --arg id "${USER_A_UUID}" \
+    '{id: $id}')"
+  assert_status "201" "user_a insert own user_profile when missing"
+  printf '%s' "${REQUEST_BODY}" | jq -e --arg id "${USER_A_UUID}" '.[0].id == $id and .[0].username == null' >/dev/null
+fi
 
-postgrest_insert "user_profiles" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "${USER_A_UUID}" \
-  '{id: $id}')"
-assert_status "201" "user_a insert own user_profile"
-printf '%s' "${REQUEST_BODY}" | jq -e --arg id "${USER_A_UUID}" '.[0].id == $id and .[0].username == null' >/dev/null
-
-postgrest_patch "user_profiles" "id=eq.${USER_A_UUID}" "${USER_A_TOKEN}" '{"username":"alpha-lifter"}'
+postgrest_patch "user_profiles" "id=eq.${USER_A_UUID}" "${USER_A_TOKEN}" "$(jq -nc \
+  --arg username "${USERNAME_A}" \
+  '{username: $username}')"
 assert_status "200" "user_a update own user_profile username"
-printf '%s' "${REQUEST_BODY}" | jq -e '.[0].username == "alpha-lifter"' >/dev/null
+printf '%s' "${REQUEST_BODY}" | jq -e --arg username "${USERNAME_A}" 'length == 1 and .[0].username == $username' >/dev/null
 
 postgrest_select "user_profiles" "id=eq.${USER_A_UUID}&select=id,username" "${USER_B_TOKEN}"
 assert_status "200" "user_b select user_a profile"
@@ -203,20 +219,32 @@ printf '%s' "${REQUEST_BODY}" | jq -e 'length == 0' >/dev/null
 
 postgrest_insert "user_profiles" "${USER_B_TOKEN}" "$(jq -nc \
   --arg id "${USER_A_UUID}" \
-  --arg username "spoof-profile" \
+  --arg username "spoof-profile-${RUN_TAG}" \
   '{id: $id, username: $username}')"
 assert_non_2xx "user_b spoof user_a profile insert"
 
-postgrest_insert "user_profiles" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "${USER_B_UUID}" \
-  --arg username "beta-lifter" \
-  '{id: $id, username: $username}')"
-assert_status "201" "user_b insert own user_profile"
+postgrest_select "user_profiles" "id=eq.${USER_B_UUID}&select=id,username" "${USER_B_TOKEN}"
+assert_status "200" "user_b select own user_profile"
+USER_B_PROFILE_COUNT="$(printf '%s' "${REQUEST_BODY}" | jq -r 'length')"
+if [[ "${USER_B_PROFILE_COUNT}" == "0" ]]; then
+  postgrest_insert "user_profiles" "${USER_B_TOKEN}" "$(jq -nc \
+    --arg id "${USER_B_UUID}" \
+    --arg username "${USERNAME_B}" \
+    '{id: $id, username: $username}')"
+  assert_status "201" "user_b insert own user_profile when missing"
+  printf '%s' "${REQUEST_BODY}" | jq -e --arg username "${USERNAME_B}" 'length == 1 and .[0].username == $username' >/dev/null
+else
+  postgrest_patch "user_profiles" "id=eq.${USER_B_UUID}" "${USER_B_TOKEN}" "$(jq -nc \
+    --arg username "${USERNAME_B}" \
+    '{username: $username}')"
+  assert_status "200" "user_b update own user_profile username"
+  printf '%s' "${REQUEST_BODY}" | jq -e --arg username "${USERNAME_B}" 'length == 1 and .[0].username == $username' >/dev/null
+fi
 
 echo "[auth-test] creating user-scoped records for user_a"
 NOW_MS="$(($(date +%s) * 1000))"
 postgrest_insert "gyms" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "gym-user-a" \
+  --arg id "${GYM_A_ID}" \
   --arg name "Garage A" \
   --argjson now "${NOW_MS}" \
   '{id: $id, name: $name, created_at: $now, updated_at: $now}')"
@@ -224,24 +252,24 @@ assert_status "201" "user_a insert gym"
 printf '%s' "${REQUEST_BODY}" | jq -e --arg owner "${USER_A_UUID}" '.[0].owner_user_id == $owner' >/dev/null
 
 postgrest_insert "sessions" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "session-user-a" \
-  --arg gym_id "gym-user-a" \
+  --arg id "${SESSION_A_ID}" \
+  --arg gym_id "${GYM_A_ID}" \
   --argjson now "${NOW_MS}" \
   --arg status "draft" \
   '{id: $id, gym_id: $gym_id, status: $status, started_at: $now, created_at: $now, updated_at: $now}')"
 assert_status "201" "user_a insert session"
 
 postgrest_insert "session_exercises" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "sx-user-a" \
-  --arg session_id "session-user-a" \
+  --arg id "${SX_A_ID}" \
+  --arg session_id "${SESSION_A_ID}" \
   --arg name "Chest Press" \
   --argjson now "${NOW_MS}" \
   '{id: $id, session_id: $session_id, order_index: 0, name: $name, created_at: $now, updated_at: $now}')"
 assert_status "201" "user_a insert session_exercise"
 
 postgrest_insert "exercise_sets" "${USER_A_TOKEN}" "$(jq -nc \
-  --arg id "set-user-a" \
-  --arg session_exercise_id "sx-user-a" \
+  --arg id "${SET_A_ID}" \
+  --arg session_exercise_id "${SX_A_ID}" \
   --argjson now "${NOW_MS}" \
   '{id: $id, session_exercise_id: $session_exercise_id, order_index: 0, weight_value: "120", reps_value: "10", created_at: $now, updated_at: $now}')"
 assert_status "201" "user_a insert exercise_set"
@@ -251,17 +279,17 @@ postgrest_select "gyms" "select=id&limit=1" "${ANON_KEY}"
 assert_non_2xx "anon select gyms"
 
 echo "[auth-test] verifying cross-user RLS denies reads/updates"
-postgrest_select "gyms" "id=eq.gym-user-a&select=id" "${USER_B_TOKEN}"
+postgrest_select "gyms" "id=eq.${GYM_A_ID}&select=id" "${USER_B_TOKEN}"
 assert_status "200" "user_b select user_a gym"
 printf '%s' "${REQUEST_BODY}" | jq -e 'length == 0' >/dev/null
 
-postgrest_patch "sessions" "id=eq.session-user-a" "${USER_B_TOKEN}" '{"status":"active"}'
+postgrest_patch "sessions" "id=eq.${SESSION_A_ID}" "${USER_B_TOKEN}" '{"status":"active"}'
 assert_status "200" "user_b patch user_a session"
 printf '%s' "${REQUEST_BODY}" | jq -e 'length == 0' >/dev/null
 
 echo "[auth-test] verifying owner spoofing insert is denied by RLS"
 postgrest_insert "gyms" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "gym-spoof" \
+  --arg id "${GYM_SPOOF_ID}" \
   --arg name "Spoof Gym" \
   --arg owner "${USER_A_UUID}" \
   --argjson now "${NOW_MS}" \
@@ -270,8 +298,8 @@ assert_non_2xx "user_b spoof owner_user_id on gym insert"
 
 echo "[auth-test] verifying cross-user parent/child mismatch is rejected"
 postgrest_insert "session_exercises" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "sx-user-b-cross" \
-  --arg session_id "session-user-a" \
+  --arg id "${SX_CROSS_OWNER_ID}" \
+  --arg session_id "${SESSION_A_ID}" \
   --arg name "Bad Link" \
   --argjson now "${NOW_MS}" \
   '{id: $id, session_id: $session_id, order_index: 1, name: $name, created_at: $now, updated_at: $now}')"
@@ -280,7 +308,7 @@ assert_body_contains "foreign key" "cross-user session_exercise parent link"
 
 echo "[auth-test] verifying user_b can create own rows"
 postgrest_insert "gyms" "${USER_B_TOKEN}" "$(jq -nc \
-  --arg id "gym-user-b" \
+  --arg id "${GYM_B_ID}" \
   --arg name "Garage B" \
   --argjson now "${NOW_MS}" \
   '{id: $id, name: $name, created_at: $now, updated_at: $now}')"

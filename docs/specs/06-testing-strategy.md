@@ -116,9 +116,34 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - `./scripts/quality-fast.sh frontend` -> `apps/mobile` `lint` + `typecheck` + `test`
   - `./scripts/quality-fast.sh backend` -> `./supabase/scripts/test-fast.sh`
   - `./scripts/quality-slow.sh frontend` -> `Maestro` local simulator smoke + data-smoke + auth/profile happy-path commands
-  - `./scripts/quality-slow.sh backend` -> local backend auth/RLS and sync API contract suites
+  - `./scripts/quality-slow.sh backend` -> local backend auth/RLS and sync API contract suites (shared Supabase runtime baseline enforced)
 - Rule:
   - wrappers reduce checklist repetition, but task cards still own trigger conditions and any hosted/manual checks.
+
+## Shared Supabase runtime contract (slow real-instance tests)
+
+- Scope:
+  - applies to local real-instance test commands that hit a running Supabase stack rather than mocked clients.
+  - current required entrypoints include:
+    - `./supabase/scripts/test-auth-authz.sh`
+    - `./supabase/scripts/test-sync-api-contract.sh`
+    - `npm run test:e2e:ios:auth-profile` (via `apps/mobile/scripts/maestro-ios-auth-profile.sh`)
+- Expected baseline state:
+  - a local Supabase runtime is reachable,
+  - `public.dev_fixture_principals` contains at least `anonymous`, `user_a`, `user_b`,
+  - deterministic auth fixtures for `user_a` and `user_b` are provisioned with known credentials from `supabase/scripts/auth-fixture-constants.sh`.
+- Enforcement path:
+  - use `./supabase/scripts/ensure-local-runtime-baseline.sh` before real-instance slow tests.
+  - behavior:
+    - if runtime is down: start runtime + reset/seed + fixture provisioning,
+    - if runtime is already up: reuse as-is (no reset), verify baseline fixture rows, and re-provision auth fixtures idempotently.
+- Data-shape contract:
+  - baseline rows must exist, but extra rows are allowed.
+  - test suites must not assume empty tables beyond the baseline.
+- Parallel-run contract (same machine):
+  - runtime bootstrap is serialized via a lock in `ensure-local-runtime-baseline.sh` to avoid concurrent startup/reset races.
+  - backend contract suites must use per-run unique entity IDs so concurrent runs on one shared runtime do not collide.
+  - avoid manual destructive operations (`db reset`, stack restart) while another slow suite is running.
 
 ## Current CI posture (M5)
 
@@ -151,8 +176,8 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
     - strategy is documented during M5.
     - first implementation should land once mobile sync integration exists, alongside mock-backend sync scenario coverage.
 - Deterministic backend fixture baseline:
-  - use a reset + seed command path before auth/RLS/API contract suites.
   - maintain named fixture identities for ownership tests (at minimum `anonymous`, `user_a`, `user_b`; optional admin/service-role-only helper path).
+  - enforce the baseline through `./supabase/scripts/ensure-local-runtime-baseline.sh` (reset/seed only when runtime is absent; non-destructive baseline verification/provisioning when runtime is already running).
 - Execution triggers (minimum expectations):
   - always run cheap tests relevant to the changed layer(s).
   - `./scripts/quality-fast.sh backend` is the default backend fast gate for covered local backend work.
@@ -176,13 +201,14 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 - Current implemented command path (`supabase/**`):
   - `./supabase/scripts/local-runtime-up.sh` (starts local stack + local health function serve)
   - `./supabase/scripts/reset-local.sh` (local migration/bootstrap + deterministic seed)
+  - `./supabase/scripts/ensure-local-runtime-baseline.sh` (shared runtime preflight; lock + conditional bootstrap/reset + deterministic fixture enforcement)
   - `./supabase/scripts/db-lint-local.sh` (fast schema lint)
   - `./supabase/scripts/smoke-health.sh` (health endpoint smoke)
   - `./supabase/scripts/smoke-seed.sh` (fixture baseline smoke through local REST API)
   - `./supabase/scripts/test-fast.sh` (combined fast backend-local smoke suite)
   - repo-level wrapper mapping:
     - `./scripts/quality-fast.sh backend` -> `./supabase/scripts/test-fast.sh`
-    - `./scripts/quality-slow.sh backend` -> backend contract suites (`test-auth-authz.sh`, `test-sync-api-contract.sh`)
+    - `./scripts/quality-slow.sh backend` -> backend contract suites (`test-auth-authz.sh`, `test-sync-api-contract.sh`) that each call `ensure-local-runtime-baseline.sh`
 - Current automated backend-local coverage (minimum baseline):
   - migration/reset/seed flow
   - deterministic fixture presence (`anonymous`, `user_a`, `user_b`, optional helper fixture)
@@ -228,6 +254,7 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - `launch.log`
   - `teardown.log`
   - `expo-start.log`
+  - `simulator-system.log`
   - `maestro-junit.xml`
 - Per-worktree configuration baseline:
   - source `.maestro/maestro.env.local` from the sample file and keep shared-build overrides there rather than hardcoding machine-specific paths in docs/tasks.
@@ -268,6 +295,7 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - (also covered by `./scripts/quality-slow.sh frontend`)
 - Reset/setup policy for this flow:
   - use `full reset` so the run starts logged out with no restored mobile session;
+  - preflight Supabase with `./supabase/scripts/ensure-local-runtime-baseline.sh` so the shared local runtime baseline exists before sign-in;
   - use the deterministic local fixture credentials (`user_a` by default) from `supabase/scripts/auth-fixture-constants.sh`;
   - use a per-run username value so repeated local runs still exercise the username-save path even when the backend profile row already exists.
 - Required screenshots for auth/profile flow:
