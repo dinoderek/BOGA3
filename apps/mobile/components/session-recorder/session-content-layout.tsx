@@ -29,6 +29,10 @@ type SessionContentLayoutProps<
     set: TSet;
     setIndex: number;
   }) => ReactNode;
+  renderSetHeader?: (input: {
+    exercise: TExercise;
+    exerciseIndex: number;
+  }) => ReactNode;
   renderExerciseHeaderAction?: (input: {
     exercise: TExercise;
     exerciseIndex: number;
@@ -54,6 +58,7 @@ export function SessionContentLayout<
   exercises,
   emptyExercisesText = 'No exercises logged yet.',
   renderSetRow,
+  renderSetHeader,
   renderExerciseHeaderAction,
   renderExerciseMeta,
   renderExerciseFooter,
@@ -97,6 +102,7 @@ export function SessionContentLayout<
             {renderExerciseMeta ? renderExerciseMeta({ exercise, exerciseIndex }) : null}
 
             <View style={styles.setList}>
+              {renderSetHeader && exercise.sets.length > 0 ? renderSetHeader({ exercise, exerciseIndex }) : null}
               {exercise.sets.map((set, setIndex) => (
                 <Fragment key={set.id}>
                   {renderSetRow({

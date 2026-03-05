@@ -45,6 +45,7 @@ jest.mock('@/src/data/exercise-catalog', () => ({
     { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
     { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
   ]),
+  listExerciseCatalogMuscleGroups: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('expo-router', () => {
@@ -209,6 +210,28 @@ describe('SessionRecorderScreen submit cleanup flow', () => {
       expect(mockPersistSessionDraftSnapshot).toHaveBeenCalled();
       expect(mockCompleteSessionDraft).toHaveBeenCalledWith('test-session');
       expect(mockDismissTo).toHaveBeenCalledWith('/');
+    });
+  });
+
+  it('keeps submit disabled when any set contains invalid numeric values', async () => {
+    render(<SessionRecorderScreen />);
+
+    fireEvent.press(screen.getByText('Log new exercise'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
+    mockPersistSessionDraftSnapshot.mockClear();
+    mockCompleteSessionDraft.mockClear();
+
+    fireEvent.changeText(screen.getByLabelText('Weight for exercise 1 set 1'), '0');
+    fireEvent.changeText(screen.getByLabelText('Reps for exercise 1 set 1'), '5');
+
+    expect(screen.getByTestId('session-recorder-submit-button').props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(screen.getByText('Submit Session'));
+
+    expect(screen.queryByText('Remove incomplete sets and submit?')).toBeNull();
+    await waitFor(() => {
+      expect(mockPersistSessionDraftSnapshot).not.toHaveBeenCalled();
+      expect(mockCompleteSessionDraft).not.toHaveBeenCalled();
+      expect(mockDismissTo).not.toHaveBeenCalled();
     });
   });
 

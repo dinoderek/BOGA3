@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
+import { uiColors } from '@/components/ui';
 import SessionRecorderScreen from '../session-recorder';
 
 const mockPush = jest.fn();
@@ -394,6 +396,9 @@ describe('SessionRecorderScreen exercise interactions', () => {
 
     expect(screen.queryByText('Select Exercise')).toBeNull();
     expect(screen.getByText('Barbell Squat')).toBeTruthy();
+    expect(screen.getByTestId('exercise-1-set-header')).toBeTruthy();
+    expect(screen.getByText('Weight')).toBeTruthy();
+    expect(screen.getByText('Reps')).toBeTruthy();
     expect(screen.queryByText('No exercises logged yet.')).toBeNull();
     expect(screen.queryByText('No tags yet.')).toBeNull();
 
@@ -402,6 +407,37 @@ describe('SessionRecorderScreen exercise interactions', () => {
 
     expect(screen.getByDisplayValue('225')).toBeTruthy();
     expect(screen.getByDisplayValue('5')).toBeTruthy();
+  });
+
+  it('constrains set inputs and uses visual-only invalid cues for non-positive values', async () => {
+    render(<SessionRecorderScreen />);
+
+    fireEvent.press(screen.getByText('Log new exercise'));
+    fireEvent.press(await screen.findByLabelText('Select exercise Barbell Squat'));
+
+    const weightInputLabel = 'Weight for exercise 1 set 1';
+    const repsInputLabel = 'Reps for exercise 1 set 1';
+
+    fireEvent.changeText(screen.getByLabelText(weightInputLabel), '12.5kg');
+    fireEvent.changeText(screen.getByLabelText(repsInputLabel), '8.5');
+    expect(screen.getByLabelText(weightInputLabel).props.value).toBe('');
+    expect(screen.getByLabelText(repsInputLabel).props.value).toBe('');
+
+    fireEvent.changeText(screen.getByLabelText(weightInputLabel), '0');
+    fireEvent.changeText(screen.getByLabelText(repsInputLabel), '0');
+
+    const invalidWeightStyle = StyleSheet.flatten(screen.getByLabelText(weightInputLabel).props.style);
+    const invalidRepsStyle = StyleSheet.flatten(screen.getByLabelText(repsInputLabel).props.style);
+    expect(invalidWeightStyle.borderColor).toBe(uiColors.actionDangerSubtleBorder);
+    expect(invalidRepsStyle.borderColor).toBe(uiColors.actionDangerSubtleBorder);
+
+    fireEvent.changeText(screen.getByLabelText(weightInputLabel), '135.5');
+    fireEvent.changeText(screen.getByLabelText(repsInputLabel), '8');
+
+    const validWeightStyle = StyleSheet.flatten(screen.getByLabelText(weightInputLabel).props.style);
+    const validRepsStyle = StyleSheet.flatten(screen.getByLabelText(repsInputLabel).props.style);
+    expect(validWeightStyle.borderColor).toBe(uiColors.borderDefault);
+    expect(validRepsStyle.borderColor).toBe(uiColors.borderDefault);
   });
 
   it('filters exercise picker by any query word across exercise names and muscle groups', async () => {

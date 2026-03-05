@@ -282,6 +282,11 @@ function createSetId(): string {
   return `set-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+type SetFieldName = keyof Pick<SessionSet, 'reps' | 'weight'>;
+
+const WEIGHT_INPUT_PATTERN = /^\d*\.?\d*$/;
+const REPS_INPUT_PATTERN = /^\d*$/;
+
 function createEmptySet(): SessionSet {
   return {
     id: createSetId(),
@@ -289,6 +294,48 @@ function createEmptySet(): SessionSet {
     weight: '',
   };
 }
+
+const constrainSetFieldInput = (field: SetFieldName, value: string): string | null => {
+  if (field === 'weight') {
+    return WEIGHT_INPUT_PATTERN.test(value) ? value : null;
+  }
+
+  return REPS_INPUT_PATTERN.test(value) ? value : null;
+};
+
+const isPositiveDecimalInput = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return true;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0;
+};
+
+const isPositiveIntegerInput = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return true;
+  }
+
+  if (!/^\d+$/.test(trimmed)) {
+    return false;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isInteger(parsed) && parsed > 0;
+};
+
+const hasSetFieldValidationError = (field: SetFieldName, value: string): boolean =>
+  field === 'weight' ? !isPositiveDecimalInput(value) : !isPositiveIntegerInput(value);
+
+const sessionHasInvalidSetValues = (session: Session): boolean =>
+  session.exercises.some((exercise) =>
+    exercise.sets.some(
+      (set) => hasSetFieldValidationError('weight', set.weight) || hasSetFieldValidationError('reps', set.reps)
+    )
+  );
 
 function createExercise(exerciseDefinitionId: string, name: string): SessionExercise {
   return {
@@ -1233,9 +1280,14 @@ export default function SessionRecorderScreen() {
   const updateSetField = (
     exerciseId: string,
     setId: string,
-    field: keyof Pick<SessionSet, 'reps' | 'weight'>,
+    field: SetFieldName,
     value: string
   ) => {
+    const constrainedValue = constrainSetFieldInput(field, value);
+    if (constrainedValue === null) {
+      return;
+    }
+
     setState((current) => ({
       ...current,
       session: {
@@ -1244,7 +1296,9 @@ export default function SessionRecorderScreen() {
           exercise.id === exerciseId
             ? {
                 ...exercise,
-                sets: exercise.sets.map((set) => (set.id === setId ? { ...set, [field]: value } : set)),
+                sets: exercise.sets.map((set) =>
+                  set.id === setId ? { ...set, [field]: constrainedValue } : set
+                ),
               }
             : exercise
         ),
@@ -1559,6 +1613,10 @@ export default function SessionRecorderScreen() {
       }
     }
 
+    if (sessionHasInvalidSetValues(state.session)) {
+      return;
+    }
+
     beginSubmitFlow(state.session);
   };
 
@@ -1653,6 +1711,9 @@ export default function SessionRecorderScreen() {
     routeMode === 'completed-edit' &&
     Boolean(completedEditTimeValidationMessage) &&
     (completedEditStartTouched || completedEditEndTouched || completedEditSubmitAttempted);
+  const hasInvalidSetValues = useMemo(() => sessionHasInvalidSetValues(state.session), [state.session]);
+  const isSubmitDisabled =
+    (routeMode === 'completed-edit' && Boolean(completedEditTimeValidationMessage)) || hasInvalidSetValues;
 
   if (routeMode === 'completed-edit' && isCompletedEditLoading) {
     return (
@@ -1746,21 +1807,36 @@ export default function SessionRecorderScreen() {
           </Pressable>
         }
         exercises={state.session.exercises}
+        renderSetHeader={({ exerciseIndex }) => (
+          <View style={styles.setHeaderRow} testID={`exercise-${exerciseIndex + 1}-set-header`}>
+            <Text style={[styles.setHeaderLabel, styles.setHeaderInputLabel]}>Weight</Text>
+            <Text style={[styles.setHeaderLabel, styles.setHeaderInputLabel]}>Reps</Text>
+            <View style={styles.setHeaderDeleteSpacer} />
+          </View>
+        )}
         renderSetRow={({ exercise, exerciseIndex, set, setIndex }) => (
           <View style={styles.setRow}>
             <TextInput
               accessibilityLabel={`Weight for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+              inputMode="decimal"
               keyboardType="decimal-pad"
-              placeholder="Weight"
-              style={[styles.input, styles.setRowInput]}
+              style={[
+                styles.input,
+                styles.setRowInput,
+                hasSetFieldValidationError('weight', set.weight) ? styles.inputInvalid : null,
+              ]}
               value={set.weight}
               onChangeText={(value) => updateSetField(exercise.id, set.id, 'weight', value)}
             />
             <TextInput
               accessibilityLabel={`Reps for exercise ${exerciseIndex + 1} set ${setIndex + 1}`}
+              inputMode="numeric"
               keyboardType="number-pad"
-              placeholder="Reps"
-              style={[styles.input, styles.setRowInput]}
+              style={[
+                styles.input,
+                styles.setRowInput,
+                hasSetFieldValidationError('reps', set.reps) ? styles.inputInvalid : null,
+              ]}
               value={set.reps}
               onChangeText={(value) => updateSetField(exercise.id, set.id, 'reps', value)}
             />
@@ -1842,8 +1918,9 @@ export default function SessionRecorderScreen() {
         testID="session-recorder-submit-button"
         style={[
           styles.submitButton,
-          routeMode === 'completed-edit' && completedEditTimeValidationMessage ? styles.submitButtonDisabled : null,
+          isSubmitDisabled ? styles.submitButtonDisabled : null,
         ]}
+        disabled={isSubmitDisabled}
         onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>
           {routeMode === 'completed-edit' ? 'Save Changes' : 'Submit Session'}
@@ -2545,19 +2622,36 @@ const styles = StyleSheet.create({
   setList: {
     gap: 8,
   },
+  setHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 2,
+  },
+  setHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: uiColors.textSecondary,
+  },
+  setHeaderInputLabel: {
+    flex: 1,
+  },
+  setHeaderDeleteSpacer: {
+    width: 28,
+  },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: uiColors.borderDefault,
-    borderRadius: 8,
-    padding: 8,
+    paddingHorizontal: 0,
     gap: 8,
-    backgroundColor: uiColors.surfaceMuted,
   },
   setRowInput: {
     flex: 1,
     paddingVertical: 8,
+  },
+  inputInvalid: {
+    borderColor: uiColors.actionDangerSubtleBorder,
+    backgroundColor: uiColors.actionDangerSubtleBg,
   },
   addSetButton: {
     borderRadius: 8,

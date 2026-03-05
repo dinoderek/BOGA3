@@ -88,6 +88,9 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 8. The M11 profile sign-in form performs basic client-side email-shape validation before attempting the auth request.
 9. The signed-in profile route keeps `username`, email, and password edits in separate stacked sections with section-local submit buttons and inline feedback.
 10. Username save, email update, password update, and sign-out failures all stay inline on the profile route instead of redirecting or collapsing back to another screen.
+11. In `session-recorder`, logged sets render as in-card rows with a header row (`Weight`, `Reps`) instead of per-set subcards, and set numeric validation uses visual cues only (no inline validation text):
+    - `Weight` accepts decimal numeric input and must be a positive number.
+    - `Reps` accepts integer numeric input and must be a positive integer.
 
 ### 6. Loading, empty, error, and feedback state handling
 

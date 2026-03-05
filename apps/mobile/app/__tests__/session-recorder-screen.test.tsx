@@ -43,6 +43,7 @@ jest.mock('@/src/data/exercise-catalog', () => ({
     { id: 'sys_barbell_bench_press', name: 'Bench Press', deletedAt: null, mappings: [] },
     { id: 'sys_romanian_deadlift', name: 'Deadlift', deletedAt: null, mappings: [] },
   ]),
+  listExerciseCatalogMuscleGroups: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock('expo-router', () => ({
