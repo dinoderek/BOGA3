@@ -722,7 +722,7 @@ export function SessionListScreenShell({
               }}
               style={[styles.modalActionButton, styles.modalDangerButton]}
               testID="discard-active-session-button">
-              <Text style={styles.modalDangerButtonText}>Delete session</Text>
+              <Text style={styles.modalDangerButtonText}>Delete</Text>
             </Pressable>
           </View>
         </View>
@@ -743,110 +743,94 @@ export function SessionListScreenShell({
           />
           {completedSessionMenuState?.action === 'delete' ? (
             <View style={styles.modalPanel} testID="completed-session-delete-modal-card">
-              <Text selectable style={styles.modalTitle}>
-                Session Options
-              </Text>
-              <Text selectable style={styles.metaText}>
-                Hide this session from the default history list.
-              </Text>
-              {reopenMenuDisabled ? (
-                <Text selectable style={styles.metaText}>
-                  Finish or discard the active session before reopening another.
-                </Text>
-              ) : null}
-              <Pressable
-                accessibilityLabel="Edit completed session"
-                accessibilityRole="button"
-                onPress={openCompletedSessionEdit}
-                style={[styles.modalActionButton, styles.modalNeutralButton]}
-                testID="completed-session-edit-menu-action-button">
-                <Text style={styles.modalNeutralButtonText}>Edit session</Text>
-              </Pressable>
+              <View style={styles.modalActionRow} testID="completed-session-menu-action-row">
+                <Pressable
+                  accessibilityLabel="Edit completed session"
+                  accessibilityRole="button"
+                  onPress={openCompletedSessionEdit}
+                  style={[styles.modalActionButton, styles.modalActionRowButton, styles.modalNeutralButton]}
+                  testID="completed-session-edit-menu-action-button">
+                  <Text style={styles.modalNeutralButtonText}>Edit</Text>
+                </Pressable>
 
-              <Pressable
-                accessibilityLabel="Reopen completed session"
-                accessibilityRole="button"
-                disabled={reopenMenuDisabled}
-                onPress={attemptCompletedSessionReopen}
-                style={[
-                  styles.modalActionButton,
-                  styles.modalNeutralButton,
-                  reopenMenuDisabled ? styles.modalDisabledButton : null,
-                ]}
-                testID="completed-session-reopen-menu-action-button">
-                <Text
+                <Pressable
+                  accessibilityLabel="Reopen completed session"
+                  accessibilityRole="button"
+                  disabled={reopenMenuDisabled}
+                  onPress={attemptCompletedSessionReopen}
                   style={[
-                    styles.modalNeutralButtonText,
-                    reopenMenuDisabled ? styles.modalDisabledButtonText : null,
-                  ]}>
-                  Reopen session
-                </Text>
-              </Pressable>
+                    styles.modalActionButton,
+                    styles.modalActionRowButton,
+                    styles.modalNeutralButton,
+                    reopenMenuDisabled ? styles.modalDisabledButton : null,
+                  ]}
+                  testID="completed-session-reopen-menu-action-button">
+                  <Text
+                    style={[
+                      styles.modalNeutralButtonText,
+                      reopenMenuDisabled ? styles.modalDisabledButtonText : null,
+                    ]}>
+                    Reopen
+                  </Text>
+                </Pressable>
 
-              <Pressable
-                accessibilityLabel="Delete completed session"
-                accessibilityRole="button"
-                onPress={() => {
-                  void applyCompletedSessionMenuAction();
-                }}
-                style={[styles.modalActionButton, styles.modalDangerButton]}
-                testID="completed-session-modal-action-button">
-                <Text style={styles.modalDangerButtonText}>Delete session</Text>
-              </Pressable>
+                <Pressable
+                  accessibilityLabel="Delete completed session"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    void applyCompletedSessionMenuAction();
+                  }}
+                  style={[styles.modalActionButton, styles.modalActionRowButton, styles.modalDangerButton]}
+                  testID="completed-session-modal-action-button">
+                  <Text style={styles.modalDangerButtonText}>Delete</Text>
+                </Pressable>
+              </View>
             </View>
           ) : null}
           {completedSessionMenuState?.action === 'undelete' ? (
             <View style={styles.modalPanel} testID="completed-session-undelete-modal-card">
-              <Text selectable style={styles.modalTitle}>
-                Session Options
-              </Text>
-              <Text selectable style={styles.metaText}>
-                Restore this session to the default history list.
-              </Text>
-              {reopenMenuDisabled ? (
-                <Text selectable style={styles.metaText}>
-                  Finish or discard the active session before reopening another.
-                </Text>
-              ) : null}
-              <Pressable
-                accessibilityLabel="Edit completed session"
-                accessibilityRole="button"
-                onPress={openCompletedSessionEdit}
-                style={[styles.modalActionButton, styles.modalNeutralButton]}
-                testID="completed-session-edit-menu-action-button">
-                <Text style={styles.modalNeutralButtonText}>Edit session</Text>
-              </Pressable>
+              <View style={styles.modalActionRow} testID="completed-session-menu-action-row">
+                <Pressable
+                  accessibilityLabel="Edit completed session"
+                  accessibilityRole="button"
+                  onPress={openCompletedSessionEdit}
+                  style={[styles.modalActionButton, styles.modalActionRowButton, styles.modalNeutralButton]}
+                  testID="completed-session-edit-menu-action-button">
+                  <Text style={styles.modalNeutralButtonText}>Edit</Text>
+                </Pressable>
 
-              <Pressable
-                accessibilityLabel="Reopen completed session"
-                accessibilityRole="button"
-                disabled={reopenMenuDisabled}
-                onPress={attemptCompletedSessionReopen}
-                style={[
-                  styles.modalActionButton,
-                  styles.modalNeutralButton,
-                  reopenMenuDisabled ? styles.modalDisabledButton : null,
-                ]}
-                testID="completed-session-reopen-menu-action-button">
-                <Text
+                <Pressable
+                  accessibilityLabel="Reopen completed session"
+                  accessibilityRole="button"
+                  disabled={reopenMenuDisabled}
+                  onPress={attemptCompletedSessionReopen}
                   style={[
-                    styles.modalNeutralButtonText,
-                    reopenMenuDisabled ? styles.modalDisabledButtonText : null,
-                  ]}>
-                  Reopen session
-                </Text>
-              </Pressable>
+                    styles.modalActionButton,
+                    styles.modalActionRowButton,
+                    styles.modalNeutralButton,
+                    reopenMenuDisabled ? styles.modalDisabledButton : null,
+                  ]}
+                  testID="completed-session-reopen-menu-action-button">
+                  <Text
+                    style={[
+                      styles.modalNeutralButtonText,
+                      reopenMenuDisabled ? styles.modalDisabledButtonText : null,
+                    ]}>
+                    Reopen
+                  </Text>
+                </Pressable>
 
-              <Pressable
-                accessibilityLabel="Undelete completed session"
-                accessibilityRole="button"
-                onPress={() => {
-                  void applyCompletedSessionMenuAction();
-                }}
-                style={[styles.modalActionButton, styles.modalNeutralButton]}
-                testID="completed-session-modal-action-button">
-                <Text style={styles.modalNeutralButtonText}>Undelete session</Text>
-              </Pressable>
+                <Pressable
+                  accessibilityLabel="Undelete completed session"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    void applyCompletedSessionMenuAction();
+                  }}
+                  style={[styles.modalActionButton, styles.modalActionRowButton, styles.modalNeutralButton]}
+                  testID="completed-session-modal-action-button">
+                  <Text style={styles.modalNeutralButtonText}>Undelete</Text>
+                </Pressable>
+              </View>
             </View>
           ) : null}
         </View>
@@ -1084,17 +1068,20 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 10,
   },
-  modalTitle: {
-    color: uiColors.textPrimary,
-    fontSize: 16,
-    fontWeight: '700',
+  modalActionRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 8,
   },
   modalActionButton: {
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalActionRowButton: {
+    flex: 1,
   },
   modalDangerButton: {
     backgroundColor: uiColors.actionDangerSubtleBg,

@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
 import {
   default as SessionListRoute,
@@ -484,7 +485,7 @@ describe('SessionListScreenShell', () => {
     render(<SessionListScreenShell />);
 
     fireEvent.press(screen.getByTestId('active-session-menu-button'));
-    expect(screen.getByText('Delete session')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('discard-active-session-button'));
 
@@ -504,7 +505,7 @@ describe('SessionListScreenShell', () => {
 
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
     expect(screen.getByTestId('completed-session-delete-modal-card')).toBeTruthy();
-    expect(screen.getByText('Delete session')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
     fireEvent.press(screen.getByTestId('completed-session-menu-overlay'));
     expect(screen.queryByTestId('completed-session-delete-modal-card')).toBeNull();
     expect(screen.getByTestId('completed-session-row-completed-visible')).toBeTruthy();
@@ -525,7 +526,9 @@ describe('SessionListScreenShell', () => {
 
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-deleted'));
     expect(screen.getByTestId('completed-session-undelete-modal-card')).toBeTruthy();
-    expect(screen.getByText('Undelete session')).toBeTruthy();
+    expect(screen.getByText('Undelete')).toBeTruthy();
+    expect(screen.queryByText('Session Options')).toBeNull();
+    expect(screen.queryByText('Restore this session to the default history list.')).toBeNull();
     fireEvent.press(screen.getByTestId('completed-session-menu-overlay'));
     expect(screen.queryByTestId('completed-session-undelete-modal-card')).toBeNull();
     expect(screen.getByTestId('completed-session-row-completed-deleted')).toBeTruthy();
@@ -547,9 +550,23 @@ describe('SessionListScreenShell', () => {
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
 
     expect(mockPush).not.toHaveBeenCalled();
-    expect(screen.getByText('Edit session')).toBeTruthy();
-    expect(screen.getByText('Reopen session')).toBeTruthy();
-    expect(screen.getByText('Delete session')).toBeTruthy();
+    expect(screen.getByText('Edit')).toBeTruthy();
+    expect(screen.getByText('Reopen')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
+  });
+
+  it('renders completed session menu actions in one row without title or helper copy', () => {
+    render(<SessionListScreenShell initialSessions={NO_ACTIVE_SESSIONS} />);
+
+    fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
+
+    expect(screen.queryByText('Session Options')).toBeNull();
+    expect(screen.queryByText('Hide this session from the default history list.')).toBeNull();
+    expect(screen.queryByText('Finish or discard the active session before reopening another.')).toBeNull();
+
+    expect(StyleSheet.flatten(screen.getByTestId('completed-session-menu-action-row').props.style)).toEqual(
+      expect.objectContaining({ flexDirection: 'row' })
+    );
   });
 
   it('opens completed edit in recorder mode from the menu', () => {
@@ -584,7 +601,7 @@ describe('SessionListScreenShell', () => {
     );
 
     fireEvent.press(screen.getByTestId('completed-session-menu-button-completed-visible'));
-    expect(screen.getByText('Finish or discard the active session before reopening another.')).toBeTruthy();
+    expect(screen.queryByText('Finish or discard the active session before reopening another.')).toBeNull();
     expect(screen.getByTestId('completed-session-reopen-menu-action-button').props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true })
     );
