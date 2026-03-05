@@ -136,6 +136,7 @@ jest.mock('@/src/data', () => ({
     };
   }),
   formatSessionListCompactDuration: formatCompactDuration,
+  listSessionExerciseAssignedTags: jest.fn().mockResolvedValue([]),
   listSessionListBuckets: jest.fn(async ({ includeDeleted }: { includeDeleted?: boolean } = {}) => {
     const allSessions = [...mockSessionsById.values()];
     const active = allSessions.find((session) => session.status === 'active' && session.deletedAt === null) ?? null;

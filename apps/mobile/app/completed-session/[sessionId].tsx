@@ -6,6 +6,7 @@ import { SessionContentLayout } from '@/components/session-recorder/session-cont
 import { uiColors } from '@/components/ui';
 import {
   formatSessionListCompactDuration,
+  listSessionExerciseAssignedTags,
   listSessionListBuckets,
   loadLocalGymById,
   loadSessionSnapshotById,
@@ -19,10 +20,17 @@ export type CompletedSessionDetailSet = {
   reps: string;
 };
 
+export type CompletedSessionDetailExerciseTag = {
+  tagDefinitionId: string;
+  name: string;
+  deletedAt: string | null;
+};
+
 export type CompletedSessionDetailExercise = {
   id: string;
   name: string;
   machineName: string | null;
+  tags: CompletedSessionDetailExerciseTag[];
   sets: CompletedSessionDetailSet[];
 };
 
@@ -86,6 +94,7 @@ const DEFAULT_COMPLETED_SESSION_DETAILS: Record<string, CompletedSessionDetailRe
         id: 'm7-detail-ex-1',
         name: 'Bench Press',
         machineName: 'Flat Bench',
+        tags: [],
         sets: [
           { id: 'm7-detail-set-1', weight: '185', reps: '8' },
           { id: 'm7-detail-set-2', weight: '185', reps: '6' },
@@ -95,6 +104,7 @@ const DEFAULT_COMPLETED_SESSION_DETAILS: Record<string, CompletedSessionDetailRe
         id: 'm7-detail-ex-2',
         name: 'Lat Pulldown',
         machineName: 'Cable',
+        tags: [],
         sets: [
           { id: 'm7-detail-set-3', weight: '120', reps: '12' },
           { id: 'm7-detail-set-4', weight: '120', reps: '12' },
@@ -115,6 +125,7 @@ const DEFAULT_COMPLETED_SESSION_DETAILS: Record<string, CompletedSessionDetailRe
         id: 'm7-detail-ex-3',
         name: 'Leg Press',
         machineName: 'Hammer Strength',
+        tags: [],
         sets: [
           { id: 'm7-detail-set-5', weight: '360', reps: '10' },
           { id: 'm7-detail-set-6', weight: '360', reps: '10' },
@@ -133,6 +144,25 @@ export const DEFAULT_COMPLETED_SESSION_DETAIL_DATA_CLIENT: CompletedSessionDetai
       const completedAt = sessionGraph.completedAt ?? sessionGraph.startedAt;
       const buckets = await listSessionListBuckets();
       const hasOtherActiveSession = Boolean(buckets.active && buckets.active.id !== sessionGraph.sessionId);
+      const tagsBySessionExerciseId = new Map<string, CompletedSessionDetailExerciseTag[]>(
+        await Promise.all(
+          sessionGraph.exercises.map(async (exercise) => {
+            try {
+              const assignedTags = await listSessionExerciseAssignedTags(exercise.id);
+              return [
+                exercise.id,
+                assignedTags.map((tag) => ({
+                  tagDefinitionId: tag.tagDefinitionId,
+                  name: tag.name,
+                  deletedAt: tag.deletedAt ? tag.deletedAt.toISOString() : null,
+                })),
+              ] as const;
+            } catch {
+              return [exercise.id, [] as CompletedSessionDetailExerciseTag[]] as const;
+            }
+          })
+        )
+      );
 
       return {
         id: sessionGraph.sessionId,
@@ -148,6 +178,7 @@ export const DEFAULT_COMPLETED_SESSION_DETAIL_DATA_CLIENT: CompletedSessionDetai
           id: exercise.id,
           name: exercise.name,
           machineName: exercise.machineName,
+          tags: tagsBySessionExerciseId.get(exercise.id) ?? [],
           sets: exercise.sets.map((set) => ({
             id: set.id,
             weight: set.weightValue,
@@ -475,6 +506,23 @@ export function CompletedSessionDetailScreenShell({
               </View>
             </View>
           )}
+          renderExerciseMeta={({ exercise }) =>
+            exercise.tags.length > 0 ? (
+              <View style={styles.exerciseTagSection} testID={`completed-session-detail-tags-${exercise.id}`}>
+                <View style={styles.exerciseTagChipWrap}>
+                  {exercise.tags.map((tag) => (
+                    <View
+                      key={`${exercise.id}-${tag.tagDefinitionId}`}
+                      style={[styles.exerciseTagChip, tag.deletedAt ? styles.exerciseTagChipDeleted : null]}>
+                      <Text numberOfLines={1} style={styles.exerciseTagChipText}>
+                        {tag.deletedAt ? `${tag.name} (deleted)` : tag.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null
+          }
         />
       </ScrollView>
     </>
@@ -734,5 +782,36 @@ const styles = StyleSheet.create({
   },
   setTableValueCell: {
     flex: 1,
+  },
+  exerciseTagSection: {
+    gap: 8,
+  },
+  exerciseTagChipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    alignItems: 'center',
+  },
+  exerciseTagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: uiColors.actionPrimarySubtleBorder,
+    backgroundColor: uiColors.actionPrimarySubtleBg,
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    maxWidth: '100%',
+  },
+  exerciseTagChipDeleted: {
+    borderColor: uiColors.actionNeutralSubtleBorder,
+    backgroundColor: uiColors.actionNeutralSubtleBg,
+  },
+  exerciseTagChipText: {
+    fontSize: 12,
+    color: uiColors.textAccentStrong,
+    fontWeight: '600',
+    maxWidth: 180,
   },
 });

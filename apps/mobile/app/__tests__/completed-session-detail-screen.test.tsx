@@ -59,6 +59,7 @@ jest.mock('@/src/data', () => ({
     return `${hours}h ${minutes}m`;
   },
   listSessionListBuckets: jest.fn().mockResolvedValue({ active: null, completed: [] }),
+  listSessionExerciseAssignedTags: jest.fn().mockResolvedValue([]),
   loadLocalGymById: jest.fn(),
   loadSessionSnapshotById: jest.fn(),
   reopenCompletedSessionDraft: jest.fn(),
@@ -86,6 +87,10 @@ const COMPLETED_SESSION_DETAIL_FIXTURE: CompletedSessionDetailRecord = {
       id: 'exercise-1',
       name: 'Bench Press',
       machineName: 'Flat Bench',
+      tags: [
+        { tagDefinitionId: 'tag-1', name: 'Paused', deletedAt: null },
+        { tagDefinitionId: 'tag-2', name: 'Tempo', deletedAt: null },
+      ],
       sets: [
         { id: 'set-1', weight: '185', reps: '8' },
         { id: 'set-2', weight: '185', reps: '6' },
@@ -135,9 +140,34 @@ describe('CompletedSessionDetailScreenShell', () => {
     expect(screen.getByText('Reps')).toBeTruthy();
     expect(screen.getByText('Bench Press')).toBeTruthy();
     expect(screen.getByText('Flat Bench')).toBeTruthy();
+    expect(screen.getByTestId('completed-session-detail-tags-exercise-1')).toBeTruthy();
+    expect(screen.getByText('Paused')).toBeTruthy();
+    expect(screen.getByText('Tempo')).toBeTruthy();
     expect(screen.getAllByText('185').length).toBeGreaterThan(0);
     expect(screen.getByText('8')).toBeTruthy();
     expect(screen.getByText('58m')).toBeTruthy();
+  });
+
+  it('does not render tag chips when an exercise has no assigned tags', async () => {
+    const dataClient: CompletedSessionDetailDataClient = {
+      loadCompletedSession: jest.fn().mockResolvedValue({
+        ...COMPLETED_SESSION_DETAIL_FIXTURE,
+        exercises: COMPLETED_SESSION_DETAIL_FIXTURE.exercises.map((exercise) => ({
+          ...exercise,
+          tags: [],
+        })),
+      }),
+      reopenCompletedSession: jest.fn().mockResolvedValue(undefined),
+      setCompletedSessionDeletedState: jest.fn().mockResolvedValue(undefined),
+    };
+
+    render(<CompletedSessionDetailScreenShell sessionId="completed-under-test" dataClient={dataClient} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('completed-session-detail-screen')).toBeTruthy();
+    });
+
+    expect(screen.queryByTestId('completed-session-detail-tags-exercise-1')).toBeNull();
   });
 
   it('edit action navigates to the recorder completed-edit UI', async () => {

@@ -114,6 +114,7 @@ Document app-specific UI semantics and guardrails for the current mobile app.
 1. Completed-session detail uses a sticky action bar for edit/reopen/delete actions above the detail content.
 2. `Reopen` can be disabled when another active session exists; the UI shows a textual hint explaining why.
 3. `intent=edit` on the completed-session route is a redirect behavior, not a separate screen.
+4. Completed-session exercise cards show assigned tags as chips under the exercise title only when one or more tags exist; no tag placeholder is shown when there are none.
 
 ### 8. Navigation/query semantics (UI-facing rule)
 
