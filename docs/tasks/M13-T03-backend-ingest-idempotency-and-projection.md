@@ -44,8 +44,8 @@ Implement backend event ingest and projection so outbox events are applied idemp
 
 - Add authenticated ingest endpoint(s) for batched events.
 - Enforce idempotency by `event_id` and ordering by `(device_id, sequence_in_device)`.
-- Persist event ingest metadata/ack watermark.
-- Project accepted events into restorable user-state tables/read models.
+- Persist event ingest metadata required for strict in-order processing.
+- Project applied events into restorable user-state tables/read models.
 - Add backend contract tests for success, duplicate replay, ordering, and denial paths.
 
 ### Out of scope
@@ -56,9 +56,9 @@ Implement backend event ingest and projection so outbox events are applied idemp
 
 ## Acceptance criteria
 
-1. Event ingest supports batch append with partial success/error detail.
+1. Event ingest response contract is minimal: `SUCCESS` or `FAILURE` with `error_index`, optional `error_event_id`, `should_retry`, and free-text `message`.
 2. Duplicate event replay is idempotent.
-3. Out-of-order events are rejected or safely deferred per contract.
+3. Batch processing is strict request-order with stop-on-first-failure and prefix-commit behavior.
 4. Projection state remains coherent for all M13 data-scope entities.
 5. Backend auth/RLS denial paths are tested.
 6. Backend fast/slow quality gates pass.

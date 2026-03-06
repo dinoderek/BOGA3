@@ -45,6 +45,9 @@ Implement the local outbox and scheduler behavior with the locked cadence policy
 - Emit events at domain write boundaries for M13 entity scope.
 - Implement scheduler cadence switching by current route/context.
 - Implement in-flight guard and backoff state machine.
+- Implement client handling for ingest responses:
+  - `SUCCESS` clears the submitted batch.
+  - `FAILURE` uses `error_index` to keep the failed suffix queued.
 - Add frontend unit/integration coverage for queue, cadence, retry, and offline resume.
 
 ### Out of scope
@@ -60,7 +63,8 @@ Implement the local outbox and scheduler behavior with the locked cadence policy
 3. In-flight guard prevents concurrent sends.
 4. Offline mode retains queue without data loss.
 5. Backoff constants follow milestone policy.
-6. Automated tests cover both cadence paths and retry behavior.
+6. Ingest response handling follows contract (`SUCCESS | FAILURE`, `error_index`, `should_retry`, free-text `message`).
+7. Automated tests cover both cadence paths and retry behavior.
 
 ## Docs touched (required)
 

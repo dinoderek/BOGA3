@@ -97,6 +97,8 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 
 - Applies to mobile/frontend-backend sync work.
 - Required coverage should include the relevant subset of:
+  - event envelope validation for required vs optional fields (`device_id`, `batch_id`, `sent_at_ms`, and per-event required fields),
+  - entity-event compatibility checks across all M13 data-scope entities,
   - first-enable bootstrap pull + local merge + convergence flush,
   - event outbox ordering (`sequence_in_device`) and idempotency (`event_id`) behavior,
   - full M13 data-scope backup coverage across user-owned entities (not only session-core tables),
@@ -105,6 +107,8 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - logged-out-then-login journey: user logs in, bootstrap/merge converges, starts session recording, and sync eventually converges,
   - auth missing/expired or sync disabled due to no authenticated session,
   - offline or backend-unavailable retry/recovery behavior with locked backoff policy constants,
+  - batch-order semantics (strict request-order processing, stop-on-first-failure, and prefix-commit behavior),
+  - response contract semantics (`SUCCESS | FAILURE`, failure `error_index`, `should_retry`, free-text `message`, optional `error_event_id`),
   - projection/read-model correctness after event ingest/replay.
 - Use mocks/fakes for broad scenario coverage, then require at least one real cross-stack proof path with local `Supabase` validating event ingest, idempotent retries, and restorable projection state.
 

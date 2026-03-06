@@ -1,7 +1,7 @@
 ---
 task_id: M13-T01-sync-event-contract-and-data-scope
 milestone_id: "M13"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs|backend|cross-stack"
 runtimes: "docs|supabase|sql"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/03-te
 
 - Task ID: `M13-T01-sync-event-contract-and-data-scope`
 - Title: M13 event contract and full data-scope lock
-- Status: `planned`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -103,9 +103,10 @@ Lock the M13 sync event contract and precise entity coverage so implementation t
 
 - command output summary for all executed gates
 - concise contract change summary by file
+- Manual verification summary (required when CI is absent/partial): CI is not configured; this task ran local backend fast gate coverage (`./scripts/quality-fast.sh backend`) and validated contract lock consistency across the required docs.
 
 ## Completion note (fill at end)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Locked the canonical M13 event envelope, entity-event mapping, idempotency/ordering semantics, and failure-category retry contract in `supabase/session-sync-api-contract.md`; aligned milestone sync protocol text in `docs/specs/milestones/M13-simple-backend-sync.md`; updated cross-cutting sync statements in `docs/specs/03-technical-architecture.md`, `docs/specs/05-data-model.md`, and `docs/specs/06-testing-strategy.md`.
+- What tests ran: `./scripts/quality-fast.sh backend` (pass).
+- What remains: M13 implementation tasks `M13-T02` through `M13-T05` are still pending; milestone remains open (`in_progress`).

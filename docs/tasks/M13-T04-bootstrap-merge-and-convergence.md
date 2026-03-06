@@ -44,6 +44,7 @@ Implement first-sync bootstrap and local merge flow, then converge outbox delive
 - Add one-time bootstrap trigger on sync enable.
 - Fetch remote restorable state and merge with local state.
 - Queue and flush post-merge local deltas/events.
+- Apply post-merge batch response semantics correctly (`SUCCESS` clears batch; `FAILURE` retains suffix from `error_index`).
 - Protect local-first behavior on failures.
 - Add automated coverage for merge correctness and convergence outcomes.
 
@@ -57,7 +58,7 @@ Implement first-sync bootstrap and local merge flow, then converge outbox delive
 1. First sync enable triggers bootstrap/merge without restart.
 2. Merge behavior is deterministic and preserves local usability.
 3. Convergence flush occurs after merge and updates sync metadata on success.
-4. Failure path keeps local data intact and retryable.
+4. Failure path keeps local data intact and retryable, honoring `should_retry` + `error_index` semantics.
 5. Tests cover the logged-out-then-login bootstrap journey up to convergence.
 
 ## Docs touched (required)

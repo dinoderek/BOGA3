@@ -1,10 +1,10 @@
-# M5 Session Sync API Contract Baseline (`T-20260220-11`)
+# Session Sync API Contract (`M5 baseline` + `M13 planned event contract`)
 
 ## Super simple summary
 
-- Current sync API uses `Supabase PostgREST` directly on `app_public` tables (`gyms`, `sessions`, `session_exercises`, `exercise_sets`).
-- Clients call table `GET/POST/PATCH` routes with `anon` key + user JWT; backend ownership is enforced by `RLS` + DB constraints.
-- Contract behavior is validated by local Supabase integration tests in `supabase/tests/session-sync-api-contract.sh`.
+- M5 uses `Supabase PostgREST` directly on `app_public` tables (`gyms`, `sessions`, `session_exercises`, `exercise_sets`).
+- M13 locks a new client-facing sync protocol: batched granular events with idempotent ingest + projection.
+- M5 table CRUD remains a legacy baseline and may still be used internally by backend projection paths, but it is not the M13 mobile sync contract.
 
 ## Related baseline docs (per `docs/specs/04-ai-development-playbook.md`)
 
@@ -12,17 +12,161 @@
 
 ## Status / scope
 
-- Status: implemented for local/backend validation in M5.
-- Chosen Supabase surface: `PostgREST` table routes against `app_public` (no custom `Edge Function` sync handlers in M5 baseline).
-- Covered entities:
+- M5 baseline status: implemented for local/backend validation.
+- M13 event contract status: planned and locked as the source-of-truth contract for implementation tasks `M13-T02+`.
+- Current M5 implemented entities:
   - `gyms`
   - `sessions`
   - `session_exercises`
   - `exercise_sets`
-- Out of scope here:
-  - mobile sync-engine wiring
-  - conflict resolution policy beyond row-level last-write semantics
-  - batched multi-entity transaction orchestration
+- M13 backup-scope entities (full user-owned scope):
+  - `gyms`
+  - `sessions`
+  - `session_exercises`
+  - `exercise_sets`
+  - `exercise_definitions`
+  - `exercise_muscle_mappings`
+  - `exercise_tag_definitions`
+  - `session_exercise_tags`
+- Out of scope for this contract lock:
+  - client outbox runtime implementation details
+  - backend ingest endpoint implementation details
+  - multi-device conflict semantics
+
+## Contract versions and precedence
+
+| Contract surface | Status | Primary client use |
+| --- | --- | --- |
+| M5 `PostgREST` row CRUD | Implemented (legacy baseline) | Existing baseline integrations and backend internals |
+| M13 `sync.events.ingest` batch envelope | Planned (locked) | Required client sync wire protocol for M13 |
+
+Rule:
+
+- when M13 client sync behavior is implemented, the mobile client must use the M13 event protocol as the primary wire contract.
+
+## M13 event contract (locked)
+
+### Canonical batch request envelope
+
+```json
+{
+  "device_id": "ios-2f4f7b84",
+  "batch_id": "c5f2735b-3327-4a3d-b6e4-bfa83815f244",
+  "sent_at_ms": 1762406400000,
+  "events": [
+    {
+      "event_id": "9e59bde0-a53f-4f2d-b8f2-a12858f91bb9",
+      "sequence_in_device": 42,
+      "occurred_at_ms": 1762406399555,
+      "entity_type": "session_exercises",
+      "entity_id": "sx_123",
+      "event_type": "reorder",
+      "payload": {
+        "session_id": "session_123",
+        "order_index": 1
+      }
+    }
+  ]
+}
+```
+
+### Event-envelope field rules
+
+Required fields (every event):
+
+| Field | Type | Validation rule |
+| --- | --- | --- |
+| `event_id` | `uuid` string | Unique idempotency key per `(owner_user_id, device_id)`. |
+| `sequence_in_device` | integer | `>= 1`, strictly monotonic for each `(owner_user_id, device_id)`. |
+| `occurred_at_ms` | integer | epoch milliseconds, `>= 0`. |
+| `entity_type` | enum | one of `gyms`, `sessions`, `session_exercises`, `exercise_sets`, `exercise_definitions`, `exercise_muscle_mappings`, `exercise_tag_definitions`, `session_exercise_tags`. |
+| `entity_id` | string | non-empty, stable primary-id of the mutated entity row or relation key. |
+| `event_type` | enum | one of `upsert`, `delete`, `attach`, `detach`, `reorder`, `complete`; must be valid for the chosen `entity_type`. |
+| `payload` | object | JSON object; required keys depend on `(entity_type, event_type)`; may be `{}` only when contract explicitly allows it. |
+
+Required request-level fields:
+
+| Field | Type | Validation rule |
+| --- | --- | --- |
+| `device_id` | string | non-empty; stable per installed app instance. |
+| `batch_id` | `uuid` string | request correlation id used for observability/debugging. |
+| `sent_at_ms` | integer | epoch milliseconds generated when the batch is sent. |
+| `events` | array | `1..100` entries (M13 batch-size limit). |
+
+Optional event fields:
+
+| Field | Type | Validation rule |
+| --- | --- | --- |
+| `schema_version` | integer | optional, defaults to `1`; reject when unsupported. |
+| `trace_id` | `uuid` string | optional diagnostics correlation id. |
+
+### Entity-to-event mapping (full M13 scope)
+
+| Entity | Supported event types | Notes |
+| --- | --- | --- |
+| `gyms` | `upsert`, `delete` | `delete` is soft-delete; undelete uses `upsert` with tombstone cleared |
+| `sessions` | `upsert`, `delete`, `complete` | `delete` is soft-delete; undelete uses `upsert` |
+| `session_exercises` | `upsert`, `delete`, `reorder` | `delete` is soft-delete; `upsert` can undelete |
+| `exercise_sets` | `upsert`, `delete`, `reorder` | `delete` is soft-delete; `upsert` can undelete |
+| `exercise_definitions` | `upsert`, `delete` | `delete` is soft-delete; undelete uses `upsert` |
+| `exercise_muscle_mappings` | `attach`, `detach` | `attach` can recreate a previously detached edge |
+| `exercise_tag_definitions` | `upsert`, `delete` | `delete` is soft-delete; undelete uses `upsert` |
+| `session_exercise_tags` | `attach`, `detach` | `attach` can recreate a previously detached edge |
+
+### Canonical ingest response envelope
+
+Success response:
+
+```json
+{
+  "status": "SUCCESS"
+}
+```
+
+Failure response:
+
+```json
+{
+  "status": "FAILURE",
+  "error_index": 2,
+  "error_event_id": "3e0b5d52-a8a1-4183-bc38-29e8efd9302c",
+  "should_retry": true,
+  "message": "Expected sequence 43 but got 44."
+}
+```
+
+Field notes:
+
+- `status`: `SUCCESS | FAILURE`
+- `error_index`: `0`-based index in request `events[]`; required when `status=FAILURE`
+- `error_event_id`: optional convenience mirror of `events[error_index].event_id`
+- `should_retry`: required when `status=FAILURE`; controls client retry/no-retry behavior
+- `message`: required when `status=FAILURE`; free-text and non-enum by contract
+
+### Idempotency + ordering semantics (testable)
+
+1. Idempotency key:
+   - server deduplicates by `(owner_user_id, device_id, event_id)`.
+2. Duplicate re-submit, same payload:
+   - treated as a no-op success and must not re-apply projection side effects.
+3. Duplicate `event_id` with different payload:
+   - return `FAILURE` with `should_retry=false`.
+4. Batch ordering:
+   - backend processes events strictly in request order (`events[0]`, `events[1]`, ...).
+5. Sequence monotonicity:
+   - each event must satisfy device-stream monotonic ordering; any sequence failure stops processing.
+6. Stop-on-first-failure:
+   - on first failing event at index `i`, backend returns `FAILURE` with `error_index=i`; event `i` and all later events are not applied.
+7. Prefix commit contract:
+   - events before `error_index` are committed and should be removed from the client outbox.
+8. Retry contract:
+   - client retries only when `should_retry=true`, using locked backoff constants (`2s`, `x2`, max `2m`, `+-25%` jitter).
+
+### Failure response semantics (client-facing)
+
+1. No enum error code is exposed in the client contract for M13.
+2. `message` is free-text and informational; clients must not parse it for control flow.
+3. `should_retry` is the only retry-control signal in the response contract.
 
 ## Surface choice (why `PostgREST` first)
 
@@ -200,7 +344,7 @@ Current Supabase `PostgREST` behavior is intentionally preserved in M5. FE integ
 
 ## Contract test coverage (local Supabase)
 
-The local integration/contract suite for this task lives at:
+M5 baseline integration/contract suite:
 
 - `supabase/tests/session-sync-api-contract.sh`
 - wrapper: `supabase/scripts/test-sync-api-contract.sh`
@@ -212,3 +356,18 @@ Coverage includes:
 - unauthenticated request denial
 - cross-user read/update denial
 - cross-user parent/child ownership mismatch denial
+
+M13 contract-lock verification expectations (to be implemented in M13 follow-up tasks):
+
+- request envelope validation for required vs optional fields
+- entity/event compatibility validation for all eight M13 data-scope entities
+- idempotency checks:
+  - duplicate event with same payload -> success without replay side effects
+  - duplicate event id with changed payload -> `FAILURE` + `should_retry=false`
+- ordering checks:
+  - strict in-order batch processing
+  - stop-on-first-failure at `error_index`
+  - prefix commit behavior (pre-failure events applied; failure event and later events not applied)
+- response-envelope checks:
+  - `status=SUCCESS` for full success batches
+  - `status=FAILURE` with `error_index`, `should_retry`, and free-text `message`

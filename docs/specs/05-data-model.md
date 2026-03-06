@@ -74,9 +74,51 @@ Note:
 ## M13 sync data-model contract (planned)
 
 1. Client emits granular outbox events for user-domain mutations.
-2. Backend ingests events with idempotency (`event_id`) and per-device ordering (`sequence_in_device`).
-3. Backend projects events into restorable user-state models.
+2. Backend ingests events with idempotency key `(owner_user_id, device_id, event_id)` and strict per-device ordering via `sequence_in_device`.
+3. Backend projects applied events into restorable user-state models.
 4. Restore/bootstrap must be coherent across all user-owned entities listed in this document.
+
+### Canonical event envelope invariants
+
+- Request-level required fields:
+  - `device_id`
+  - `batch_id`
+  - `sent_at_ms`
+  - `events` (`1..100`)
+- Event-level required fields:
+  - `event_id`
+  - `sequence_in_device`
+  - `occurred_at_ms`
+  - `entity_type`
+  - `entity_id`
+  - `event_type`
+  - `payload`
+- Event-level optional fields:
+  - `schema_version` (default `1`)
+  - `trace_id`
+
+### M13 entity-event coverage (locked; undelete is supported for all entities)
+
+| Entity | Supported event types |
+| --- | --- |
+| `gyms` | `upsert`, `delete` (`upsert` handles undelete) |
+| `sessions` | `upsert`, `delete`, `complete` (`upsert` handles undelete/reopen) |
+| `session_exercises` | `upsert`, `delete`, `reorder` (`upsert` handles undelete) |
+| `exercise_sets` | `upsert`, `delete`, `reorder` (`upsert` handles undelete) |
+| `exercise_definitions` | `upsert`, `delete` (`upsert` handles undelete) |
+| `exercise_muscle_mappings` | `attach`, `detach` (`attach` recreates detached edges) |
+| `exercise_tag_definitions` | `upsert`, `delete` (`upsert` handles undelete) |
+| `session_exercise_tags` | `attach`, `detach` (`attach` recreates detached edges) |
+
+### M13 ingest/ack invariants (locked)
+
+1. Backend processes batch events strictly in request order and stops on the first failing event.
+2. Response contract is minimal:
+   - `SUCCESS` for full-batch success.
+   - `FAILURE` with `error_index`, `should_retry`, and free-text `message` (optional `error_event_id`).
+3. Events before `error_index` are committed; the failed event and all later events are not applied.
+4. Duplicate submit with same event body is a no-op success.
+5. Reuse of `event_id` with a different event body fails with `should_retry=false`.
 
 ## Maintenance rule (mandatory)
 

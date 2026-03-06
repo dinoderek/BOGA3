@@ -48,6 +48,7 @@ Deliver the profile sync controls/status UX and close M13 verification with expl
 
 - Implement/finalize `/profile` sync controls and status messaging.
 - Ensure sync status semantics match M13 policy (`60s` general, `10s` recorder cadence).
+- Ensure failure UI reflects the simplified ingest contract (`should_retry` hint + backend free-text message).
 - Add/execute automated coverage and Maestro/integration evidence for both required journeys.
 - Update authoritative UI docs for any changed profile/settings behavior.
 
@@ -86,7 +87,7 @@ Deliver the profile sync controls/status UX and close M13 verification with expl
 
 ## Acceptance criteria
 
-1. `/profile` shows sync enabled state, last successful sync, and clear inline error state.
+1. `/profile` shows sync enabled state, last successful sync, and clear inline error state (including retry hint + free-text failure message when present).
 2. Journey 1 has automated proof (test and/or Maestro evidence).
 3. Journey 2 has automated proof (test and/or Maestro evidence).
 4. `./scripts/quality-fast.sh frontend` passes.

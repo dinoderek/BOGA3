@@ -4,7 +4,7 @@
 
 - Milestone ID: `M13`
 - Title: `Simple Backend Sync (Granular Outbox Baseline)`
-- Status: `planned`
+- Status: `in_progress`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03`
 
@@ -103,27 +103,59 @@ Not part of M13 backup scope:
 
 ## Sync protocol baseline (locked for M13)
 
-Client sends batched event envelopes to backend:
+Canonical source:
 
-- envelope fields:
-  - `event_id` (uuid; client-generated idempotency key)
-  - `device_id`
-  - `entity_type`
-  - `entity_id`
-  - `event_type` (`upsert | delete | attach | detach | reorder | complete`)
-  - `occurred_at_ms`
-  - `sequence_in_device` (monotonic per device)
-  - `payload` (json delta/snapshot needed for deterministic projection)
-- backend response:
-  - accepted event ids
-  - rejected event ids with error category
-  - ack watermark per device/user stream
+- `supabase/session-sync-api-contract.md` (`M13 event contract (locked)` section).
+
+Client sends batched event envelopes to backend with request-level required fields:
+
+- `device_id` (stable per installed app instance)
+- `batch_id` (uuid request correlation id)
+- `sent_at_ms` (epoch ms)
+- `events` (array, `1..100`)
+
+Each event has required fields:
+
+- `event_id` (uuid idempotency key)
+- `sequence_in_device` (`>= 1`, strict monotonic sequence per `(owner_user_id, device_id)`)
+- `occurred_at_ms` (epoch ms)
+- `entity_type`
+- `entity_id`
+- `event_type` (`upsert | delete | attach | detach | reorder | complete`)
+- `payload` (entity/event-specific object)
+
+Optional event fields:
+
+- `schema_version` (default `1`)
+- `trace_id`
+
+Backend response includes:
+
+- `status` (`SUCCESS | FAILURE`)
+- `error_index` on failure (`0`-based in request batch)
+- `should_retry` on failure
+- `message` on failure (free-text; non-enum by contract)
+- optional `error_event_id` mirror for easier diagnostics
+
+Locked entity/event mapping (all M13 backup-scope entities):
+
+- `gyms` -> `upsert`, `delete` (`upsert` also handles undelete)
+- `sessions` -> `upsert`, `delete`, `complete` (`upsert` also handles undelete/reopen)
+- `session_exercises` -> `upsert`, `delete`, `reorder` (`upsert` also handles undelete)
+- `exercise_sets` -> `upsert`, `delete`, `reorder` (`upsert` also handles undelete)
+- `exercise_definitions` -> `upsert`, `delete` (`upsert` also handles undelete)
+- `exercise_muscle_mappings` -> `attach`, `detach` (`attach` can recreate detached edges)
+- `exercise_tag_definitions` -> `upsert`, `delete` (`upsert` also handles undelete)
+- `session_exercise_tags` -> `attach`, `detach` (`attach` can recreate detached edges)
 
 Protocol requirements:
 
-- idempotent server handling by `event_id`
-- ordered application by `(device_id, sequence_in_device)`
-- partial-batch failure reporting without dropping successful events
+- idempotency key is `(owner_user_id, device_id, event_id)`
+- duplicate re-submit with same payload is a no-op success
+- duplicate `event_id` with different payload fails with `should_retry=false`
+- ordered application is strict request-order processing with stop-on-first-failure
+- on failure at index `i`, events before `i` are committed; event `i` and later are not applied
+- retry control is contract-level `should_retry`; `message` is free text and non-enum
 
 ## Scheduling and retry policy (locked for M13)
 
@@ -245,13 +277,13 @@ Protocol requirements:
 
 - Add local outbox storage with ordered pending events.
 - Emit events from repository/domain write boundaries.
-- Track ack watermark and per-event delivery state.
+- Track delivery state using simplified batch results (`SUCCESS` / `FAILURE` with `error_index`).
 
 ### Backend ingest + projection
 
-- Add authenticated event ingest API for batched append/ack semantics.
+- Add authenticated event ingest API for strict in-order batch apply semantics.
 - Apply idempotency and per-device ordering checks.
-- Project accepted events into restorable user-state tables/read models.
+- Project applied events into restorable user-state tables/read models.
 
 ### Bootstrap + merge
 
@@ -277,7 +309,7 @@ Protocol requirements:
 
 ## Task breakdown
 
-1. `docs/tasks/M13-T01-sync-event-contract-and-data-scope.md` - define event contract, data-scope mapping, and architecture/testing doc updates. (`planned`)
+1. `docs/tasks/complete/M13-T01-sync-event-contract-and-data-scope.md` - define event contract, data-scope mapping, and architecture/testing doc updates. (`completed`)
 2. `docs/tasks/M13-T02-client-outbox-and-recorder-cadence-sync.md` - implement local outbox model and event emission at write boundaries with `60s` general and `10s` recorder cadence handling. (`planned`)
 3. `docs/tasks/M13-T03-backend-ingest-idempotency-and-projection.md` - implement backend ingest/ack semantics and projection path for restore. (`planned`)
 4. `docs/tasks/M13-T04-bootstrap-merge-and-convergence.md` - implement first-sync bootstrap/merge/outbox convergence flow and related coverage. (`planned`)
