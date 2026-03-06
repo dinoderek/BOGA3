@@ -106,8 +106,10 @@ Implement the local outbox and scheduler behavior with the locked cadence policy
   - `./scripts/quality-slow.sh frontend`
     - `test:e2e:ios:smoke` (`pass`)
     - `test:e2e:ios:data-smoke` (`pass`)
-    - `test:e2e:ios:auth-profile` (`fail`: `Element not found: Id matching regex: profile-username-input`)
-  - Retried `npm run test:e2e:ios:auth-profile` once; same failure reproduced.
+    - `test:e2e:ios:auth-profile` (`pass`)
+  - Auth-profile regression fix verification:
+    - patched `apps/mobile/.maestro/flows/auth-profile-happy-path.yaml` to match current profile screen IDs/state transitions (`Edit` -> `profile-update-button` / `profile-update-feedback`)
+    - `npm run test:e2e:ios:auth-profile` (`pass`)
 - Cadence proof notes:
   - Added scheduler unit coverage asserting `60s` default cadence and `10s` `session-recorder` cadence plus offline->online immediate flush trigger.
 
@@ -119,10 +121,12 @@ Implement the local outbox and scheduler behavior with the locked cadence policy
   - Added route-aware cadence scheduler (`60s` general / `10s` recorder) and wired root layout to update cadence context from pathname.
   - Wired M13 entity-scope event enqueueing at frontend write boundaries for gyms/sessions/session exercises/exercise sets/exercise definitions/exercise muscle mappings/exercise tag definitions/session exercise tags.
   - Added sync-focused unit coverage for engine/scheduler and domain-event emission wiring.
+  - Updated Maestro auth-profile happy-path flow IDs to match current signed-in/profile-edit UI behavior.
+  - Added `docs/specs/tech/client-sync-engine.md` and linked it from sync engine source; updated navigation/task docs with the cadence route-coupling maintenance contract.
 - What tests ran:
   - `npm run test -- app/__tests__/sync-outbox-engine.test.ts app/__tests__/sync-scheduler.test.ts app/__tests__/sync-domain-event-emission.test.ts app/__tests__/root-layout-auth-bootstrap.test.ts`
   - `./scripts/quality-fast.sh frontend`
-  - `./scripts/quality-slow.sh frontend` (with one deterministic failing sub-flow noted above)
-  - `npm run test:e2e:ios:auth-profile` (retry, same failure)
+  - `npm run test:e2e:ios:auth-profile`
+  - `./scripts/quality-slow.sh frontend`
 - What remains:
-  - Resolve the existing/now-deterministic Maestro auth-profile flow failure (`profile-username-input` not found after sign-in).
+  - none for this task scope.

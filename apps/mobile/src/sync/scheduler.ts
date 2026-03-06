@@ -2,6 +2,7 @@ import { flushSyncOutbox, setSyncNetworkOnline, type SyncFlushResult } from './e
 
 export const SYNC_GENERAL_CADENCE_MS = 60_000;
 export const SYNC_SESSION_RECORDER_CADENCE_MS = 10_000;
+export const SESSION_RECORDER_ROUTE_SEGMENT = 'session-recorder';
 
 export type SyncCadenceContext = 'general' | 'session-recorder';
 
@@ -16,8 +17,25 @@ export type SyncScheduler = {
   isRunning(): boolean;
 };
 
+const normalizeFirstRouteSegment = (pathname: string): string | null => {
+  const [pathWithoutQueryOrHash] = pathname.split(/[?#]/, 1);
+  const trimmed = pathWithoutQueryOrHash.trim().replace(/^\/+|\/+$/g, '');
+  if (!trimmed) {
+    return null;
+  }
+
+  const [firstSegment] = trimmed.split('/', 1);
+  return firstSegment || null;
+};
+
 export const syncCadenceContextFromPathname = (pathname: string | null | undefined): SyncCadenceContext => {
-  if (typeof pathname === 'string' && pathname.startsWith('/session-recorder')) {
+  // Route-coupling contract:
+  // if '/session-recorder' is renamed, update this constant and
+  // docs/specs/ui/navigation-contract.md + docs/specs/tech/client-sync-engine.md.
+  if (
+    typeof pathname === 'string' &&
+    normalizeFirstRouteSegment(pathname) === SESSION_RECORDER_ROUTE_SEGMENT
+  ) {
     return 'session-recorder';
   }
 

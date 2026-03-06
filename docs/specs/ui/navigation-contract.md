@@ -42,6 +42,11 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
   - `sessionId` (optional; used by completed-edit flow)
 - Behavior:
   - missing/invalid completed-edit inputs are handled by route UI state (no crash)
+  - client sync cadence contract depends on this route segment:
+    - active route segment `session-recorder` -> `10s` recorder cadence
+    - all other routes -> `60s` general cadence
+  - maintenance rule:
+    - if this route path/segment is renamed, update `apps/mobile/src/sync/scheduler.ts` (`SESSION_RECORDER_ROUTE_SEGMENT`) in the same task/session.
 
 4. `/exercise-catalog`
 - File: `apps/mobile/app/exercise-catalog.tsx`

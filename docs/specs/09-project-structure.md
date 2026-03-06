@@ -36,6 +36,7 @@ Define the canonical repository structure, path ownership, and placement convent
   docs/
     specs/                       # Project/milestone/task process and technical specs
       ui/                        # Canonical UI discovery/audit/guardrail docs (M8+)
+      tech/                      # Subsystem-level technical deep-dive docs (M13+)
     tasks/                       # Active task cards
       complete/                  # Completed task-card archive
     brainstorms/                 # Working notes and brainstorming docs
@@ -60,6 +61,8 @@ Define the canonical repository structure, path ownership, and placement convent
   - owns project policy, architecture/testing strategy, milestone specs, and templates.
 - `docs/specs/ui/`
   - owns authoritative UI discovery/audit/guardrail documentation produced in M8+ tasks.
+- `docs/specs/tech/`
+  - owns subsystem-level technical deep-dive docs that complement (but do not replace) top-level architecture/testing docs.
 - `docs/tasks/`
   - owns active per-session execution task cards (`planned`, `in_progress`, `blocked`).
 - `docs/tasks/complete/`
@@ -76,6 +79,9 @@ Define the canonical repository structure, path ownership, and placement convent
 - `docs/specs/ui/` (introduced in M8)
   - canonical location for authoritative UI discovery/audit/guardrail docs (for example repo discovery baseline, pattern audit, screen map, navigation contract, components catalog, UX rules).
   - keep UI docs under `docs/specs/ui/**` rather than `docs/brainstorms/**` once they become source-of-truth references.
+- `docs/specs/tech/` (introduced in M13)
+  - canonical location for subsystem-level technical deep dives (for example client sync engine internals, failure handling, and maintenance contracts).
+  - keep deep-dive docs concise, source-linked, and update them in the same task when subsystem behavior materially changes.
 - `docs/tasks/complete/`
   - canonical archive location for task cards whose status is `completed`.
   - move a task card here in the same session that marks it `completed`.

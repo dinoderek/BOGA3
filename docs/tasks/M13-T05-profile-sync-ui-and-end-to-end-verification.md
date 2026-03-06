@@ -7,7 +7,7 @@ areas: "frontend|cross-stack|docs"
 runtimes: "node|expo|maestro|supabase"
 gates_fast: "./scripts/quality-fast.sh frontend"
 gates_slow: "./scripts/quality-slow.sh frontend"
-docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/ux-rules.md,docs/specs/06-testing-strategy.md"
+docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/screen-map.md,docs/specs/ui/navigation-contract.md,docs/specs/ui/ux-rules.md,docs/specs/06-testing-strategy.md,docs/specs/tech/client-sync-engine.md"
 ---
 
 # Task Card
@@ -37,6 +37,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/sc
 - UI screen map: `docs/specs/ui/screen-map.md`
 - UI navigation contract: `docs/specs/ui/navigation-contract.md`
 - UI UX rules: `docs/specs/ui/ux-rules.md`
+- Client sync engine deep-dive: `docs/specs/tech/client-sync-engine.md`
 
 ## Objective
 
@@ -101,6 +102,7 @@ Deliver the profile sync controls/status UX and close M13 verification with expl
 - `docs/specs/ui/navigation-contract.md` - route/transition updates if changed.
 - `docs/specs/ui/ux-rules.md` - sync status semantics in profile UI.
 - `docs/specs/06-testing-strategy.md` - final journey-proof policy updates if needed.
+- `docs/specs/tech/client-sync-engine.md` - update component/flow/failure/test-overview sections if profile-sync UX changes sync runtime interactions or end-to-end proof posture.
 
 ## Testing and verification approach
 

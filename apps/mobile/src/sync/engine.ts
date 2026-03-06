@@ -1,3 +1,7 @@
+/**
+ * Client sync engine design reference:
+ * docs/specs/tech/client-sync-engine.md
+ */
 import {
   applySyncIngestResponse,
   getSyncDeliveryState,

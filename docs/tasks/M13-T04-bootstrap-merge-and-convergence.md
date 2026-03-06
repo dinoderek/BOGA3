@@ -7,7 +7,7 @@ areas: "frontend|backend|cross-stack"
 runtimes: "node|expo|supabase"
 gates_fast: "./scripts/quality-fast.sh"
 gates_slow: "./scripts/quality-slow.sh"
-docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/03-technical-architecture.md,docs/specs/06-testing-strategy.md"
+docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/03-technical-architecture.md,docs/specs/06-testing-strategy.md,docs/specs/tech/client-sync-engine.md"
 ---
 
 # Task Card
@@ -32,6 +32,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/03-te
 - AI development playbook: `docs/specs/04-ai-development-playbook.md`
 - Testing strategy: `docs/specs/06-testing-strategy.md`
 - Project structure: `docs/specs/09-project-structure.md`
+- Client sync engine deep-dive: `docs/specs/tech/client-sync-engine.md`
 
 ## Objective
 
@@ -66,6 +67,7 @@ Implement first-sync bootstrap and local merge flow, then converge outbox delive
 - `docs/specs/milestones/M13-simple-backend-sync.md` - align with implemented merge behavior.
 - `docs/specs/03-technical-architecture.md` - update planned/adopted language if behavior stabilizes.
 - `docs/specs/06-testing-strategy.md` - update coverage policy if needed.
+- `docs/specs/tech/client-sync-engine.md` - update end-to-end flow, failure-mode, and subsystem interaction sections for implemented bootstrap/merge/convergence behavior.
 
 ## Testing and verification approach
 

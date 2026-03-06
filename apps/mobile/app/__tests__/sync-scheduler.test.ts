@@ -71,6 +71,9 @@ describe('sync scheduler cadence + context', () => {
   it('maps route context to cadence mode', () => {
     expect(syncCadenceContextFromPathname('/session-recorder')).toBe('session-recorder');
     expect(syncCadenceContextFromPathname('/session-recorder?mode=completed-edit')).toBe('session-recorder');
+    expect(syncCadenceContextFromPathname('/session-recorder#fragment')).toBe('session-recorder');
+    expect(syncCadenceContextFromPathname('/session-recorder/')).toBe('session-recorder');
+    expect(syncCadenceContextFromPathname('/session-recorder-legacy')).toBe('general');
     expect(syncCadenceContextFromPathname('/session-list')).toBe('general');
     expect(syncCadenceContextFromPathname(null)).toBe('general');
   });

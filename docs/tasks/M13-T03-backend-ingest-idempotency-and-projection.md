@@ -7,7 +7,7 @@ areas: "backend|cross-stack"
 runtimes: "supabase|sql|deno"
 gates_fast: "./scripts/quality-fast.sh backend"
 gates_slow: "./scripts/quality-slow.sh backend"
-docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/05-data-model.md,docs/specs/06-testing-strategy.md,supabase/session-sync-api-contract.md"
+docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/05-data-model.md,docs/specs/06-testing-strategy.md,docs/specs/tech/client-sync-engine.md,supabase/session-sync-api-contract.md"
 ---
 
 # Task Card
@@ -33,6 +33,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/05-da
 - Testing strategy: `docs/specs/06-testing-strategy.md`
 - Project structure: `docs/specs/09-project-structure.md`
 - API auth/authz guidelines: `docs/specs/10-api-authn-authz-guidelines.md`
+- Client sync engine deep-dive: `docs/specs/tech/client-sync-engine.md`
 
 ## Objective
 
@@ -69,6 +70,7 @@ Implement backend event ingest and projection so outbox events are applied idemp
 - `docs/specs/05-data-model.md` - backend model updates for projection storage.
 - `docs/specs/06-testing-strategy.md` - backend sync verification expectations.
 - `docs/specs/milestones/M13-simple-backend-sync.md` - align technical approach details if needed.
+- `docs/specs/tech/client-sync-engine.md` - update client/backend interaction, failure-mode, and test-overview sections impacted by ingest/projection behavior changes.
 
 ## Testing and verification approach
 
