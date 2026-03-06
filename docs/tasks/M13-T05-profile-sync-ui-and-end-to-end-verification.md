@@ -1,7 +1,7 @@
 ---
 task_id: M13-T05-profile-sync-ui-and-end-to-end-verification
 milestone_id: "M13"
-status: planned
+status: in_progress
 ui_impact: "yes"
 areas: "frontend|cross-stack|docs"
 runtimes: "node|expo|maestro|supabase"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/sc
 
 - Task ID: `M13-T05-profile-sync-ui-and-end-to-end-verification`
 - Title: M13 profile sync UX and end-to-end journey verification
-- Status: `planned`
+- Status: `in_progress`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -52,6 +52,7 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 - Ensure failure UI reflects the simplified ingest contract (`should_retry` hint + backend free-text message).
 - Add/execute automated coverage and Maestro/integration evidence for both required journeys.
 - Update authoritative UI docs for any changed profile/settings behavior.
+- Update `docs/specs/tech/client-sync-engine.md` with any profile-sync UX-driven runtime semantics changes (including interruption/replay handling if clarified by this task).
 
 ### Out of scope
 
@@ -87,6 +88,35 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 - Failure/edge outcome:
   - local data remains usable and eventual convergence occurs after recovery
 
+### Interaction + appearance notes
+
+1. Retrieval model:
+- first-enable (or first auth session after enable for a different user) runs one bootstrap pull + merge + convergence flush.
+- this retrieval is non-streaming in M13 (no incremental/progressive backend stream UI).
+- steady-state M13 sync is push-dominant; there is no periodic pull loop after bootstrap.
+
+2. Status presentation model (`/profile` sync section):
+- always show sync toggle (`Enabled` / `Disabled`) and last successful sync (`Never` until first success).
+- show a single current-state line (for example: `Syncing`, `Up to date`, `Waiting for network`, `Retry scheduled`, `Action required`).
+- while active, use indeterminate activity feedback (`Syncing...`) rather than a determinate progress bar.
+- include pending outbox count when non-zero (`N changes waiting to sync`) to indicate outstanding local work.
+
+3. Blocking behavior:
+- sync work runs in the background and must not block normal app usage.
+- profile screen may disable only the directly relevant control while that control action is in-flight (for example toggle submit), not the whole route.
+- user can leave `/profile` during bootstrap/retry and continue recording/local usage.
+
+4. Failure message and retry hint contract:
+- when backend returns `FAILURE`, surface backend free-text `message` inline.
+- if `should_retry=true` (or transport failure), show retry hint (`Will retry automatically`) and next-attempt timing when available.
+- if `should_retry=false`, show `Action required`/`Sync blocked` wording and explicit no-auto-retry hint.
+
+5. Unrecoverable-error UX:
+- keep local data usable; do not force sign-out or full-screen blocking modal.
+- keep error visible inline in `/profile` sync section until state changes.
+- provide clear copy that automatic retry is stopped and manual intervention is required.
+- no event-level debug payload is shown in UI (no raw envelope/body rendering in M13).
+
 ## Acceptance criteria
 
 1. `/profile` shows sync enabled state, last successful sync, and clear inline error state (including retry hint + free-text failure message when present).
@@ -96,6 +126,9 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 5. `./scripts/quality-slow.sh frontend` passes with artifact evidence recorded.
 6. UI docs are updated for any changed profile/settings route behavior and semantics.
 7. Reinstall restore-parity proof is explicitly delegated to `docs/tasks/M13-T06-reinstall-restore-state-parity.md`.
+8. Sync retrieval UX for first-enable bootstrap is represented as background, non-streaming work with indeterminate activity feedback (no determinate progress bar in M13).
+9. Non-retryable ingest failure (`should_retry=false`) is shown as persistent inline blocked state with explicit no-auto-retry messaging while local app usage remains available.
+10. `docs/specs/tech/client-sync-engine.md` is updated in the same session with final M13 profile-sync status semantics and interruption/replay/checkpoint behavior.
 
 ## Docs touched (required)
 
@@ -104,7 +137,7 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 - `docs/specs/ui/navigation-contract.md` - route/transition updates if changed.
 - `docs/specs/ui/ux-rules.md` - sync status semantics in profile UI.
 - `docs/specs/06-testing-strategy.md` - final journey-proof policy updates if needed.
-- `docs/specs/tech/client-sync-engine.md` - update component/flow/failure/test-overview sections if profile-sync UX changes sync runtime interactions or end-to-end proof posture.
+- `docs/specs/tech/client-sync-engine.md` - mandatory same-session update for component/flow/failure/test-overview sections when profile-sync UX changes sync runtime interactions, including interruption/replay/checkpoint semantics where applicable.
 
 ## Testing and verification approach
 

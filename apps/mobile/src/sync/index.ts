@@ -50,6 +50,12 @@ export {
   type SyncRuntimeStateSnapshot,
 } from './runtime';
 export {
+  deriveSyncProfileStatus,
+  loadSyncProfileStatus,
+  type SyncProfileStatusKind,
+  type SyncProfileStatusSnapshot,
+} from './profile-status';
+export {
   createSyncScheduler,
   setDefaultSyncCadenceContext,
   setDefaultSyncCadenceContextFromPathname,

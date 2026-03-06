@@ -115,7 +115,9 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
 - Current frontend baseline suites for this policy include:
   - `apps/mobile/app/__tests__/sync-bootstrap-merge.test.ts` (deterministic merge decisions + convergence-loop terminal behavior),
   - `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts` (first-enable trigger and logged-out-then-login bootstrap trigger),
-  - `apps/mobile/app/__tests__/sync-outbox-engine.test.ts` (batch response semantics, including retry scheduling and blocked failure mapping).
+  - `apps/mobile/app/__tests__/sync-outbox-engine.test.ts` (batch response semantics, including retry scheduling and blocked failure mapping),
+  - `apps/mobile/app/__tests__/sync-profile-status.test.ts` (profile-facing sync status mapping, including blocked and retry-scheduled states),
+  - `apps/mobile/app/__tests__/settings-profile-navigation.test.tsx` (profile sync section render + toggle + inline blocked-failure messaging).
 
 ## Maestro contract ownership (M10)
 

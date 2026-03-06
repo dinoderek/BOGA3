@@ -318,7 +318,7 @@ Restore-parity ownership note:
 2. `docs/tasks/complete/M13-T02-client-outbox-and-recorder-cadence-sync.md` - implement local outbox model and event emission at write boundaries with `60s` general and `10s` recorder cadence handling. (`completed`)
 3. `docs/tasks/complete/M13-T03-backend-ingest-idempotency-and-projection.md` - implement backend ingest/ack semantics and projection path for restore. (`completed`)
 4. `docs/tasks/complete/M13-T04-bootstrap-merge-and-convergence.md` - implement first-sync bootstrap/merge/outbox convergence flow and related coverage. (`completed`)
-5. `docs/tasks/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`planned`)
+5. `docs/tasks/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`in_progress`)
 6. `docs/tasks/M13-T06-reinstall-restore-state-parity.md` - add deterministic reinstall restore-parity verification (`Jest` + local `Supabase`) across all M13 data-scope entities. (`planned`)
 
 Rule:

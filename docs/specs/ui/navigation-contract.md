@@ -72,6 +72,8 @@ Brief entrypoint contract for current mobile routes, query/path params, and allo
 - Behavior:
   - may briefly render a restoring banner while auth bootstrap resolves a stored session
   - renders in-place logged-out vs signed-in account states from the shared auth provider snapshot
+  - signed-in state includes in-route sync controls/status (`Enable/Disable sync`, status line, last successful sync, inline retry/error hints) without navigating away
+  - sync bootstrap/retry activity remains background/non-blocking; users can leave `/profile` while sync continues
   - sign-in/sign-out change route state without redirecting away from `/profile`
   - inline auth/profile failures do not redirect away from `/profile` or block returning to local-only routes
 

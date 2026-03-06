@@ -106,6 +106,13 @@ Document app-specific UI semantics and guardrails for the current mobile app.
    - inline warning messaging when auth config is missing,
    - inline error cards for sign-in/sign-out failures,
    - inline success/error card handling for unified profile update submits,
+   - a signed-in sync section with:
+     - sync enable/disable control,
+     - one current state line (`Disabled`, `Enabled`, `Syncing initial data`, `Syncing`, `Waiting for network`, `Retry scheduled`, `Sync blocked`),
+     - `Last successful sync` value (`Never` before first success),
+     - optional `Pending changes` and `Next retry` rows,
+     - inline backend free-text failure message and retry/action-required hint when present,
+   - sync work as background/non-blocking behavior (the route stays usable while sync runs or retries),
    - explicit email-change pending-confirmation messaging instead of assuming immediate completion,
    - password field clearing after each authenticated password submit,
    - in-place signed-out/signed-in rerendering instead of a redirect loop.

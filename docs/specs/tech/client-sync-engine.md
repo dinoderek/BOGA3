@@ -44,20 +44,24 @@ Source-of-truth implementation files:
 7. `apps/mobile/src/sync/index.ts`
 - Public sync API surface for app/data layers.
 
-8. `apps/mobile/src/data/schema/sync-outbox-events.ts`
+8. `apps/mobile/src/sync/profile-status.ts`
+- Profile-facing status projection (`loadSyncProfileStatus`) derived from runtime state, delivery state, pending queue, and network flag.
+- Maps runtime internals into UX-facing status kinds/hints for `/profile`.
+
+9. `apps/mobile/src/data/schema/sync-outbox-events.ts`
 - Persistent outbox table schema.
 
-9. `apps/mobile/src/data/schema/sync-delivery-state.ts`
+10. `apps/mobile/src/data/schema/sync-delivery-state.ts`
 - Persistent delivery state schema.
 
-10. `apps/mobile/src/data/schema/sync-runtime-state.ts`
+11. `apps/mobile/src/data/schema/sync-runtime-state.ts`
 - Persistent sync enable/bootstrap state.
 
-11. `apps/mobile/src/data/migrations/index.ts`
+12. `apps/mobile/src/data/migrations/index.ts`
 - `m0007_sync_outbox_delivery_state`: outbox + delivery-state persistence.
 - `m0008_sync_runtime_state`: runtime enable/bootstrap persistence.
 
-12. Event emission integration points (`apps/mobile/src/data/**`)
+13. Event emission integration points (`apps/mobile/src/data/**`)
 - `local-gyms.ts`
 - `session-drafts.ts`
 - `session-list.ts`
@@ -109,7 +113,11 @@ Source-of-truth implementation files:
 - Runtime transport calls `POST /rest/v1/rpc/sync_events_ingest` (schema `app_public`) and consumes the locked `SUCCESS | FAILURE` envelope shape.
 - Sync enable/bootstrap metadata is persisted locally in `sync_runtime_state`, so bootstrap completion is tracked per authenticated user.
 
-4. Navigation contract coupling
+4. Profile route status surface (`apps/mobile/app/profile.tsx`)
+- Signed-in profile UI consumes `loadSyncProfileStatus` + `setSyncEnabled` to render sync state/control copy from local runtime state.
+- Sync section is a background status/control surface only; it does not block local tracking routes.
+
+5. Navigation contract coupling
 - Recorder cadence depends on route segment `session-recorder`.
 - If recorder route path changes, update:
   - `apps/mobile/src/sync/scheduler.ts` (`SESSION_RECORDER_ROUTE_SEGMENT`)
@@ -147,6 +155,24 @@ Source-of-truth implementation files:
 - remote projection fetch/parse failures do not mutate local domain tables because merge apply is transactional.
 - runtime records inline bootstrap error metadata and keeps local-first usage unblocked.
 
+9. App/process interruption during first-enable bootstrap fetch/merge (backend -> frontend)
+- bootstrap fetch (`fetchRemoteSyncProjectionState`) does not mutate local projection tables directly.
+- local projection replacement + convergence-event enqueue run inside one local DB transaction (`mergeRemoteProjectionIntoLocalState` -> `applyMergePlanTx`), so the apply step is all-or-nothing at transaction boundaries.
+- if app/process interruption occurs before bootstrap is marked completed, runtime treats bootstrap as incomplete and retries it on next eligible reconciliation.
+- bootstrap completion is checkpointed per authenticated user in `sync_runtime_state` (`bootstrap_user_id`, `bootstrap_completed_at`) only after convergence success.
+- M13 does not persist fine-grained bootstrap phase checkpoints; retry is coarse-grained (rerun fetch + merge + convergence).
+
+10. Repeat behavior after interrupted bootstrap
+- repeated bootstrap runs are expected and safe for convergence; merge selection is deterministic (`updated_at` winner with local tie-break).
+- M13 does not use a separate bootstrap-run idempotency token; safety is based on deterministic merge plus idempotent/overwrite-safe projection semantics for repeated equivalent events.
+- a rerun can enqueue convergence events again if bootstrap had not been marked completed; this is acceptable under the at-least-once sync model.
+
+11. App/process interruption during post-bootstrap outbox flush
+- outbox and delivery state are persisted locally (`sync_outbox_events`, `sync_delivery_state`).
+- events are only removed from outbox after ingest response handling (`applySyncIngestResponse`); if app closes before response handling, queued events remain.
+- after restart, runtime/scheduler re-attempts eligible flushes from persisted queue state.
+- replay safety relies on backend idempotency key `(owner_user_id, device_id, event_id)` and duplicate-same-payload no-op semantics.
+
 ## 5) Test overview
 
 1. Engine/outbox behavior
@@ -174,6 +200,13 @@ Source-of-truth implementation files:
 6. Backend ingest/projection contract
 - `supabase/tests/sync-events-ingest-contract.sh`
 - coverage: success projection, duplicate replay idempotency, duplicate-with-drift rejection, strict ordering + prefix commit, and auth/RLS denial paths.
+  - includes explicit duplicate replay assertions and changed-payload duplicate rejection assertions.
+
+7. Profile sync status semantics
+- `apps/mobile/app/__tests__/sync-profile-status.test.ts`
+- coverage: derived status mapping for disabled, initial-sync, retry-scheduled, and blocked/action-required states.
+- `apps/mobile/app/__tests__/settings-profile-navigation.test.tsx`
+- coverage: signed-in profile sync section render, toggle wiring, and inline blocked-failure messaging.
 
 ## Maintenance rule for follow-up tasks
 
