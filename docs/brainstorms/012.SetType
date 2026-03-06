@@ -1,0 +1,14 @@
+We want to (optionally) log what type of Set is being logged.
+Typical Set types would be:
+- To failure
+- 1 to failure
+- 2 to failure 
+- Warm up
+
+Let's research a small set of set types that make sense.
+
+Let's add a small button to the left of the set logging row to pick the set type. The button should be small (44x44?) and cycle through the types. 
+Each type needs to have a "descriptive" icon or text that fits in the 44x44. 
+On long press on the button we should add a modal that allows to select the type from the full descriptions.
+ 
+Let's record the set type as part of the set metadata so that we can use it later in analytics.
