@@ -2,6 +2,7 @@ import { asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
 import { exerciseDefinitions, exerciseMuscleMappings, muscleGroups } from './schema';
+import { enqueueSyncEventsTx } from '@/src/sync';
 
 export type ExerciseCatalogMuscleGroup = {
   id: string;
@@ -70,6 +71,14 @@ export type ExerciseCatalogStore = {
     now: Date;
   }): Promise<void>;
 };
+
+const toExerciseDefinitionSyncPayload = (row: typeof exerciseDefinitions.$inferSelect) => ({
+  id: row.id,
+  name: row.name,
+  deleted_at_ms: row.deletedAt ? row.deletedAt.getTime() : null,
+  created_at_ms: row.createdAt.getTime(),
+  updated_at_ms: row.updatedAt.getTime(),
+});
 
 const createLocalId = (prefix: string) =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -169,6 +178,19 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
     const exerciseId = input.id ?? createLocalId('exercise-definition');
 
     database.transaction((tx) => {
+      const existingMappingRows = tx
+        .select({
+          id: exerciseMuscleMappings.id,
+          exerciseDefinitionId: exerciseMuscleMappings.exerciseDefinitionId,
+          muscleGroupId: exerciseMuscleMappings.muscleGroupId,
+          weight: exerciseMuscleMappings.weight,
+          role: exerciseMuscleMappings.role,
+          createdAt: exerciseMuscleMappings.createdAt,
+        })
+        .from(exerciseMuscleMappings)
+        .where(eq(exerciseMuscleMappings.exerciseDefinitionId, exerciseId))
+        .all();
+
       const existing = tx
         .select({ id: exerciseDefinitions.id })
         .from(exerciseDefinitions)
@@ -200,10 +222,46 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
         .where(eq(exerciseMuscleMappings.exerciseDefinitionId, exerciseId))
         .run();
 
+      const nextMappingsByMuscleId = new Map(input.mappings.map((mapping) => [mapping.muscleGroupId, mapping]));
+      const syncEvents: Parameters<typeof enqueueSyncEventsTx>[1] = [
+        {
+          entityType: 'exercise_definitions',
+          entityId: exerciseId,
+          eventType: 'upsert',
+          occurredAt: input.now,
+          payload: {
+            id: exerciseId,
+            name: input.name,
+            deleted_at_ms: null,
+            created_at_ms: input.now.getTime(),
+            updated_at_ms: input.now.getTime(),
+          },
+        },
+      ];
+
+      existingMappingRows
+        .filter((mapping) => !nextMappingsByMuscleId.has(mapping.muscleGroupId))
+        .forEach((mapping) => {
+          const mappingEntityId = `${mapping.exerciseDefinitionId}:${mapping.muscleGroupId}`;
+          syncEvents.push({
+            entityType: 'exercise_muscle_mappings',
+            entityId: mappingEntityId,
+            eventType: 'detach',
+            occurredAt: input.now,
+            payload: {
+              id: mappingEntityId,
+              exercise_definition_id: mapping.exerciseDefinitionId,
+              muscle_group_id: mapping.muscleGroupId,
+            },
+          });
+        });
+
       for (const mapping of input.mappings) {
+        const mappingId = createLocalId('exercise-muscle-mapping');
+        const mappingEntityId = `${exerciseId}:${mapping.muscleGroupId}`;
         tx.insert(exerciseMuscleMappings)
           .values({
-            id: createLocalId('exercise-muscle-mapping'),
+            id: mappingId,
             exerciseDefinitionId: exerciseId,
             muscleGroupId: mapping.muscleGroupId,
             weight: mapping.weight,
@@ -212,7 +270,26 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
             updatedAt: input.now,
           })
           .run();
+
+        syncEvents.push({
+          entityType: 'exercise_muscle_mappings',
+          entityId: mappingEntityId,
+          eventType: 'attach',
+          occurredAt: input.now,
+          payload: {
+            id: mappingEntityId,
+            row_id: mappingId,
+            exercise_definition_id: exerciseId,
+            muscle_group_id: mapping.muscleGroupId,
+            weight: mapping.weight,
+            role: mapping.role,
+            created_at_ms: input.now.getTime(),
+            updated_at_ms: input.now.getTime(),
+          },
+        });
       }
+
+      enqueueSyncEventsTx(tx, syncEvents, { now: input.now });
     });
 
     const exerciseRow = database
@@ -243,14 +320,40 @@ export const createDrizzleExerciseCatalogStore = (): ExerciseCatalogStore => ({
   async setExerciseDeletedState(input) {
     const database = await bootstrapLocalDataLayer();
 
-    database
-      .update(exerciseDefinitions)
-      .set({
-        deletedAt: input.deletedAt,
-        updatedAt: input.now,
-      })
-      .where(eq(exerciseDefinitions.id, input.id))
-      .run();
+    database.transaction((tx) => {
+      tx.update(exerciseDefinitions)
+        .set({
+          deletedAt: input.deletedAt,
+          updatedAt: input.now,
+        })
+        .where(eq(exerciseDefinitions.id, input.id))
+        .run();
+
+      const updatedRow = tx.select().from(exerciseDefinitions).where(eq(exerciseDefinitions.id, input.id)).get();
+      if (!updatedRow) {
+        return;
+      }
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'exercise_definitions',
+            entityId: input.id,
+            eventType: input.deletedAt ? 'delete' : 'upsert',
+            occurredAt: input.now,
+            payload: input.deletedAt
+              ? {
+                  id: updatedRow.id,
+                  deleted_at_ms: input.deletedAt.getTime(),
+                  updated_at_ms: input.now.getTime(),
+                }
+              : toExerciseDefinitionSyncPayload(updatedRow),
+          },
+        ],
+        { now: input.now }
+      );
+    });
   },
 });
 

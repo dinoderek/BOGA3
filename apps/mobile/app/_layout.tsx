@@ -1,16 +1,32 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { AuthProvider, bootstrapAuthState } from '@/src/auth';
 import { bootstrapLocalDataLayer } from '@/src/data';
+import {
+  setDefaultSyncCadenceContextFromPathname,
+  startDefaultSyncScheduler,
+  stopDefaultSyncScheduler,
+} from '@/src/sync';
 
 export default function RootLayout() {
+  const pathname = usePathname();
+
   useEffect(() => {
     void bootstrapLocalDataLayer();
     void bootstrapAuthState();
+    startDefaultSyncScheduler();
+
+    return () => {
+      stopDefaultSyncScheduler();
+    };
   }, []);
+
+  useEffect(() => {
+    setDefaultSyncCadenceContextFromPathname(pathname);
+  }, [pathname]);
 
   return (
     <AuthProvider>

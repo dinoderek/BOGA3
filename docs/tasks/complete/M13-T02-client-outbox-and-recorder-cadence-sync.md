@@ -1,7 +1,7 @@
 ---
 task_id: M13-T02-client-outbox-and-recorder-cadence-sync
 milestone_id: "M13"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "frontend|cross-stack"
 runtimes: "node|expo"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/06-te
 
 - Task ID: `M13-T02-client-outbox-and-recorder-cadence-sync`
 - Title: M13 client outbox and dual-cadence scheduler
-- Status: `planned`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -98,12 +98,31 @@ Implement the local outbox and scheduler behavior with the locked cadence policy
 
 ## Evidence
 
-- targeted test command results
-- fast/slow gate summaries
-- recorder-vs-general cadence proof notes
+- Targeted suites:
+  - `npm run test -- app/__tests__/sync-outbox-engine.test.ts app/__tests__/sync-scheduler.test.ts app/__tests__/sync-domain-event-emission.test.ts app/__tests__/root-layout-auth-bootstrap.test.ts` (`pass`)
+- Fast gate:
+  - `./scripts/quality-fast.sh frontend` (`pass`; existing repo lint warnings only, no lint/type/test errors)
+- Slow gate:
+  - `./scripts/quality-slow.sh frontend`
+    - `test:e2e:ios:smoke` (`pass`)
+    - `test:e2e:ios:data-smoke` (`pass`)
+    - `test:e2e:ios:auth-profile` (`fail`: `Element not found: Id matching regex: profile-username-input`)
+  - Retried `npm run test:e2e:ios:auth-profile` once; same failure reproduced.
+- Cadence proof notes:
+  - Added scheduler unit coverage asserting `60s` default cadence and `10s` `session-recorder` cadence plus offline->online immediate flush trigger.
 
 ## Completion note (fill at end)
 
 - What changed:
+  - Added persistent sync tables (`sync_outbox_events`, `sync_delivery_state`) and runtime migration `m0007`.
+  - Implemented M13 sync outbox/event models, ingest-response handling, retry/backoff policy, and flush in-flight guard under `apps/mobile/src/sync/**`.
+  - Added route-aware cadence scheduler (`60s` general / `10s` recorder) and wired root layout to update cadence context from pathname.
+  - Wired M13 entity-scope event enqueueing at frontend write boundaries for gyms/sessions/session exercises/exercise sets/exercise definitions/exercise muscle mappings/exercise tag definitions/session exercise tags.
+  - Added sync-focused unit coverage for engine/scheduler and domain-event emission wiring.
 - What tests ran:
+  - `npm run test -- app/__tests__/sync-outbox-engine.test.ts app/__tests__/sync-scheduler.test.ts app/__tests__/sync-domain-event-emission.test.ts app/__tests__/root-layout-auth-bootstrap.test.ts`
+  - `./scripts/quality-fast.sh frontend`
+  - `./scripts/quality-slow.sh frontend` (with one deterministic failing sub-flow noted above)
+  - `npm run test:e2e:ios:auth-profile` (retry, same failure)
 - What remains:
+  - Resolve the existing/now-deterministic Maestro auth-profile flow failure (`profile-username-input` not found after sign-in).

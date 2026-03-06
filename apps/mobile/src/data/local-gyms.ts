@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer } from './bootstrap';
 import { gyms } from './schema';
+import { enqueueSyncEventsTx } from '@/src/sync';
 
 export type UpsertLocalGymInput = {
   id: string;
@@ -19,7 +20,7 @@ export const upsertLocalGym = async (input: UpsertLocalGymInput) => {
   const now = input.now ?? new Date();
 
   database.transaction((tx) => {
-    const existing = tx.select({ id: gyms.id }).from(gyms).where(eq(gyms.id, input.id)).get();
+    const existing = tx.select().from(gyms).where(eq(gyms.id, input.id)).get();
 
     if (existing) {
       tx.update(gyms)
@@ -29,6 +30,27 @@ export const upsertLocalGym = async (input: UpsertLocalGymInput) => {
         })
         .where(eq(gyms.id, input.id))
         .run();
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'gyms',
+            entityId: input.id,
+            eventType: 'upsert',
+            occurredAt: now,
+            payload: {
+              id: input.id,
+              name: input.name,
+              origin_scope_id: existing.originScopeId,
+              origin_source_id: existing.originSourceId,
+              created_at_ms: existing.createdAt.getTime(),
+              updated_at_ms: now.getTime(),
+            },
+          },
+        ],
+        { now }
+      );
       return;
     }
 
@@ -42,6 +64,27 @@ export const upsertLocalGym = async (input: UpsertLocalGymInput) => {
         updatedAt: now,
       })
       .run();
+
+    enqueueSyncEventsTx(
+      tx,
+      [
+        {
+          entityType: 'gyms',
+          entityId: input.id,
+          eventType: 'upsert',
+          occurredAt: now,
+          payload: {
+            id: input.id,
+            name: input.name,
+            origin_scope_id: 'private',
+            origin_source_id: 'local',
+            created_at_ms: now.getTime(),
+            updated_at_ms: now.getTime(),
+          },
+        },
+      ],
+      { now }
+    );
   });
 };
 

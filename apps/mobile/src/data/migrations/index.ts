@@ -48,6 +48,12 @@ export const localRuntimeMigrations: RuntimeMigrationConfig = {
         tag: '0006_noisy_vector',
         breakpoints: true,
       },
+      {
+        idx: 7,
+        when: 1772806400000,
+        tag: '0007_sync_outbox_delivery_state',
+        breakpoints: true,
+      },
     ],
   },
   migrations: {
@@ -229,5 +235,40 @@ CREATE INDEX \`session_exercise_tags_exercise_tag_definition_id_idx\` ON \`sessi
 CREATE UNIQUE INDEX \`session_exercise_tags_session_exercise_id_tag_definition_unique\` ON \`session_exercise_tags\` (\`session_exercise_id\`,\`exercise_tag_definition_id\`);--> statement-breakpoint
 ALTER TABLE \`session_exercises\` ADD \`exercise_definition_id\` text REFERENCES exercise_definitions(id);--> statement-breakpoint
 CREATE INDEX \`session_exercises_exercise_definition_id_idx\` ON \`session_exercises\` (\`exercise_definition_id\`);`,
+    m0007: `CREATE TABLE \`sync_delivery_state\` (
+	\`id\` text PRIMARY KEY NOT NULL,
+	\`device_id\` text NOT NULL,
+	\`next_sequence_in_device\` integer DEFAULT 1 NOT NULL,
+	\`consecutive_failures\` integer DEFAULT 0 NOT NULL,
+	\`retry_blocked\` integer DEFAULT 0 NOT NULL,
+	\`next_attempt_at\` integer,
+	\`last_attempt_at\` integer,
+	\`last_success_at\` integer,
+	\`last_error_message\` text,
+	\`updated_at\` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	CONSTRAINT "sync_delivery_state_next_sequence_positive" CHECK("sync_delivery_state"."next_sequence_in_device" >= 1),
+	CONSTRAINT "sync_delivery_state_consecutive_failures_non_negative" CHECK("sync_delivery_state"."consecutive_failures" >= 0),
+	CONSTRAINT "sync_delivery_state_retry_blocked_boolean_guard" CHECK("sync_delivery_state"."retry_blocked" in (0, 1))
+);
+--> statement-breakpoint
+CREATE TABLE \`sync_outbox_events\` (
+	\`id\` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	\`event_id\` text NOT NULL,
+	\`sequence_in_device\` integer NOT NULL,
+	\`occurred_at\` integer NOT NULL,
+	\`entity_type\` text NOT NULL,
+	\`entity_id\` text NOT NULL,
+	\`event_type\` text NOT NULL,
+	\`payload_json\` text NOT NULL,
+	\`schema_version\` integer DEFAULT 1 NOT NULL,
+	\`trace_id\` text,
+	\`created_at\` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	CONSTRAINT "sync_outbox_events_sequence_in_device_positive" CHECK("sync_outbox_events"."sequence_in_device" >= 1),
+	CONSTRAINT "sync_outbox_events_payload_json_non_empty" CHECK("sync_outbox_events"."payload_json" <> '')
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX \`sync_outbox_events_event_id_unique\` ON \`sync_outbox_events\` (\`event_id\`);--> statement-breakpoint
+CREATE UNIQUE INDEX \`sync_outbox_events_sequence_in_device_unique\` ON \`sync_outbox_events\` (\`sequence_in_device\`);--> statement-breakpoint
+CREATE INDEX \`sync_outbox_events_created_at_idx\` ON \`sync_outbox_events\` (\`created_at\`);`,
   },
 };

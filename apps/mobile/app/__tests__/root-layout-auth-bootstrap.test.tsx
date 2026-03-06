@@ -4,6 +4,9 @@ import type { ReactNode } from 'react';
 
 const mockBootstrapLocalDataLayer = jest.fn();
 const mockBootstrapAuthState = jest.fn();
+const mockSetDefaultSyncCadenceContextFromPathname = jest.fn();
+const mockStartDefaultSyncScheduler = jest.fn();
+const mockStopDefaultSyncScheduler = jest.fn();
 
 jest.mock('@/src/data', () => ({
   bootstrapLocalDataLayer: (...args: unknown[]) => mockBootstrapLocalDataLayer(...args),
@@ -18,6 +21,13 @@ jest.mock('@/src/auth', () => {
     bootstrapAuthState: (...args: unknown[]) => mockBootstrapAuthState(...args),
   };
 });
+
+jest.mock('@/src/sync', () => ({
+  setDefaultSyncCadenceContextFromPathname: (...args: unknown[]) =>
+    mockSetDefaultSyncCadenceContextFromPathname(...args),
+  startDefaultSyncScheduler: (...args: unknown[]) => mockStartDefaultSyncScheduler(...args),
+  stopDefaultSyncScheduler: (...args: unknown[]) => mockStopDefaultSyncScheduler(...args),
+}));
 
 jest.mock('expo-status-bar', () => ({
   StatusBar: () => null,
@@ -34,6 +44,7 @@ jest.mock('expo-router', () => {
 
   return {
     Stack,
+    usePathname: () => '/session-list',
   };
 });
 
@@ -45,6 +56,9 @@ describe('RootLayout auth bootstrap wiring', () => {
   beforeEach(() => {
     mockBootstrapLocalDataLayer.mockReset();
     mockBootstrapAuthState.mockReset();
+    mockSetDefaultSyncCadenceContextFromPathname.mockReset();
+    mockStartDefaultSyncScheduler.mockReset();
+    mockStopDefaultSyncScheduler.mockReset();
     mockBootstrapLocalDataLayer.mockResolvedValue(undefined);
     mockBootstrapAuthState.mockResolvedValue(undefined);
   });
@@ -56,6 +70,8 @@ describe('RootLayout auth bootstrap wiring', () => {
       expect(mockBootstrapLocalDataLayer).toHaveBeenCalledTimes(1);
     });
     expect(mockBootstrapAuthState).toHaveBeenCalledTimes(1);
+    expect(mockStartDefaultSyncScheduler).toHaveBeenCalledTimes(1);
+    expect(mockSetDefaultSyncCadenceContextFromPathname).toHaveBeenCalledWith('/session-list');
     expect(screen.getByTestId('root-stack')).toBeTruthy();
     expect(screen.getByTestId('screen-settings')).toBeTruthy();
     expect(screen.getByTestId('screen-profile')).toBeTruthy();

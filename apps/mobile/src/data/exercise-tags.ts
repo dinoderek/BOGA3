@@ -2,6 +2,7 @@ import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer } from './bootstrap';
 import { exerciseTagDefinitions, sessionExercises, sessionExerciseTags } from './schema';
+import { enqueueSyncEvent } from '@/src/sync';
 
 export type ExerciseTagDefinitionRecord = {
   id: string;
@@ -119,6 +120,16 @@ const normalizeTagName = (name: string): { name: string; normalizedName: string 
   };
 };
 
+const toTagDefinitionSyncPayload = (row: ExerciseTagDefinitionRecord) => ({
+  id: row.id,
+  exercise_definition_id: row.exerciseDefinitionId,
+  name: row.name,
+  normalized_name: row.normalizedName,
+  deleted_at_ms: row.deletedAt ? row.deletedAt.getTime() : null,
+  created_at_ms: row.createdAt.getTime(),
+  updated_at_ms: row.updatedAt.getTime(),
+});
+
 const isUniqueConstraintError = (error: unknown, requiredMessageParts: string[]) => {
   if (!(error instanceof Error)) {
     return false;
@@ -213,6 +224,17 @@ export const createDrizzleExerciseTagStore = (): ExerciseTagStore => ({
       throw new Error(`Tag definition ${tagDefinitionId} was not found after create`);
     }
 
+    await enqueueSyncEvent(
+      {
+        entityType: 'exercise_tag_definitions',
+        entityId: tagDefinition.id,
+        eventType: 'upsert',
+        occurredAt: input.now,
+        payload: toTagDefinitionSyncPayload(tagDefinition),
+      },
+      { now: input.now }
+    );
+
     return tagDefinition;
   },
   async renameTagDefinition(input) {
@@ -242,6 +264,19 @@ export const createDrizzleExerciseTagStore = (): ExerciseTagStore => ({
       .where(eq(exerciseTagDefinitions.id, input.id))
       .get() as ExerciseTagDefinitionRecord | undefined;
 
+    if (tagDefinition) {
+      await enqueueSyncEvent(
+        {
+          entityType: 'exercise_tag_definitions',
+          entityId: tagDefinition.id,
+          eventType: 'upsert',
+          occurredAt: input.now,
+          payload: toTagDefinitionSyncPayload(tagDefinition),
+        },
+        { now: input.now }
+      );
+    }
+
     return tagDefinition ?? null;
   },
   async setTagDefinitionDeletedState(input) {
@@ -255,6 +290,41 @@ export const createDrizzleExerciseTagStore = (): ExerciseTagStore => ({
       })
       .where(eq(exerciseTagDefinitions.id, input.id))
       .run();
+
+    const updatedTagDefinition = database
+      .select({
+        id: exerciseTagDefinitions.id,
+        exerciseDefinitionId: exerciseTagDefinitions.exerciseDefinitionId,
+        name: exerciseTagDefinitions.name,
+        normalizedName: exerciseTagDefinitions.normalizedName,
+        deletedAt: exerciseTagDefinitions.deletedAt,
+        createdAt: exerciseTagDefinitions.createdAt,
+        updatedAt: exerciseTagDefinitions.updatedAt,
+      })
+      .from(exerciseTagDefinitions)
+      .where(eq(exerciseTagDefinitions.id, input.id))
+      .get() as ExerciseTagDefinitionRecord | undefined;
+
+    if (!updatedTagDefinition) {
+      return;
+    }
+
+    await enqueueSyncEvent(
+      {
+        entityType: 'exercise_tag_definitions',
+        entityId: updatedTagDefinition.id,
+        eventType: input.deletedAt ? 'delete' : 'upsert',
+        occurredAt: input.now,
+        payload: input.deletedAt
+          ? {
+              id: updatedTagDefinition.id,
+              deleted_at_ms: input.deletedAt.getTime(),
+              updated_at_ms: input.now.getTime(),
+            }
+          : toTagDefinitionSyncPayload(updatedTagDefinition),
+      },
+      { now: input.now }
+    );
   },
   async loadSessionExerciseScope(sessionExerciseId) {
     const database = await bootstrapLocalDataLayer();
@@ -284,16 +354,35 @@ export const createDrizzleExerciseTagStore = (): ExerciseTagStore => ({
   },
   async createTagAssignment(input) {
     const database = await bootstrapLocalDataLayer();
+    const assignmentId = createLocalId('session-exercise-tag');
+    const assignmentEntityId = `${input.sessionExerciseId}:${input.tagDefinitionId}`;
 
     database
       .insert(sessionExerciseTags)
       .values({
-        id: createLocalId('session-exercise-tag'),
+        id: assignmentId,
         sessionExerciseId: input.sessionExerciseId,
         exerciseTagDefinitionId: input.tagDefinitionId,
         createdAt: input.now,
       })
       .run();
+
+    await enqueueSyncEvent(
+      {
+        entityType: 'session_exercise_tags',
+        entityId: assignmentEntityId,
+        eventType: 'attach',
+        occurredAt: input.now,
+        payload: {
+          id: assignmentEntityId,
+          row_id: assignmentId,
+          session_exercise_id: input.sessionExerciseId,
+          exercise_tag_definition_id: input.tagDefinitionId,
+          created_at_ms: input.now.getTime(),
+        },
+      },
+      { now: input.now }
+    );
   },
   async removeTagAssignment(input) {
     const database = await bootstrapLocalDataLayer();
@@ -307,6 +396,17 @@ export const createDrizzleExerciseTagStore = (): ExerciseTagStore => ({
         )
       )
       .run();
+
+    await enqueueSyncEvent({
+      entityType: 'session_exercise_tags',
+      entityId: `${input.sessionExerciseId}:${input.tagDefinitionId}`,
+      eventType: 'detach',
+      payload: {
+        id: `${input.sessionExerciseId}:${input.tagDefinitionId}`,
+        session_exercise_id: input.sessionExerciseId,
+        exercise_tag_definition_id: input.tagDefinitionId,
+      },
+    });
   },
   async listAssignedTags(input) {
     const database = await bootstrapLocalDataLayer();

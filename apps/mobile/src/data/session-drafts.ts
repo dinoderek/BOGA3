@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bootstrapLocalDataLayer, type LocalDatabase } from './bootstrap';
 import { exerciseSets, sessionExercises, sessionExerciseTags, sessions } from './schema';
+import { enqueueSyncEventsTx, type QueuedSyncEventInput } from '@/src/sync';
 
 export type SessionDraftStatus = 'active';
 
@@ -278,6 +279,18 @@ const mapSessionRow = (row: typeof sessions.$inferSelect): SessionPersistenceRec
   };
 };
 
+const toSessionSyncPayload = (row: typeof sessions.$inferSelect) => ({
+  id: row.id,
+  gym_id: row.gymId,
+  status: row.status,
+  started_at_ms: row.startedAt.getTime(),
+  completed_at_ms: row.completedAt ? row.completedAt.getTime() : null,
+  duration_sec: row.durationSec,
+  deleted_at_ms: row.deletedAt ? row.deletedAt.getTime() : null,
+  created_at_ms: row.createdAt.getTime(),
+  updated_at_ms: row.updatedAt.getTime(),
+});
+
 const mapDraftSnapshot = (graph: StoredDraftGraph): SessionDraftSnapshot => ({
   sessionId: graph.session.id,
   gymId: graph.session.gymId,
@@ -397,13 +410,30 @@ const replaceSessionExerciseGraph = (
   const existingExerciseRows = tx
     .select({
       id: sessionExercises.id,
+      sessionId: sessionExercises.sessionId,
       exerciseDefinitionId: sessionExercises.exerciseDefinitionId,
+      orderIndex: sessionExercises.orderIndex,
     })
     .from(sessionExercises)
     .where(eq(sessionExercises.sessionId, input.sessionId))
     .all();
   const existingExerciseIds = existingExerciseRows.map((row) => row.id);
   const existingExercisesById = new Map(existingExerciseRows.map((row) => [row.id, row]));
+  const existingSetRows =
+    existingExerciseIds.length > 0
+      ? tx
+          .select({
+            id: exerciseSets.id,
+            sessionExerciseId: exerciseSets.sessionExerciseId,
+            orderIndex: exerciseSets.orderIndex,
+            repsValue: exerciseSets.repsValue,
+            weightValue: exerciseSets.weightValue,
+          })
+          .from(exerciseSets)
+          .where(inArray(exerciseSets.sessionExerciseId, existingExerciseIds))
+          .all()
+      : [];
+  const existingSetsById = new Map(existingSetRows.map((row) => [row.id, row]));
   const existingTagRows =
     existingExerciseIds.length > 0
       ? (tx
@@ -426,6 +456,9 @@ const replaceSessionExerciseGraph = (
     },
     new Map<string, StoredSessionExerciseTagRecord[]>()
   );
+  const syncEvents: QueuedSyncEventInput[] = [];
+  const nextExerciseIds = new Set<string>();
+  const nextSetIds = new Set<string>();
 
   if (existingExerciseIds.length > 0) {
     // Do not rely on FK cascade state; clear tag assignments explicitly.
@@ -437,6 +470,7 @@ const replaceSessionExerciseGraph = (
   input.exercises.forEach((exercise, exerciseIndex) => {
     const sessionExerciseId = exercise.id?.trim() || createLocalEntityId('exercise');
     const exerciseDefinitionId = exercise.exerciseDefinitionId.trim();
+    nextExerciseIds.add(sessionExerciseId);
 
     if (!exerciseDefinitionId) {
       throw new Error(`Exercise definition id is required for exercise at index ${exerciseIndex}`);
@@ -457,7 +491,39 @@ const replaceSessionExerciseGraph = (
       })
       .run();
 
+    syncEvents.push({
+      entityType: 'session_exercises',
+      entityId: sessionExerciseId,
+      eventType: 'upsert',
+      occurredAt: input.now,
+      payload: {
+        id: sessionExerciseId,
+        session_id: input.sessionId,
+        exercise_definition_id: exerciseDefinitionId,
+        order_index: exerciseIndex,
+        name: exercise.name,
+        machine_name: exercise.machineName ?? null,
+        origin_scope_id: exercise.originScopeId ?? 'private',
+        origin_source_id: exercise.originSourceId ?? 'local',
+        created_at_ms: input.now.getTime(),
+        updated_at_ms: input.now.getTime(),
+      },
+    });
+
     const existingExercise = existingExercisesById.get(sessionExerciseId);
+    if (existingExercise && existingExercise.orderIndex !== exerciseIndex) {
+      syncEvents.push({
+        entityType: 'session_exercises',
+        entityId: sessionExerciseId,
+        eventType: 'reorder',
+        occurredAt: input.now,
+        payload: {
+          session_id: input.sessionId,
+          order_index: exerciseIndex,
+        },
+      });
+    }
+
     if (existingExercise && existingExercise.exerciseDefinitionId === exerciseDefinitionId) {
       const existingTags = existingTagsByExerciseId.get(sessionExerciseId) ?? [];
       existingTags.forEach((assignment) => {
@@ -473,9 +539,11 @@ const replaceSessionExerciseGraph = (
     }
 
     exercise.sets.forEach((set, setIndex) => {
+      const setId = set.id?.trim() || createLocalEntityId('set');
+      nextSetIds.add(setId);
       tx.insert(exerciseSets)
         .values({
-          id: set.id?.trim() || createLocalEntityId('set'),
+          id: setId,
           sessionExerciseId,
           orderIndex: setIndex,
           repsValue: set.repsValue,
@@ -484,8 +552,70 @@ const replaceSessionExerciseGraph = (
           updatedAt: input.now,
         })
         .run();
+
+      syncEvents.push({
+        entityType: 'exercise_sets',
+        entityId: setId,
+        eventType: 'upsert',
+        occurredAt: input.now,
+        payload: {
+          id: setId,
+          session_exercise_id: sessionExerciseId,
+          order_index: setIndex,
+          reps_value: set.repsValue,
+          weight_value: set.weightValue,
+          created_at_ms: input.now.getTime(),
+          updated_at_ms: input.now.getTime(),
+        },
+      });
+
+      const existingSet = existingSetsById.get(setId);
+      if (existingSet && existingSet.orderIndex !== setIndex) {
+        syncEvents.push({
+          entityType: 'exercise_sets',
+          entityId: setId,
+          eventType: 'reorder',
+          occurredAt: input.now,
+          payload: {
+            session_exercise_id: sessionExerciseId,
+            order_index: setIndex,
+          },
+        });
+      }
     });
   });
+
+  existingExerciseRows
+    .filter((exercise) => !nextExerciseIds.has(exercise.id))
+    .forEach((exercise) => {
+      syncEvents.push({
+        entityType: 'session_exercises',
+        entityId: exercise.id,
+        eventType: 'delete',
+        occurredAt: input.now,
+        payload: {
+          id: exercise.id,
+          session_id: exercise.sessionId,
+        },
+      });
+    });
+
+  existingSetRows
+    .filter((set) => !nextSetIds.has(set.id))
+    .forEach((set) => {
+      syncEvents.push({
+        entityType: 'exercise_sets',
+        entityId: set.id,
+        eventType: 'delete',
+        occurredAt: input.now,
+        payload: {
+          id: set.id,
+          session_exercise_id: set.sessionExerciseId,
+        },
+      });
+    });
+
+  return syncEvents;
 };
 
 export const __replaceSessionExerciseGraphForTests = replaceSessionExerciseGraph;
@@ -528,11 +658,31 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
           .run();
       }
 
-      replaceSessionExerciseGraph(tx, {
+      const sessionExerciseEvents = replaceSessionExerciseGraph(tx, {
         sessionId,
         exercises: input.exercises,
         now: input.now,
       });
+
+      const persistedSession = tx.select().from(sessions).where(eq(sessions.id, sessionId)).get();
+      if (!persistedSession) {
+        return;
+      }
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'sessions',
+            entityId: sessionId,
+            eventType: 'upsert',
+            occurredAt: input.now,
+            payload: toSessionSyncPayload(persistedSession),
+          },
+          ...sessionExerciseEvents,
+        ],
+        { now: input.now }
+      );
     });
 
     return { sessionId };
@@ -561,11 +711,31 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
         .where(eq(sessions.id, input.sessionId))
         .run();
 
-      replaceSessionExerciseGraph(tx, {
+      const sessionExerciseEvents = replaceSessionExerciseGraph(tx, {
         sessionId: input.sessionId,
         exercises: input.exercises,
         now: input.now,
       });
+
+      const updatedSession = tx.select().from(sessions).where(eq(sessions.id, input.sessionId)).get();
+      if (!updatedSession) {
+        return;
+      }
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'sessions',
+            entityId: input.sessionId,
+            eventType: 'upsert',
+            occurredAt: input.now,
+            payload: toSessionSyncPayload(updatedSession),
+          },
+          ...sessionExerciseEvents,
+        ],
+        { now: input.now }
+      );
     });
 
     return { sessionId: input.sessionId };
@@ -596,16 +766,48 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
   },
   async completeSession(input) {
     const database = await bootstrapLocalDataLayer();
-    database
-      .update(sessions)
-      .set({
-        status: 'completed',
-        completedAt: input.completedAt,
-        durationSec: input.durationSec,
-        updatedAt: input.updatedAt,
-      })
-      .where(eq(sessions.id, input.sessionId))
-      .run();
+    database.transaction((tx) => {
+      tx.update(sessions)
+        .set({
+          status: 'completed',
+          completedAt: input.completedAt,
+          durationSec: input.durationSec,
+          updatedAt: input.updatedAt,
+        })
+        .where(eq(sessions.id, input.sessionId))
+        .run();
+
+      const updatedSession = tx.select().from(sessions).where(eq(sessions.id, input.sessionId)).get();
+      if (!updatedSession) {
+        return;
+      }
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'sessions',
+            entityId: input.sessionId,
+            eventType: 'upsert',
+            occurredAt: input.updatedAt,
+            payload: toSessionSyncPayload(updatedSession),
+          },
+          {
+            entityType: 'sessions',
+            entityId: input.sessionId,
+            eventType: 'complete',
+            occurredAt: input.updatedAt,
+            payload: {
+              id: input.sessionId,
+              completed_at_ms: input.completedAt.getTime(),
+              duration_sec: input.durationSec,
+              updated_at_ms: input.updatedAt.getTime(),
+            },
+          },
+        ],
+        { now: input.updatedAt }
+      );
+    });
   },
   async reopenCompletedSession(input) {
     const database = await bootstrapLocalDataLayer();
@@ -640,6 +842,25 @@ export const createDrizzleSessionDraftStore = (): SessionDraftStore => ({
         })
         .where(eq(sessions.id, input.sessionId))
         .run();
+
+      const reopenedSession = tx.select().from(sessions).where(eq(sessions.id, input.sessionId)).get();
+      if (!reopenedSession) {
+        return;
+      }
+
+      enqueueSyncEventsTx(
+        tx,
+        [
+          {
+            entityType: 'sessions',
+            entityId: input.sessionId,
+            eventType: 'upsert',
+            occurredAt: input.updatedAt,
+            payload: toSessionSyncPayload(reopenedSession),
+          },
+        ],
+        { now: input.updatedAt }
+      );
     });
   },
   async listCompletedSessions() {
