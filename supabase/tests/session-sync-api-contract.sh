@@ -192,6 +192,7 @@ SESSION_INVALID_STATUS_ID="sync-session-a-invalid-status-${RUN_TAG}"
 SX_INVALID_ID="sync-sx-a-invalid-${RUN_TAG}"
 SX_CROSS_OWNER_ID="sync-sx-cross-owner-${RUN_TAG}"
 SET_INVALID_ID="sync-set-a-invalid-${RUN_TAG}"
+SET_INVALID_TYPE_ID="sync-set-a-invalid-type-${RUN_TAG}"
 SET_CROSS_OWNER_ID="sync-set-cross-owner-${RUN_TAG}"
 SESSION_SPOOF_ID="sync-session-spoof-${RUN_TAG}"
 
@@ -297,20 +298,20 @@ postgrest_insert "session_exercises" "${USER_A_TOKEN}" "$(jq -nc \
   --arg session_id "${SESSION_A_ID}" \
   --argjson created_at "$((BASE_MS + 30))" \
   --argjson updated_at "$((BASE_MS + 30))" \
-  '{id: $id, session_id: $session_id, order_index: 0, name: "Chest Press", machine_name: "Plate Press", created_at: $created_at, updated_at: $updated_at}')"
+  '{id: $id, session_id: $session_id, order_index: 0, name: "Chest Press", machine_name: "Plate Press", exercise_definition_id: null, created_at: $created_at, updated_at: $updated_at}')"
 assert_status "201" "user_a create session_exercise"
-assert_json_expr --arg owner "${USER_A_UUID}" 'length == 1 and .[0].owner_user_id == $owner and .[0].order_index == 0' "user_a create session_exercise row"
+assert_json_expr --arg owner "${USER_A_UUID}" 'length == 1 and .[0].owner_user_id == $owner and .[0].order_index == 0 and .[0].exercise_definition_id == null' "user_a create session_exercise row"
 
-postgrest_select "session_exercises" "id=eq.${SX_A_ID}&select=id,session_id,order_index,name,machine_name" "${USER_A_TOKEN}"
+postgrest_select "session_exercises" "id=eq.${SX_A_ID}&select=id,session_id,order_index,name,machine_name,exercise_definition_id" "${USER_A_TOKEN}"
 assert_status "200" "user_a read session_exercise by id"
-assert_json_expr --arg session_id "${SESSION_A_ID}" 'length == 1 and .[0].session_id == $session_id' "user_a read session_exercise payload"
+assert_json_expr --arg session_id "${SESSION_A_ID}" 'length == 1 and .[0].session_id == $session_id and .[0].exercise_definition_id == null' "user_a read session_exercise payload"
 
 postgrest_patch "session_exercises" "id=eq.${SX_A_ID}" "${USER_A_TOKEN}" "$(jq -nc \
   --arg machine_name "Incline Press" \
   --argjson updated_at "$((BASE_MS + 31))" \
-  '{machine_name: $machine_name, updated_at: $updated_at}')"
+  '{machine_name: $machine_name, exercise_definition_id: null, updated_at: $updated_at}')"
 assert_status "200" "user_a update session_exercise"
-assert_json_expr 'length == 1 and .[0].machine_name == "Incline Press"' "user_a update session_exercise result"
+assert_json_expr 'length == 1 and .[0].machine_name == "Incline Press" and .[0].exercise_definition_id == null' "user_a update session_exercise result"
 
 postgrest_select "session_exercises" "session_id=eq.${SESSION_A_ID}&select=id,order_index,name&order=order_index.asc" "${USER_A_TOKEN}"
 assert_status "200" "user_a list session_exercises by session"
@@ -341,22 +342,24 @@ echo "[sync-api] exercise_sets success flow (create/read/update/list)"
 postgrest_insert "exercise_sets" "${USER_A_TOKEN}" "$(jq -nc \
   --arg id "${SET_A_ID}" \
   --arg session_exercise_id "${SX_A_ID}" \
+  --arg set_type "rir_2" \
   --argjson created_at "$((BASE_MS + 40))" \
   --argjson updated_at "$((BASE_MS + 40))" \
-  '{id: $id, session_exercise_id: $session_exercise_id, order_index: 0, weight_value: "120", reps_value: "10", created_at: $created_at, updated_at: $updated_at}')"
+  '{id: $id, session_exercise_id: $session_exercise_id, order_index: 0, weight_value: "120", reps_value: "10", set_type: $set_type, created_at: $created_at, updated_at: $updated_at}')"
 assert_status "201" "user_a create exercise_set"
-assert_json_expr --arg owner "${USER_A_UUID}" 'length == 1 and .[0].owner_user_id == $owner and .[0].order_index == 0' "user_a create exercise_set row"
+assert_json_expr --arg owner "${USER_A_UUID}" 'length == 1 and .[0].owner_user_id == $owner and .[0].order_index == 0 and .[0].set_type == "rir_2"' "user_a create exercise_set row"
 
-postgrest_select "exercise_sets" "id=eq.${SET_A_ID}&select=id,session_exercise_id,order_index,weight_value,reps_value" "${USER_A_TOKEN}"
+postgrest_select "exercise_sets" "id=eq.${SET_A_ID}&select=id,session_exercise_id,order_index,weight_value,reps_value,set_type" "${USER_A_TOKEN}"
 assert_status "200" "user_a read exercise_set by id"
-assert_json_expr --arg sx_id "${SX_A_ID}" 'length == 1 and .[0].session_exercise_id == $sx_id' "user_a read exercise_set payload"
+assert_json_expr --arg sx_id "${SX_A_ID}" 'length == 1 and .[0].session_exercise_id == $sx_id and .[0].set_type == "rir_2"' "user_a read exercise_set payload"
 
 postgrest_patch "exercise_sets" "id=eq.${SET_A_ID}" "${USER_A_TOKEN}" "$(jq -nc \
   --arg reps_value "12" \
+  --arg set_type "rir_0" \
   --argjson updated_at "$((BASE_MS + 41))" \
-  '{reps_value: $reps_value, updated_at: $updated_at}')"
+  '{reps_value: $reps_value, set_type: $set_type, updated_at: $updated_at}')"
 assert_status "200" "user_a update exercise_set"
-assert_json_expr 'length == 1 and .[0].reps_value == "12"' "user_a update exercise_set result"
+assert_json_expr 'length == 1 and .[0].reps_value == "12" and .[0].set_type == "rir_0"' "user_a update exercise_set result"
 
 postgrest_select "exercise_sets" "session_exercise_id=eq.${SX_A_ID}&select=id,order_index,reps_value&order=order_index.asc" "${USER_A_TOKEN}"
 assert_status "200" "user_a list exercise_sets by session_exercise"
@@ -371,6 +374,15 @@ postgrest_insert "exercise_sets" "${USER_A_TOKEN}" "$(jq -nc \
 assert_non_2xx "exercise_set negative order validation"
 assert_body_contains "23514" "exercise_set negative order validation code"
 
+postgrest_insert "exercise_sets" "${USER_A_TOKEN}" "$(jq -nc \
+  --arg id "${SET_INVALID_TYPE_ID}" \
+  --arg session_exercise_id "${SX_A_ID}" \
+  --arg set_type "bad_type" \
+  --argjson now "$((BASE_MS + 43))" \
+  '{id: $id, session_exercise_id: $session_exercise_id, order_index: 1, weight_value: "100", reps_value: "8", set_type: $set_type, created_at: $now, updated_at: $now}')"
+assert_non_2xx "exercise_set invalid set_type validation"
+assert_body_contains "23514" "exercise_set invalid set_type validation code"
+
 postgrest_patch "exercise_sets" "id=eq.${SET_A_ID}" "${USER_B_TOKEN}" '{"reps_value":"99"}'
 assert_status "200" "user_b cross-user exercise_set update"
 assert_json_expr 'length == 0' "user_b cross-user exercise_set update denied"
@@ -378,7 +390,7 @@ assert_json_expr 'length == 0' "user_b cross-user exercise_set update denied"
 postgrest_insert "exercise_sets" "${USER_B_TOKEN}" "$(jq -nc \
   --arg id "${SET_CROSS_OWNER_ID}" \
   --arg session_exercise_id "${SX_A_ID}" \
-  --argjson now "$((BASE_MS + 43))" \
+  --argjson now "$((BASE_MS + 44))" \
   '{id: $id, session_exercise_id: $session_exercise_id, order_index: 9, weight_value: "200", reps_value: "3", created_at: $now, updated_at: $now}')"
 assert_non_2xx "cross-user exercise_set parent link"
 assert_body_contains "foreign key" "cross-user exercise_set parent link error"

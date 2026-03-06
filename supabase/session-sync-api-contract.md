@@ -235,6 +235,12 @@ The FE integration milestone should treat the following as the stable contract n
 
 All timestamps are epoch milliseconds (`number`), matching the current mobile/local schema.
 
+Field notes for current local/mobile parity:
+
+- `sessions.status`: clients should use `active`/`completed`; backend still accepts legacy `draft` rows for compatibility.
+- `session_exercises.exercise_definition_id`: optional text metadata for durable exercise-definition linkage.
+- `exercise_sets.set_type`: optional enum text (`warm_up`, `rir_0`, `rir_1`, `rir_2`).
+
 ### `GymRecord`
 
 ```json
@@ -254,7 +260,7 @@ All timestamps are epoch milliseconds (`number`), matching the current mobile/lo
 {
   "id": "session_123",
   "gym_id": "gym_123",
-  "status": "draft",
+  "status": "active",
   "started_at": 1730000010000,
   "completed_at": null,
   "duration_sec": null,
@@ -273,6 +279,7 @@ All timestamps are epoch milliseconds (`number`), matching the current mobile/lo
   "order_index": 0,
   "name": "Chest Press",
   "machine_name": "Plate Press",
+  "exercise_definition_id": "exercise_chest_press",
   "origin_scope_id": "private",
   "origin_source_id": "local",
   "created_at": 1730000020000,
@@ -289,6 +296,7 @@ All timestamps are epoch milliseconds (`number`), matching the current mobile/lo
   "order_index": 0,
   "weight_value": "120",
   "reps_value": "10",
+  "set_type": "rir_2",
   "created_at": 1730000030000,
   "updated_at": 1730000030000
 }

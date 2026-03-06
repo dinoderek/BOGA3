@@ -177,7 +177,7 @@ Local sync API contract suite:
 
 This wrapper enforces the shared runtime baseline first (`ensure-local-runtime-baseline.sh`) and then runs the sync contract suite.
 
-Coverage includes success read/write flows, validation failures, unauthenticated denial, and cross-user denial across all sync-domain entities.
+Coverage includes success read/write flows, validation failures, unauthenticated denial, and cross-user denial across all sync-domain entities, including session metadata parity fields (`session_exercises.exercise_definition_id`, `exercise_sets.set_type`).
 
 Parallel-run note:
 
