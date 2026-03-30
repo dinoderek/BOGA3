@@ -545,6 +545,7 @@ describe('SessionRecorderScreen exercise interactions', () => {
     fireEvent.press(screen.getByLabelText('Dismiss add tag modal overlay'));
 
     fireEvent.press(screen.getByLabelText('Remove tag Paused from exercise 1'));
+    await act(async () => {});
 
     await waitFor(() => {
       expect(screen.queryByText('Paused')).toBeNull();
@@ -625,6 +626,7 @@ describe('SessionRecorderScreen exercise interactions', () => {
     });
     fireEvent.press(screen.getByLabelText('Dismiss add tag modal overlay'));
     fireEvent.press(screen.getByLabelText('Remove tag Competition Pause from exercise 1'));
+    await act(async () => {});
     await waitFor(() => {
       expect(screen.queryByText('Competition Pause')).toBeNull();
     });
@@ -785,6 +787,7 @@ describe('SessionRecorderScreen exercise interactions', () => {
     });
 
     fireEvent.press(screen.getByLabelText('Remove tag Close Grip from exercise 1'));
+    await act(async () => {});
     await waitFor(() => {
       expect(screen.queryByText('Close Grip')).toBeNull();
     });
