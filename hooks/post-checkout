@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+PREV_HEAD="$1"
+NULL_REF="0000000000000000000000000000000000000000"
+
+# Only run on new worktree creation (null previous HEAD)
+[[ "${PREV_HEAD}" == "${NULL_REF}" ]] || exit 0
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if [[ -x "${REPO_ROOT}/scripts/worktree-setup.sh" ]]; then
+  echo "[post-checkout] New worktree detected. Running worktree-setup.sh..."
+  "${REPO_ROOT}/scripts/worktree-setup.sh"
+fi

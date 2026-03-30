@@ -65,6 +65,11 @@ maestro_source_env() {
   export EXPO_START_WAIT_SECONDS
   export MAESTRO_RESET_STRATEGY
   export MAESTRO_KEEP_SIMULATOR_BOOTED
+
+  # Guard: EXPO_DEV_SERVER_PORT must be set for worktree isolation
+  if [[ -z "${EXPO_DEV_SERVER_PORT}" ]]; then
+    maestro_fail "EXPO_DEV_SERVER_PORT is not set. Set it in ${MAESTRO_LOCAL_ENV_FILE} to a unique port per worktree (e.g. 8081 for slot 0, 8082 for slot 1)."
+  fi
 }
 
 maestro_trim() {

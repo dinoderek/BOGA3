@@ -9,12 +9,18 @@ Define the canonical repository structure, path ownership, and placement convent
 - Update this document in the same task/session when significant project-structure changes are made (for example new top-level folders, workspace moves, canonical test-location changes, or path-convention changes).
 - Minor file additions within an existing well-defined folder usually do not require updates.
 
-## Current repository structure (verified 2026-03-02)
+## Current repository structure (verified 2026-03-30)
 
 ```text
 /
+  .gitignore                     # Root gitignore (.worktree-slot)
+  .worktree-slot                 # Per-worktree slot identity (gitignored, generated)
   AGENTS.md
+  hooks/                         # Git hook sources (symlinked into .git/hooks/ by worktree-setup)
+    post-checkout                # Auto-runs worktree-setup.sh on `git worktree add`
   scripts/                       # Repo-level cross-workspace wrappers (quality gates, orchestration)
+    boga-config-init.sh          # One-time machine setup: create ~/.config/boga/ from examples
+    worktree-setup.sh            # Per-worktree setup: slot, config.toml, symlinks, hook install
   apps/
     mobile/                      # Expo React Native app (current primary codebase)
       app/                       # Expo Router routes/screens
@@ -28,6 +34,8 @@ Define the canonical repository structure, path ownership, and placement convent
       scripts/                   # Mobile/maestro helper scripts
       artifacts/maestro/         # Maestro output artifacts, runtime state, and logs
   supabase/                      # Supabase backend root (M5 local runtime + backend assets)
+    config.toml.template         # Template with {{PLACEHOLDER}} tokens for port/project_id
+    config.toml                  # Generated per-worktree (gitignored)
     migrations/                  # Postgres migrations
     seed.sql                     # Deterministic local seed fixtures
     functions/                   # Edge Functions (including health smoke endpoint)
@@ -44,6 +52,10 @@ Define the canonical repository structure, path ownership, and placement convent
 
 ## Workspace ownership (current)
 
+- `hooks/`
+  - owns checked-in Git hook sources that are symlinked into `.git/hooks/` by `scripts/worktree-setup.sh`.
+- `.worktree-slot`
+  - per-worktree identity file (gitignored). Contains a numeric slot (0, 1, 2, ...) that drives port allocation and Supabase project namespace.
 - `apps/mobile/`
   - owns the mobile app code, mobile-only tests, mobile SQLite schema artifacts, Maestro flows/config, and mobile test helper scripts.
 - `apps/mobile/components/ui/`
