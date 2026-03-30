@@ -19,6 +19,64 @@ Human-operator guide for local development, runtime operations, logs, and tests 
 - Docker (for local Supabase stack)
 - `jq` (required by backend contract test scripts)
 
+## Worktree quick-start (parallel development)
+
+`git worktree` lets you work on multiple branches simultaneously without duplicating the full repo. Each worktree gets its own Supabase stack on isolated ports.
+
+### First-time machine setup
+
+```bash
+./scripts/boga-config-init.sh
+```
+
+Creates `~/.config/boga/` with shared credentials and CLI config copied from example files. Only needed once per machine.
+
+### Initialize the main checkout
+
+```bash
+./scripts/worktree-setup.sh
+```
+
+Assigns slot 0 (default ports), generates `supabase/config.toml` from the template, creates symlinks to `~/.config/boga/`, and installs the `post-checkout` hook.
+
+### Create a second worktree
+
+```bash
+git worktree add ../scaffolding-wt1 some-branch
+```
+
+The `post-checkout` hook fires automatically and runs `worktree-setup.sh`, which:
+- Assigns the next available slot (1, 2, ...)
+- Generates `config.toml` with offset ports (+100 per slot)
+- Creates a separate Supabase project (`scaffolding-wt1`, `scaffolding-wt2`, ...)
+
+### Port layout
+
+| Resource | Slot 0 | Slot 1 | Slot 2 |
+|----------|--------|--------|--------|
+| API | 55431 | 55531 | 55631 |
+| DB | 55422 | 55522 | 55622 |
+| Studio | 55423 | 55523 | 55623 |
+| Inspector | 8183 | 8193 | 8203 |
+| Expo dev | 8081 | 8082 | 8083 |
+
+### Re-run setup (safe, idempotent)
+
+```bash
+./scripts/worktree-setup.sh
+```
+
+### Remove a worktree
+
+```bash
+git worktree remove ../scaffolding-wt1
+```
+
+Docker containers for that slot's project remain until manually cleaned up:
+```bash
+npx -y supabase@2.76.15 stop --project-id scaffolding-wt1
+```
+
 ## Quick start (full local stack)
 
 1. Start backend runtime:

@@ -2,6 +2,9 @@
 .branches
 .temp
 
+# Generated from config.toml.template by scripts/worktree-setup.sh
+config.toml
+
 # dotenvx
 .env.keys
 .env.local
