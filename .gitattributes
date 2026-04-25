@@ -1,0 +1,12 @@
+# Shell scripts: sempre LF
+*.sh text eol=lf
+
+# JavaScript / config (evita sorprese)
+*.js text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+
+# Windows batch (se li hai)
+*.bat text eol=crlf
+*.cmd text eol=crlf
