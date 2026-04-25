@@ -17,14 +17,17 @@ This folder is the backend root for M5 (`Supabase` local-first development and t
 
 ## Local environment configuration strategy
 
-- Local script overrides (optional): `supabase/.env.local`
-  - copy from `supabase/.env.local.example`
+- Run `./scripts/worktree-setup.sh` from the repo root before local runtime use.
+- Checked-in Supabase config is `supabase/config.toml.template`.
+- Generated per-worktree config is `supabase/config.toml` and is gitignored.
+- Local script overrides: `supabase/.env.local`
+  - setup links this to `~/.config/boga/supabase/cli.env`
   - currently used for script-level config like `SUPABASE_CLI_VERSION`
-- Local function env vars (optional): `supabase/functions/.env.local`
-  - copy from `supabase/functions/.env.local.example`
+- Local function env vars: `supabase/functions/.env.local`
+  - setup links this to `~/.config/boga/edge-functions/env.shared`
   - used by `supabase functions serve --env-file ...`
 - Hosted placeholders (no secrets committed): `supabase/.env.hosted`
-  - copy from `supabase/.env.hosted.example`
+  - setup links this to `~/.config/boga/supabase/env.hosted`
   - detailed hosted env/deployment command path is owned by `T-20260220-09`
 
 ## One-command local startup path
@@ -38,13 +41,20 @@ Run from repo root:
 What it does:
 
 1. Starts the Supabase local stack (`supabase start` via pinned `npx`).
-2. Starts the local Edge Function server for `health` (background process).
-3. Waits until `GET /functions/v1/health` responds.
+2. Opportunistically sweeps completed worktree Supabase infra before startup.
+3. Starts the local Edge Function server for `health` (background process).
+4. Waits until `GET /functions/v1/health` responds.
 
 Stop the local runtime:
 
 ```bash
 ./supabase/scripts/local-runtime-down.sh
+```
+
+Sweep completed/orphaned worktree Supabase infra:
+
+```bash
+./scripts/worktree-sweep.sh
 ```
 
 ## Deterministic local reset/seed path
@@ -181,8 +191,10 @@ Coverage includes success read/write flows, validation failures, unauthenticated
 
 Parallel-run note:
 
-- the sync/auth contract suites now use per-run unique record IDs, so multiple runs can execute concurrently against one shared local Supabase instance without key collisions.
+- each initialized BOGA worktree gets slot-derived Supabase ports, `project_id`, containers, and database volume.
+- the sync/auth contract suites use per-run unique record IDs, so repeated runs in one slot do not collide.
 - tests require the deterministic fixture baseline to exist but do not require empty app tables.
+- run `./scripts/worktree-doctor.sh` when a backend suite appears to hit another worktree's local runtime.
 
 ## Accessing `app_public` via REST (local/manual testing)
 

@@ -24,16 +24,16 @@ xcrun simctl list devices >/dev/null
 maestro --version
 ```
 
-3. Create the per-worktree Maestro config:
+3. From the repo root, initialize the checkout/worktree:
 
 ```bash
-cp .maestro/maestro.env.sample .maestro/maestro.env.local
+cd ../..
+./scripts/worktree-setup.sh
+cd apps/mobile
 ```
 
-4. Edit `.maestro/maestro.env.local` before running any Maestro command.
-   Set at minimum:
-   - `EXPO_DEV_SERVER_PORT`
-   - `IOS_SIM_UDID` or `IOS_SIM_DEVICE`
+4. Edit `.maestro/maestro.env.local` before running any Maestro command if you need to override the generated simulator target.
+   Prefer setting `IOS_SIM_UDID` for a manually chosen dedicated simulator.
 
 5. Optional but recommended on a shared Mac: create a dedicated simulator for this workspace and use its UDID.
 
@@ -92,10 +92,10 @@ xcrun simctl install booted "$(./scripts/maestro-ios-dev-client-build.sh --print
 xcrun simctl launch booted com.dinoderek.mobile
 ```
 
-After install, start Metro for the dev client:
+After install, start Metro for the dev client with the worktree config:
 
 ```bash
-npx expo start --dev-client
+npm run start:ios:dev-client
 ```
 
 Normal Maestro validation does not require you to do this manual install step first. The Maestro provision step will boot the configured simulator and install the shared dev client automatically.
@@ -108,11 +108,10 @@ If you are sharing the Mac with an agent or another worktree, configure this wor
 2. Pick one dedicated simulator for this workspace.
 3. Put both in `.maestro/maestro.env.local`.
 
-Recommended config:
+Generated config uses the worktree slot for the Expo port. Recommended manual override:
 
 ```bash
 TASK_ID=human-local
-EXPO_DEV_SERVER_PORT=8092
 IOS_SIM_UDID="<your-dedicated-simulator-udid>"
 ```
 
@@ -126,7 +125,7 @@ Notes:
 
 - Prefer `IOS_SIM_UDID` over `IOS_SIM_DEVICE` when sharing a machine.
 - If you use `IOS_SIM_DEVICE` instead, make sure the simulator name is unique to this workspace.
-- Use the same `EXPO_DEV_SERVER_PORT` value when you manually run `npx expo start --dev-client` so your manual loop matches the Maestro config.
+- Use `npm run start:ios:dev-client` so your manual loop uses the same `EXPO_DEV_SERVER_PORT` and simulator config as Maestro.
 - The sample file is only a template; runtime scripts do not fall back to it when `.maestro/maestro.env.local` is absent.
 - By default teardown shuts the configured simulator down after each run. Set `MAESTRO_KEEP_SIMULATOR_BOOTED=1` only if you intentionally want the simulator left open.
 

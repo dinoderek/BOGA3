@@ -55,7 +55,7 @@ Replace the current Expo Go based Maestro smoke loop with a reliable, parallel-s
   - the draft-time implementation used host-level locking to derive ports and simulator pools,
   - but there is no per-worktree config sample, no dedicated simulator provisioning by agent identity, and no runtime state file for downstream scripts.
 - Current simulator helper `apps/mobile/scripts/ios-sim-boot.sh` only resolves and boots an existing simulator by name or UDID.
-  - it does not create dedicated simulators,
+  - it can create a dedicated simulator when `IOS_SIM_AUTO_CREATE=1`,
   - it does not install an app binary,
   - it does not emit a reusable runtime state artifact.
 - Current docs are incomplete/stale for the desired workflow:

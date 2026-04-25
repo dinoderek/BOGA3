@@ -4,8 +4,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd -- "$APP_DIR/../.." && pwd)"
 MAESTRO_SAMPLE_ENV_FILE="$APP_DIR/.maestro/maestro.env.sample"
 MAESTRO_LOCAL_ENV_FILE="$APP_DIR/.maestro/maestro.env.local"
+
+if [[ -f "$REPO_ROOT/scripts/worktree-lib.sh" ]]; then
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/scripts/worktree-lib.sh"
+fi
 
 maestro_fail() {
   echo "$*" >&2
@@ -29,11 +35,15 @@ maestro_require_command() {
 
 maestro_require_local_env_file() {
   [[ -f "$MAESTRO_SAMPLE_ENV_FILE" ]] || maestro_fail "Missing checked-in Maestro sample config: $MAESTRO_SAMPLE_ENV_FILE"
-  [[ -f "$MAESTRO_LOCAL_ENV_FILE" ]] || maestro_fail "Missing $MAESTRO_LOCAL_ENV_FILE. Copy $MAESTRO_SAMPLE_ENV_FILE to $MAESTRO_LOCAL_ENV_FILE and set EXPO_DEV_SERVER_PORT plus IOS_SIM_UDID or IOS_SIM_DEVICE for this workspace."
+  [[ -f "$MAESTRO_LOCAL_ENV_FILE" ]] || maestro_fail "Missing $MAESTRO_LOCAL_ENV_FILE. Run './scripts/worktree-setup.sh' from the repo root, then set IOS_SIM_UDID or IOS_SIM_DEVICE for this workspace."
 }
 
 maestro_source_env() {
   local env_file
+
+  if declare -F boga_validate_runtime_worktree >/dev/null 2>&1; then
+    boga_validate_runtime_worktree "$REPO_ROOT" || exit 1
+  fi
 
   maestro_require_local_env_file
 
@@ -51,6 +61,7 @@ maestro_source_env() {
   : "${MAESTRO_IOS_DEV_CLIENT_APP_PATH:=$MAESTRO_IOS_SHARED_BUILD_ROOT/mobile-dev-client.app}"
   : "${IOS_SIM_DEVICE:=}"
   : "${IOS_SIM_UDID:=}"
+  : "${IOS_SIM_AUTO_CREATE:=0}"
   : "${EXPO_DEV_SERVER_PORT:=}"
   : "${EXPO_START_WAIT_SECONDS:=30}"
   : "${MAESTRO_RESET_STRATEGY:=data}"
@@ -61,10 +72,13 @@ maestro_source_env() {
   export MAESTRO_IOS_DEV_CLIENT_APP_PATH
   export IOS_SIM_DEVICE
   export IOS_SIM_UDID
+  export IOS_SIM_AUTO_CREATE
   export EXPO_DEV_SERVER_PORT
   export EXPO_START_WAIT_SECONDS
   export MAESTRO_RESET_STRATEGY
   export MAESTRO_KEEP_SIMULATOR_BOOTED
+
+  [[ -n "$EXPO_DEV_SERVER_PORT" ]] || maestro_fail "Missing EXPO_DEV_SERVER_PORT. Run './scripts/worktree-setup.sh' from the repo root or set it in $MAESTRO_LOCAL_ENV_FILE."
 }
 
 maestro_trim() {

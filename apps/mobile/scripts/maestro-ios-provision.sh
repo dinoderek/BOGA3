@@ -29,10 +29,10 @@ MAESTRO_IOS_DEV_CLIENT_EXECUTABLE="$(maestro_dev_client_executable_name "$MAESTR
 
 if [[ -n "${IOS_SIM_UDID:-}" ]]; then
   echo "[maestro-ios-provision] Booting configured simulator UDID: $IOS_SIM_UDID"
-  IOS_SIM_UDID="$(IOS_SIM_UDID="$IOS_SIM_UDID" "$SCRIPT_DIR/ios-sim-boot.sh")"
+  IOS_SIM_UDID="$(IOS_SIM_UDID="$IOS_SIM_UDID" IOS_SIM_AUTO_CREATE="${IOS_SIM_AUTO_CREATE:-0}" "$SCRIPT_DIR/ios-sim-boot.sh")"
 else
   echo "[maestro-ios-provision] Booting configured simulator device: $IOS_SIM_DEVICE"
-  IOS_SIM_UDID="$(IOS_SIM_DEVICE="$IOS_SIM_DEVICE" "$SCRIPT_DIR/ios-sim-boot.sh")"
+  IOS_SIM_UDID="$(IOS_SIM_DEVICE="$IOS_SIM_DEVICE" IOS_SIM_AUTO_CREATE="${IOS_SIM_AUTO_CREATE:-0}" "$SCRIPT_DIR/ios-sim-boot.sh")"
 fi
 
 IOS_SIM_DEVICE="$(maestro_simulator_name_for_udid "$IOS_SIM_UDID")"

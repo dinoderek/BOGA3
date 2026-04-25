@@ -19,37 +19,70 @@ Human-operator guide for local development, runtime operations, logs, and tests 
 - Docker (for local Supabase stack)
 - `jq` (required by backend contract test scripts)
 
+## Worktree setup and isolation
+
+Authoritative design: `docs/specs/12-worktree-config-and-isolation.md`.
+
+BOGA worktrees must live outside another BOGA checkout. Use the wrapper when possible:
+
+```bash
+./scripts/worktree-create.sh codex/my-branch
+```
+
+Initialize or repair the current checkout/worktree:
+
+```bash
+./scripts/worktree-setup.sh
+```
+
+Diagnose isolation/config problems:
+
+```bash
+./scripts/worktree-doctor.sh
+```
+
+Sweep completed worktree Supabase infrastructure:
+
+```bash
+./scripts/worktree-sweep.sh
+```
+
+Setup generates `.worktree-slot`, `supabase/config.toml`, shared Supabase env symlinks, and `apps/mobile/.maestro/maestro.env.local`.
+
+Rules:
+
+- never create a BOGA worktree under another BOGA checkout;
+- run `cd apps/mobile && npm install` in each worktree;
+- do not symlink `apps/mobile/node_modules` between worktrees;
+- use a unique simulator target per concurrent worktree.
+
+`./supabase/scripts/local-runtime-up.sh` automatically runs a conservative Supabase cleanup sweep for completed worktree slots before starting the current slot. A slot is considered completed only when its registered path is gone/invalid, or when it belongs to this git worktree group and is no longer listed by `git worktree list`.
+
 ## Quick start (full local stack)
 
-1. Start backend runtime:
+1. Initialize this checkout/worktree:
+
+```bash
+./scripts/worktree-setup.sh
+```
+
+2. Start backend runtime:
 
 ```bash
 ./supabase/scripts/local-runtime-up.sh
 ```
 
-2. Install mobile dependencies:
+3. Install mobile dependencies:
 
 ```bash
 cd apps/mobile
 npm install
 ```
 
-3. Create per-worktree Maestro config (first time only):
+4. Start the iOS dev-client manual loop:
 
 ```bash
-cp .maestro/maestro.env.sample .maestro/maestro.env.local
-```
-
-4. Build or reuse simulator dev client:
-
-```bash
-./scripts/maestro-ios-dev-client-build.sh
-```
-
-5. Start app in simulator dev-client mode:
-
-```bash
-npx expo start --dev-client
+npm run start:ios:dev-client
 ```
 
 ## Mobile app: run on iOS simulator
@@ -66,7 +99,7 @@ npx expo start
 ```bash
 cd apps/mobile
 ./scripts/maestro-ios-dev-client-build.sh
-npx expo start --dev-client
+npm run start:ios:dev-client
 ```
 
 ### Uninstall and reinstall app on simulator
@@ -107,6 +140,18 @@ Stop runtime:
 ./supabase/scripts/local-runtime-down.sh
 ```
 
+Clean completed/orphaned Supabase infra:
+
+```bash
+./scripts/worktree-sweep.sh
+```
+
+Clean one completed slot manually:
+
+```bash
+./scripts/worktree-clean.sh --slot <n> --supabase --remove-registry
+```
+
 Reset DB (migrations + seed):
 
 ```bash
@@ -130,7 +175,7 @@ Source: `supabase/scripts/auth-fixture-constants.sh`
 
 ### App logs
 
-- Expo/dev-client logs: terminal where `npx expo start --dev-client` is running.
+- Expo/dev-client logs: terminal where `npm run start:ios:dev-client` or `npx expo start --dev-client` is running.
 - Maestro run artifacts/logs:
   - root: `apps/mobile/artifacts/maestro/<task-id-or-ad-hoc>/<timestamp>/`
   - key files: `runtime.env`, `provision.log`, `launch.log`, `teardown.log`, `expo-start.log`, `simulator-system.log`, `maestro-junit.xml`
@@ -153,7 +198,8 @@ tail -f supabase/.temp/health-functions-serve.log
 - Runtime status/env:
 
 ```bash
-npx -y supabase@2.76.15 status -o env
+source ~/.config/boga/supabase/cli.env
+npx -y "supabase@${SUPABASE_CLI_VERSION:-2.76.15}" status -o env
 ```
 
 - Container logs (if needed):
@@ -209,4 +255,3 @@ TASK_ID=ad-hoc npm run test:e2e:ios:auth-profile
 cd apps/mobile
 npm run test:sync:reinstall-parity
 ```
-

@@ -18,8 +18,12 @@ This directory contains two kinds of files:
   - used by: `npm run router:types`, which is part of `npm run typecheck`.
   - status: used and needed.
 - `maestro-ios-dev-client-build.sh`
-  - purpose: builds or reuses the shared iOS simulator development-client `.app`.
+  - purpose: builds or reuses the configured iOS simulator development-client `.app`.
   - used by: humans directly, `README` instructions, and `maestro-ios-provision.sh`.
+  - status: used and needed.
+- `ios-dev-client-start.sh`
+  - purpose: starts the manual iOS dev-client loop using the worktree's configured simulator and Expo port.
+  - used by: `npm run start:ios:dev-client`.
   - status: used and needed.
 - `maestro-ios-smoke.sh`
   - purpose: scenario wrapper for the iOS smoke flow.
@@ -33,7 +37,7 @@ This directory contains two kinds of files:
 ### Internal Maestro helpers
 
 - `ios-sim-boot.sh`
-  - purpose: resolves an existing simulator by `IOS_SIM_UDID` or `IOS_SIM_DEVICE`, boots it, and waits for boot readiness.
+  - purpose: resolves a simulator by `IOS_SIM_UDID` or `IOS_SIM_DEVICE`, optionally creates a slot-named simulator when `IOS_SIM_AUTO_CREATE=1`, boots it, and waits for boot readiness.
   - used by: `maestro-ios-provision.sh`.
   - status: used and needed.
 - `maestro-env.sh`

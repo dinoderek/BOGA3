@@ -108,8 +108,8 @@ Rules:
 
 ### Current simulator helper behavior
 
-- `apps/mobile/scripts/ios-sim-boot.sh` only resolves an existing simulator by `IOS_SIM_UDID` or `IOS_SIM_DEVICE`, boots it, waits for boot readiness, and echoes the resolved UDID.
-- It does not create dedicated simulators.
+- `apps/mobile/scripts/ios-sim-boot.sh` resolves a simulator by `IOS_SIM_UDID` or `IOS_SIM_DEVICE`, boots it, waits for boot readiness, and echoes the resolved UDID.
+- When `IOS_SIM_AUTO_CREATE=1` and no simulator matching `IOS_SIM_DEVICE` exists, it creates a dedicated simulator using the newest available iOS runtime and a preferred iPhone simulator type.
 - App installation and runtime-state emission now live in `maestro-ios-provision.sh`, which wraps the helper instead of expanding `ios-sim-boot.sh` itself.
 - Verified against:
   - `apps/mobile/scripts/ios-sim-boot.sh`
@@ -119,6 +119,7 @@ Rules:
 
 - Runtime isolation now comes from explicit per-worktree config instead of a shared host lock.
 - Each workspace sets its own `EXPO_DEV_SERVER_PORT` and simulator target in `apps/mobile/.maestro/maestro.env.local`.
+- Worktree setup generates `EXPO_DEV_SERVER_PORT` from the BOGA worktree slot and defaults `IOS_SIM_DEVICE` to a slot-named simulator with `IOS_SIM_AUTO_CREATE=1`.
 - `IOS_SIM_UDID` is preferred for shared-host use because simulator names can collide across cloned devices.
 - If two worktrees are configured with the same simulator or Metro port, they can still interfere with each other; the scripts no longer arbitrate that automatically.
 
@@ -202,6 +203,7 @@ Existing environment names that are already implemented remain canonical:
 - `MAESTRO_RESET_STRATEGY`
 - `IOS_SIM_DEVICE`
 - `IOS_SIM_UDID`
+- `IOS_SIM_AUTO_CREATE`
 - `EXPO_START_WAIT_SECONDS`
 
 New M10-required environment names are locked as:
@@ -215,7 +217,7 @@ New M10-required environment names are locked as:
 
 The shared development-client artifact contract is:
 
-1. The artifact is host-local and reusable across repository checkouts.
+1. The artifact is host-local and reusable across repository checkouts when explicitly configured that way.
 2. The canonical shared-build root is:
    - `$HOME/.cache/boga/maestro/ios-dev-client`
 3. The exact `.app` path consumed by runtime scripts is passed through `MAESTRO_IOS_DEV_CLIENT_APP_PATH`.
@@ -248,6 +250,12 @@ Current native-input fingerprint inputs:
 - `apps/mobile/eas.json`
 - `apps/mobile/package.json`
 - `apps/mobile/package-lock.json`
+
+Worktree setup note:
+
+- `./scripts/worktree-setup.sh` generates `apps/mobile/.maestro/maestro.env.local` with a slot-scoped default build root:
+  - `$HOME/.cache/boga/maestro/ios-dev-client/wt<slot>`
+- This prevents concurrent agents on different branches from mutating the same native build temp directory or installed `.app` path unless a human explicitly opts into a shared override.
 
 Current host-tool prerequisites for the local shared build:
 
@@ -312,6 +320,7 @@ Minimum `runtime.env` fields:
 - `MAESTRO_RESET_STRATEGY`
 - `IOS_SIM_UDID`
 - `IOS_SIM_DEVICE`
+- `IOS_SIM_AUTO_CREATE`
 - `EXPO_DEV_SERVER_PORT`
 - `MAESTRO_IOS_DEV_CLIENT_APP_PATH`
 - `MAESTRO_IOS_DEV_CLIENT_BUNDLE_ID`
@@ -334,6 +343,7 @@ Implementation note:
    - one Expo port,
    - one simulator selection,
    - one local config file,
+   - one slot-scoped default iOS dev-client build cache,
    - one runtime state file per run.
 4. If a later task reintroduces automatic arbitration, it must preserve the same cross-worktree isolation guarantees without weakening the per-worktree config contract.
 

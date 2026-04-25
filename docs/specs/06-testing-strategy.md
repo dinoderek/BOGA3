@@ -172,9 +172,32 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - baseline rows must exist, but extra rows are allowed.
   - test suites must not assume empty tables beyond the baseline.
 - Parallel-run contract (same machine):
-  - runtime bootstrap is serialized via a lock in `ensure-local-runtime-baseline.sh` to avoid concurrent startup/reset races.
-  - backend contract suites must use per-run unique entity IDs so concurrent runs on one shared runtime do not collide.
-  - avoid manual destructive operations (`db reset`, stack restart) while another slow suite is running.
+  - each initialized BOGA worktree has its own slot-derived Supabase `project_id`, port block, containers, and database volume.
+  - runtime bootstrap remains serialized per worktree via a lock in `ensure-local-runtime-baseline.sh` to avoid startup/reset races within the same slot.
+  - backend contract suites must use per-run unique entity IDs so repeated runs in one slot do not collide.
+  - avoid manual destructive operations (`db reset`, stack restart) in a worktree while another suite is actively using that same worktree slot.
+  - use `./scripts/worktree-doctor.sh` when a backend suite appears to hit the wrong local Supabase instance.
+
+## Worktree isolation testing policy
+
+- Worktree setup and runtime isolation are owned by `docs/specs/12-worktree-config-and-isolation.md`.
+- Before running local gates in a linked worktree, initialize it with:
+  - `./scripts/worktree-setup.sh`
+- Diagnostic entrypoint:
+  - `./scripts/worktree-doctor.sh`
+- Completed-worktree Supabase cleanup:
+  - `./scripts/worktree-sweep.sh`
+  - `./supabase/scripts/local-runtime-up.sh` runs this sweep opportunistically before starting the current slot.
+  - cleanup is limited to slots whose registered worktree path is gone/invalid or no longer active in the same git worktree group, never the current slot.
+- Placement rule:
+  - BOGA worktrees must not be nested inside another BOGA checkout.
+  - quality wrappers and runtime helpers fail before starting services when nested placement is detected.
+- Dependency isolation rule:
+  - each worktree owns its own `apps/mobile/node_modules`;
+  - symlinked `apps/mobile/node_modules` is refused by runtime guards.
+- Supabase isolation rule:
+  - generated `supabase/config.toml` is per-worktree and slot-derived;
+  - tests should consume local runtime values from `supabase status -o env` or project wrappers, not hardcoded ports.
 
 ## Current CI posture (M5)
 
@@ -380,9 +403,10 @@ Reason: keeps FE/backend integration test expectations explicit without forcing 
   - iOS Maestro runner scripts now rely on explicit per-worktree config instead of host-level locking.
   - each worktree must own one Metro port and one simulator target.
 - Configuration:
-  - `EXPO_DEV_SERVER_PORT` (default: `8082`; must be unique per workspace on a shared host)
+  - `EXPO_DEV_SERVER_PORT` (generated default: `8082 + worktree slot`; must be unique per workspace on a shared host)
   - `IOS_SIM_UDID` (preferred on a shared host)
   - `IOS_SIM_DEVICE` (fallback only when the simulator name is unique for that workspace)
+  - `IOS_SIM_AUTO_CREATE` (generated default: `1` for setup-created worktree env files; creates a slot-named simulator when possible)
 - Operational rules:
   - parallel runs are safe only when each worktree uses a unique `EXPO_DEV_SERVER_PORT` and a unique simulator target.
   - if two worktrees point at the same simulator or port, the runners can clobber each other; there is no longer an automatic host-level lock to prevent that.

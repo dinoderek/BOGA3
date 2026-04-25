@@ -14,6 +14,7 @@ It defines what to load first and where detailed rules live.
 - `docs/specs/04-ai-development-playbook.md`
 - `docs/specs/06-testing-strategy.md`
 - `docs/specs/09-project-structure.md`
+- `docs/specs/12-worktree-config-and-isolation.md` (required for local worktree/runtime setup and cross-worktree issue diagnosis)
 - `docs/specs/08-ux-delivery-standard.md` (required for UI tasks)
 - `docs/specs/ui/README.md` (required for UI tasks; load relevant bundle docs from there)
 

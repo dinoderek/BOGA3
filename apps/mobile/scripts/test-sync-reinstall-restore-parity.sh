@@ -11,7 +11,7 @@ source "$REPO_ROOT/supabase/scripts/_common.sh"
 # shellcheck disable=SC1091
 source "$REPO_ROOT/supabase/scripts/auth-fixture-constants.sh"
 
-echo "[sync-reinstall-restore-parity] ensuring shared local Supabase baseline"
+echo "[sync-reinstall-restore-parity] ensuring worktree local Supabase baseline"
 "$REPO_ROOT/supabase/scripts/ensure-local-runtime-baseline.sh"
 
 load_supabase_status_env

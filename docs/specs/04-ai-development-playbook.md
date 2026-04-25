@@ -29,6 +29,7 @@ Define the minimum scaffolding required before feature development, and standard
    - `docs/specs/06-testing-strategy.md`
    - `docs/specs/09-project-structure.md`
    - `docs/specs/11-maestro-runtime-and-testing-conventions.md` (required for Maestro runtime/testing work)
+   - `docs/specs/12-worktree-config-and-isolation.md` (required for local worktree/runtime isolation, cross-worktree test failures, and parallel-agent setup)
 2. Milestone level:
    - `docs/specs/milestones/<milestone-id>.md`
 3. Task level:
@@ -227,6 +228,19 @@ Provide these references at execution start:
 11. `supabase/session-sync-api-contract.md` (for session sync API work and FE/backend sync integration tasks, when present)
 12. `docs/specs/11-maestro-runtime-and-testing-conventions.md` (required for tasks that touch `apps/mobile/.maestro/**`, `apps/mobile/scripts/maestro*`, the Maestro harness/runtime helpers, or that require real iOS simulator smoke validation)
 13. `RUNBOOK.md` (always load; update in-session when local operator workflow changes)
+14. `docs/specs/12-worktree-config-and-isolation.md` (required when creating/repairing worktrees, changing local runtime setup, or investigating cross-worktree contamination)
+
+## Worktree execution rules
+
+Apply these rules whenever a human or agent session runs in a linked git worktree or investigates local cross-worktree behavior.
+
+1. Run `./scripts/worktree-setup.sh` before local runtime or gate commands if the worktree has not already been initialized.
+2. Run `./scripts/worktree-doctor.sh` when tests appear to hit another worktree's Supabase runtime, Metro server, simulator, dependency tree, or generated config.
+3. Treat nested BOGA worktrees as a setup bug:
+   - do not patch Jest, Vitest, Metro, TypeScript, or watcher config to compensate for nested placement;
+   - remove the nested worktree and recreate it outside the checkout with `./scripts/worktree-create.sh <branch-name>`.
+4. Do not share `apps/mobile/node_modules` across worktrees.
+5. Keep simulator/Metro/Supabase isolation values in generated per-worktree config files, not in shared docs or task cards.
 
 Recommended bootstrap helper (optional but preferred when available):
 
