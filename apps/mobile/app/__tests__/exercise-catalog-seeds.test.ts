@@ -25,15 +25,15 @@ const cloneSeedBundle = (
 });
 
 describe('M6 exercise catalog seeds', () => {
-  it('ships a valid simplified default seed bundle and summary', () => {
+  it('ships a valid expanded default seed bundle and summary', () => {
     expect(validateSystemExerciseCatalogSeeds()).toEqual([]);
     expect(() => assertValidSystemExerciseCatalogSeeds()).not.toThrow();
 
     const summary = getSystemExerciseCatalogSeedSummary();
 
     expect(summary.muscleGroupCount).toBe(19);
-    expect(summary.exerciseCount).toBe(14);
-    expect(summary.mappingCount).toBe(34);
+    expect(summary.exerciseCount).toBe(393);
+    expect(summary.mappingCount).toBe(1194);
     expect(summary.defaultWeightPolicy).toContain('non-normalized');
 
     expect(M6_SYSTEM_EXERCISE_SEED_POLICY_NOTE).toContain('practical logging defaults');
