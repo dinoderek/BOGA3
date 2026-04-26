@@ -1,7 +1,7 @@
 ---
 task_id: T-20260426-01-refined-exercise-search
 milestone_id: "M6"
-status: in_progress
+status: completed
 ui_impact: "yes"
 areas: "frontend,docs"
 runtimes: "node,expo"
@@ -14,7 +14,7 @@ docs_touched: "docs/specs/ui/screen-map.md"
 
 - Task ID: `T-20260426-01-refined-exercise-search`
 - Title: Refine exercise catalog search matching
-- Status: `in_progress`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -35,8 +35,8 @@ docs_touched: "docs/specs/ui/screen-map.md"
 
 ## Context Freshness (required at session start; update before edits)
 
-- Verified current branch + HEAD commit: attempted via `git status --short --branch` / `git rev-parse`; local git commands became unresponsive during session startup.
-- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: partial; `git fetch origin` completed with no output, but local git status/rev-parse commands remained unresponsive.
+- Verified current branch + HEAD commit: `main...origin/main`; resumed in `/home/stefano/projects/BOGA3` with `git status --short --branch`.
+- Start-of-session sync completed per `docs/specs/04-ai-development-playbook.md` git sync workflow?: partial; initial `git fetch origin` completed with no output, and resumed workspace was already tracking `origin/main`.
 - Parent refs opened in this session:
   - `docs/specs/README.md`
   - `docs/specs/00-product.md`
@@ -51,8 +51,8 @@ docs_touched: "docs/specs/ui/screen-map.md"
   - `docs/specs/milestones/M6-exercise-taxonomy-and-muscle-analytics-foundation.md`
 - Code/docs inventory freshness checks run:
   - inspected `apps/mobile/src/exercise-catalog/search.ts` - current filter indexed exercise name, all mapped muscle IDs, display names, and family names with any-word matching
-  - inspected `apps/mobile/app/exercise-catalog.tsx` and `apps/mobile/app/__tests__/exercise-catalog-screen.test.tsx` - existing screen-level search coverage found
-- Known stale references or assumptions: none beyond blocked local git status output.
+  - inspected `apps/mobile/app/exercise-catalog.tsx`, `apps/mobile/app/__tests__/exercise-catalog-screen.test.tsx`, and `apps/mobile/app/__tests__/session-recorder-interactions.test.tsx` - shared search is used by catalog and recorder picker surfaces
+- Known stale references or assumptions: full frontend gate has unrelated pre-existing failures in `session-list-screen` and `exercise-catalog-seeds`; details recorded in Evidence.
 
 ## Objective
 
@@ -125,7 +125,8 @@ UI artifacts/screenshots expectation:
 ## Testing and verification approach
 
 - Planned checks/commands:
-  - `cd apps/mobile && npm test -- --runTestsByPath app/__tests__/exercise-catalog-screen.test.tsx`
+  - `cd apps/mobile && npm test -- --runInBand --runTestsByPath app/__tests__/exercise-catalog-search.test.ts`
+  - `cd apps/mobile && npm test -- --runInBand --runTestsByPath app/__tests__/session-recorder-interactions.test.tsx --testNamePattern="filters exercise picker"`
   - `./scripts/quality-fast.sh frontend`
 - Test layers covered:
   - Jest/RNTL screen behavior coverage
@@ -138,9 +139,10 @@ UI artifacts/screenshots expectation:
 
 ## Implementation notes
 
-- Planned files/areas allowed to change:
+- Files/areas changed:
   - `apps/mobile/src/exercise-catalog/search.ts`
-  - `apps/mobile/app/__tests__/exercise-catalog-screen.test.tsx`
+  - `apps/mobile/app/__tests__/exercise-catalog-search.test.ts`
+  - `apps/mobile/app/__tests__/session-recorder-interactions.test.tsx`
   - `docs/specs/ui/screen-map.md`
 - Project structure impact:
   - none
@@ -153,19 +155,41 @@ UI artifacts/screenshots expectation:
 
 - Standard local fast gate: `./scripts/quality-fast.sh frontend`
 - Standard local slow gate: `N/A`
-- Additional gate(s): targeted exercise catalog screen test.
+- Additional gate(s): targeted exercise catalog search unit test and targeted session-recorder picker UI test.
 
 ## Evidence
 
 - Targeted test output:
+  - `npm test -- --runInBand --runTestsByPath app/__tests__/exercise-catalog-search.test.ts` passed: 1 suite, 1 test.
+  - `npm test -- --runInBand --runTestsByPath app/__tests__/session-recorder-interactions.test.tsx --testNamePattern="filters exercise picker"` passed: 1 suite, 1 selected test.
 - Fast gate output:
+  - `bash ./scripts/quality-fast.sh frontend` ran lint, typecheck, and Jest.
+  - lint completed with existing warnings only.
+  - typecheck completed during the gate before tests started.
+  - Jest result: 32 passed suites, 2 failed suites, 200 passed tests, 2 failed tests.
+  - Failing suites were unrelated to refined search:
+    - `app/__tests__/session-list-screen.test.tsx` reopen failure expects `completed-session-delete-modal-card` to be absent.
+    - `app/__tests__/exercise-catalog-seeds.test.ts` expects 14 seeded exercises but current summary reports 393.
 - Manual verification summary:
+  - Refined search behavior is covered by focused unit test and recorder picker UI test.
+  - `RUNBOOK.md` reviewed; no operator workflow changes required.
+- Manual verification summary (required when CI is absent/partial): refined-search behavior is covered by focused unit and UI tests; full frontend gate has unrelated failures listed above.
 
 ## Completion note (fill at end)
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: refined exercise search now matches only exercise name plus resolved primary muscle display/family terms, requires all query words, excludes secondary/stabilizer/raw-ID matches, adds focused tests, and updates UI screen-map semantics.
+  - Exercise search now indexes exercise name plus resolved primary muscle display/family terms only.
+  - Search no longer indexes secondary/stabilizer muscles or raw muscle group IDs.
+  - Multi-word queries now require every query word to match the allowed search text.
+  - Added focused search unit coverage and updated recorder picker coverage for the shared refined behavior.
+  - Updated UI screen map search semantics for catalog and recorder picker surfaces.
+- What tests ran: targeted search utility test passed, targeted session-recorder picker test passed, and `bash ./scripts/quality-fast.sh frontend` failed only on unrelated existing suites.
+  - `npm test -- --runInBand --runTestsByPath app/__tests__/exercise-catalog-search.test.ts` - passed.
+  - `npm test -- --runInBand --runTestsByPath app/__tests__/session-recorder-interactions.test.tsx --testNamePattern="filters exercise picker"` - passed.
+  - `bash ./scripts/quality-fast.sh frontend` - failed on unrelated existing suites listed in Evidence.
+- What remains: no refined-search implementation work remains; unrelated full-gate failures need separate cleanup.
+  - No refined-search implementation work remains.
+  - Separate cleanup is needed for the unrelated full-gate failures in `session-list-screen` and `exercise-catalog-seeds`.
 
 ## Status update checklist (mandatory at closeout)
 

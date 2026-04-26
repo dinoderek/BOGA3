@@ -142,6 +142,7 @@ Planned task cards for M6 are listed below.
 3. `docs/tasks/complete/T-20260224-03-m6-exercise-editing-muscle-linking-ui.md` - implement exercise editing support for linking muscle groups and weights on user-editable exercises. (`completed`)
 4. `docs/tasks/complete/T-20260224-04-m6-session-recorder-exercise-management-integration.md` - connect session recorder exercise manage/add flows to the persistent exercise catalog editor and refresh recorder selection behavior after return. (`completed`)
 5. `docs/tasks/complete/T-20260224-05-m6-historical-mapping-behavior-options.md` - define and narrow/lock the historical mapping behavior policy path before analytics implementation. (`completed`)
+6. `docs/tasks/complete/T-20260426-01-refined-exercise-search.md` - refine shared exercise search to match exercise names plus primary muscle display/family terms only, with all query words required. (`completed`)
 
 ## Risks / dependencies
 
