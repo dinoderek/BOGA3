@@ -48,6 +48,8 @@ describe('ExerciseCatalogScreen', () => {
       { id: 'chest', displayName: 'Chest', familyName: 'Chest', sortOrder: 0 },
       { id: 'triceps', displayName: 'Triceps', familyName: 'Arms', sortOrder: 1 },
       { id: 'delts_front', displayName: 'Front Delts', familyName: 'Shoulders', sortOrder: 2 },
+      { id: 'quads', displayName: 'Quads', familyName: 'Legs', sortOrder: 3 },
+      { id: 'back', displayName: 'Back', familyName: 'Back', sortOrder: 4 },
     ]);
   });
 
@@ -280,46 +282,4 @@ describe('ExerciseCatalogScreen', () => {
     });
   });
 
-  it('filters exercises by any query word across names and muscle groups', async () => {
-    mockListExercises.mockResolvedValue([
-      {
-        id: 'exercise-bench',
-        name: 'Bench Press',
-        deletedAt: null,
-        mappings: [{ id: 'map-bench', muscleGroupId: 'chest', weight: 1, role: 'primary' }],
-      },
-      {
-        id: 'exercise-squat',
-        name: 'Barbell Squat',
-        deletedAt: null,
-        mappings: [{ id: 'map-squat', muscleGroupId: 'quads', weight: 1, role: 'primary' }],
-      },
-      {
-        id: 'exercise-deadlift',
-        name: 'Deadlift',
-        deletedAt: null,
-        mappings: [{ id: 'map-deadlift', muscleGroupId: 'back', weight: 1, role: 'primary' }],
-      },
-    ]);
-
-    render(<ExerciseCatalogScreen />);
-
-    await screen.findByText('Bench Press');
-    expect(screen.getByText('Barbell Squat')).toBeTruthy();
-    expect(screen.getByText('Deadlift')).toBeTruthy();
-
-    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '   squAT   press  ');
-    await waitFor(() => {
-      expect(screen.getByText('Bench Press')).toBeTruthy();
-      expect(screen.getByText('Barbell Squat')).toBeTruthy();
-      expect(screen.queryByText('Deadlift')).toBeNull();
-    });
-
-    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  CHEST ');
-    await waitFor(() => {
-      expect(screen.getByText('Bench Press')).toBeTruthy();
-      expect(screen.queryByText('Barbell Squat')).toBeNull();
-      expect(screen.queryByText('Deadlift')).toBeNull();
-    });
-  });
 });

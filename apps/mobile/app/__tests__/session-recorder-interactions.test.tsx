@@ -269,13 +269,22 @@ jest.mock('@/src/data/exercise-catalog', () => ({
       id: 'sys_barbell_bench_press',
       name: 'Bench Press',
       deletedAt: null,
-      mappings: [{ id: 'map-bench-chest', muscleGroupId: 'chest', weight: 1, role: 'primary' }],
+      mappings: [
+        { id: 'map-bench-chest', muscleGroupId: 'chest', weight: 1, role: 'primary' },
+        { id: 'map-bench-triceps', muscleGroupId: 'triceps', weight: 0.5, role: 'secondary' },
+      ],
     },
     {
       id: 'sys_romanian_deadlift',
       name: 'Deadlift',
       deletedAt: null,
       mappings: [{ id: 'map-deadlift-hamstrings', muscleGroupId: 'hamstrings', weight: 1, role: 'primary' }],
+    },
+    {
+      id: 'sys_overhead_press',
+      name: 'Overhead Press',
+      deletedAt: null,
+      mappings: [{ id: 'map-overhead-press-delts', muscleGroupId: 'delts_front', weight: 1, role: 'primary' }],
     },
   ]),
   listExerciseCatalogMuscleGroups: jest.fn().mockResolvedValue([
@@ -466,28 +475,56 @@ describe('SessionRecorderScreen exercise interactions', () => {
     expect(validRepsStyle.borderColor).toBe(uiColors.borderDefault);
   });
 
-  it('filters exercise picker by any query word across exercise names and muscle groups', async () => {
+  it('filters exercise picker by all query words across names and primary muscles only', async () => {
     render(<SessionRecorderScreen />);
 
     fireEvent.press(screen.getByText('Log new exercise'));
     expect(await screen.findByLabelText('Select exercise Barbell Squat')).toBeTruthy();
     expect(screen.getByLabelText('Select exercise Bench Press')).toBeTruthy();
     expect(screen.getByLabelText('Select exercise Deadlift')).toBeTruthy();
+    expect(screen.getByLabelText('Select exercise Overhead Press')).toBeTruthy();
 
     fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '   squAT   press  ');
     await waitFor(() => {
-      expect(screen.getByLabelText('Select exercise Barbell Squat')).toBeTruthy();
-      expect(screen.getByLabelText('Select exercise Bench Press')).toBeTruthy();
+      expect(screen.queryByLabelText('Select exercise Barbell Squat')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Bench Press')).toBeNull();
       expect(screen.queryByLabelText('Select exercise Deadlift')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Overhead Press')).toBeNull();
     });
 
-    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  CHEST ');
+    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  CHEST bench ');
     await waitFor(() => {
       expect(screen.getByLabelText('Select exercise Bench Press')).toBeTruthy();
       expect(screen.queryByLabelText('Select exercise Barbell Squat')).toBeNull();
       expect(screen.queryByLabelText('Select exercise Deadlift')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Overhead Press')).toBeNull();
     });
-  });
+
+    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  front press ');
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Select exercise Bench Press')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Barbell Squat')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Deadlift')).toBeNull();
+      expect(screen.getByLabelText('Select exercise Overhead Press')).toBeTruthy();
+    });
+
+    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  triceps ');
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Select exercise Bench Press')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Barbell Squat')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Deadlift')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Overhead Press')).toBeNull();
+      expect(screen.getByText('No exercises match that filter.')).toBeTruthy();
+    });
+
+    fireEvent.changeText(screen.getByLabelText('Exercise filter input'), '  delts_front ');
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Select exercise Bench Press')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Barbell Squat')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Deadlift')).toBeNull();
+      expect(screen.queryByLabelText('Select exercise Overhead Press')).toBeNull();
+    });
+  }, 30000);
 
   it('creates a new exercise inline from the picker and keeps set add/remove interactions intact', async () => {
     render(<SessionRecorderScreen />);

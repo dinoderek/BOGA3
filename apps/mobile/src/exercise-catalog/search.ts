@@ -20,12 +20,16 @@ const buildExerciseCatalogSearchText = (
   muscleGroupsById: Record<string, ExerciseCatalogMuscleGroup>
 ): string => {
   const muscleTerms = exercise.mappings.flatMap((mapping) => {
-    const matchedMuscleGroup = muscleGroupsById[mapping.muscleGroupId];
-    if (!matchedMuscleGroup) {
-      return [mapping.muscleGroupId];
+    if (mapping.role !== 'primary') {
+      return [];
     }
 
-    return [mapping.muscleGroupId, matchedMuscleGroup.displayName, matchedMuscleGroup.familyName];
+    const matchedMuscleGroup = muscleGroupsById[mapping.muscleGroupId];
+    if (!matchedMuscleGroup) {
+      return [];
+    }
+
+    return [matchedMuscleGroup.displayName, matchedMuscleGroup.familyName];
   });
 
   return [exercise.name, ...muscleTerms].join(' ').toLowerCase();
@@ -43,6 +47,6 @@ export const filterExerciseCatalogExercises = (
 
   return exercises.filter((exercise) => {
     const searchText = buildExerciseCatalogSearchText(exercise, muscleGroupsById);
-    return searchWords.some((searchWord) => searchText.includes(searchWord));
+    return searchWords.every((searchWord) => searchText.includes(searchWord));
   });
 };

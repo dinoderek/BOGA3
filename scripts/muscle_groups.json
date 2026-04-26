@@ -1,0 +1,126 @@
+[
+  {
+    "muscle_group_id": "chest",
+    "muscle_group_name": "Chest",
+    "muscles": [
+      {
+        "muscle_id": "pectoralis_major",
+        "muscle_name": "Pectoralis Major"
+      }
+    ]
+  },
+  {
+    "muscle_group_id": "back",
+    "muscle_group_name": "Back",
+    "muscles": [
+      {
+        "muscle_id": "latissimus_dorsi",
+        "muscle_name": "Latissimus Dorsi"
+      },
+      {
+        "muscle_id": "rhomboids",
+        "muscle_name": "Rhomboids"
+      },
+      {
+        "muscle_id": "teres_major",
+        "muscle_name": "Teres Major"
+      },
+      {
+        "muscle_id": "trapezius",
+        "muscle_name": "Trapezius"
+      },
+      {
+        "muscle_id": "erector_spinae",
+        "muscle_name": "Erector Spinae"
+      }
+    ]
+  },
+  {
+    "muscle_group_id": "shoulders",
+    "muscle_group_name": "Shoulders",
+    "muscles": [
+      {
+        "muscle_id": "deltoids",
+        "muscle_name": "Deltoids"
+      },
+      {
+        "muscle_id": "deltoid_anterior",
+        "muscle_name": "Anterior Deltoid"
+      }
+    ]
+  },
+  {
+    "muscle_group_id": "arms",
+    "muscle_group_name": "Arms",
+    "muscles": [
+      {
+        "muscle_id": "triceps_brachii",
+        "muscle_name": "Triceps Brachii"
+      },
+      {
+        "muscle_id": "biceps_brachii",
+        "muscle_name": "Biceps Brachii"
+      },
+      {
+        "muscle_id": "brachialis",
+        "muscle_name": "Brachialis"
+      },
+      {
+        "muscle_id": "brachioradialis",
+        "muscle_name": "Brachioradialis"
+      },
+      {
+        "muscle_id": "forearm_flexors",
+        "muscle_name": "Forearm Flexors"
+      },
+      {
+        "muscle_id": "forearm_extensors",
+        "muscle_name": "Forearm Extensors"
+      }
+    ]
+  },
+  {
+    "muscle_group_id": "core",
+    "muscle_group_name": "Core",
+    "muscles": [
+      {
+        "muscle_id": "core",
+        "muscle_name": "Core"
+      },
+      {
+        "muscle_id": "rectus_abdominis",
+        "muscle_name": "Rectus Abdominis"
+      },
+      {
+        "muscle_id": "obliques",
+        "muscle_name": "Obliques"
+      }
+    ]
+  },
+  {
+    "muscle_group_id": "lower_body",
+    "muscle_group_name": "Lower Body",
+    "muscles": [
+      {
+        "muscle_id": "quadriceps_femoris",
+        "muscle_name": "Quadriceps"
+      },
+      {
+        "muscle_id": "hamstrings",
+        "muscle_name": "Hamstrings"
+      },
+      {
+        "muscle_id": "gluteus_maximus",
+        "muscle_name": "Gluteus Maximus"
+      },
+      {
+        "muscle_id": "gastrocnemius",
+        "muscle_name": "Calves"
+      },
+      {
+        "muscle_id": "adductors",
+        "muscle_name": "Adductors"
+      }
+    ]
+  }
+]

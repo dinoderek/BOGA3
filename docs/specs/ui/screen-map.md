@@ -42,7 +42,7 @@ Brief entrypoint map of the current mobile screens.
 - Key states (high level):
   - active mode
   - completed-edit loading/error/content states
-  - in-route picker/editor/action modals (exercise picker includes text filtering by exercise name + linked muscle groups, with compact header icon actions for manage/add)
+  - in-route picker/editor/action modals (exercise picker includes text filtering by exercise name + primary muscle display/family terms, with compact header icon actions for manage/add)
   - in-route exercise-tag add/manage modals (search/select/create, rename/delete/undelete, deleted-visibility toggle)
 - Key exits:
   - `exercise-catalog` (`source=session-recorder&intent=manage` from exercise picker)
@@ -54,7 +54,7 @@ Brief entrypoint map of the current mobile screens.
   - exercise catalog management (create/edit/soft-delete/undelete exercises and muscle mappings)
 - Key states (high level):
   - loading / error / content
-  - text filtering across exercise names + linked muscle-group metadata
+  - text filtering across exercise names + primary muscle display/family terms
   - in-route editor/action/delete modals
   - deleted visibility toggle (`Show deleted` / `Hide deleted`) via top-level options kebab menu
 - Key exits:
