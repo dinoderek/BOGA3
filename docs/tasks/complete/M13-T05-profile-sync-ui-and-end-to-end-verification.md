@@ -1,7 +1,7 @@
 ---
 task_id: M13-T05-profile-sync-ui-and-end-to-end-verification
 milestone_id: "M13"
-status: blocked
+status: completed
 ui_impact: "yes"
 areas: "frontend|cross-stack|docs"
 runtimes: "node|expo|maestro|supabase"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/sc
 
 - Task ID: `M13-T05-profile-sync-ui-and-end-to-end-verification`
 - Title: M13 profile sync UX and end-to-end journey verification
-- Status: `blocked`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -177,16 +177,22 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 
 ## Completion note
 
-- What changed: Added explicit journey-named automated proof in `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts`.
-  - Added explicit journey-named automated proof in `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts` for:
-    - already signed in -> enable/bootstrap/converge -> recorder cadence flush,
-    - logged out -> enable sync -> login/bootstrap/converge -> recorder cadence flush.
-  - Confirmed the existing `/profile` sync section covers enabled/disabled state, last successful sync, pending count, inline retryable/blocked failure copy, and no-auto-retry messaging.
-- What tests ran: Targeted sync/profile tests and frontend fast gate passed; frontend slow gate is blocked by missing `maestro`.
+- What changed: Added explicit journey-named automated proof in `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts` for both required M13 sync journeys, and confirmed the existing `/profile` sync section covers enabled/disabled state, last successful sync, pending count, inline retryable/blocked failure copy, and no-auto-retry messaging.
+- What tests ran: Targeted sync/profile tests, frontend fast gate, and frontend slow gate passed.
   - `npm test -- --runTestsByPath app/__tests__/sync-runtime-bootstrap.test.ts` (`PASS`)
   - `npm test -- --runTestsByPath app/__tests__/sync-profile-status.test.ts app/__tests__/settings-profile-navigation.test.tsx` (`PASS`)
   - `./scripts/quality-fast.sh frontend` (`PASS`; existing lint warnings and React `act(...)` console warnings remain)
-  - `./scripts/quality-slow.sh frontend` (`BLOCKED`: missing required local command `maestro`)
-- What remains: Install Maestro and rerun `./scripts/quality-slow.sh frontend`.
-  - Install Maestro and rerun `./scripts/quality-slow.sh frontend`; record artifact root(s) before marking this task `completed` and moving it to `docs/tasks/complete/`.
-- Manual verification summary (required when CI is absent/partial): No manual simulator verification completed because `maestro` is not installed locally.
+  - `./scripts/quality-slow.sh frontend` (`PASS` on `2026-05-03`) using `DOCKER_HOST=unix:///var/run/docker.sock` for Colima/Supabase socket compatibility.
+  - Final slow-gate artifact roots:
+    - `apps/mobile/artifacts/maestro/ad-hoc/20260503-230400-41475` (`smoke-launch`, `PASS`)
+    - `apps/mobile/artifacts/maestro/ad-hoc/20260503-230503-42463` (`data-runtime-smoke`, `PASS`)
+    - `apps/mobile/artifacts/maestro/ad-hoc/20260503-230737-43528` (`auth-profile-happy-path`, `PASS`)
+  - Supabase baseline startup passed in the final gate: local stack started, migrations and seed applied, deterministic auth fixtures provisioned, and the auth/profile Maestro flow completed on simulator `BOGA wt1` (`8EE7AAC8-0DD9-4EFA-852A-737A7C5746F8`).
+- Host dependencies for rerunning slow gate locally:
+  - full Xcode with iOS Simulator selected,
+  - mobile.dev Maestro CLI, OpenJDK, CocoaPods, and mobile `npm install`,
+  - Docker via Colima with enough disk for the local Supabase image set,
+  - `/var/run/docker.sock` available as a symlink to `/Users/sboschi/.colima/default/docker.sock`, then run the gate with `DOCKER_HOST=unix:///var/run/docker.sock`.
+- What remains: none for M13-T05.
+- Manual verification summary (required when CI is absent/partial): Real iOS Simulator Maestro verification completed through smoke launch, data runtime, and auth/profile flows; the required frontend slow gate passed.
+  - `RUNBOOK.md` reviewed; no repo operator workflow changes required.

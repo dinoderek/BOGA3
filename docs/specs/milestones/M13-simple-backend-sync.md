@@ -4,7 +4,7 @@
 
 - Milestone ID: `M13`
 - Title: `Simple Backend Sync (Granular Outbox Baseline)`
-- Status: `in_progress`
+- Status: `completed`
 - Owner: `AI + human reviewer`
 - Target window: `2026-03`
 
@@ -318,7 +318,7 @@ Restore-parity ownership note:
 2. `docs/tasks/complete/M13-T02-client-outbox-and-recorder-cadence-sync.md` - implement local outbox model and event emission at write boundaries with `60s` general and `10s` recorder cadence handling. (`completed`)
 3. `docs/tasks/complete/M13-T03-backend-ingest-idempotency-and-projection.md` - implement backend ingest/ack semantics and projection path for restore. (`completed`)
 4. `docs/tasks/complete/M13-T04-bootstrap-merge-and-convergence.md` - implement first-sync bootstrap/merge/outbox convergence flow and related coverage. (`completed`)
-5. `docs/tasks/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`blocked`) Automated Jest/frontend fast proof is passing; frontend slow Maestro gate is blocked until `maestro` is installed.
+5. `docs/tasks/complete/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`completed`)
 6. `docs/tasks/complete/M13-T06-reinstall-restore-state-parity.md` - add deterministic reinstall restore-parity verification (`Jest` + local `Supabase`) across all M13 data-scope entities. (`completed`)
 
 Rule:
@@ -341,14 +341,14 @@ Rule:
 
 ## Completion note (fill when milestone closes)
 
-- What changed:
+- What changed: Completed the M13 granular outbox sync baseline, including client outbox emission/cadence, backend ingest/projection, first-enable bootstrap/merge, profile sync UX/status behavior, end-to-end journey proof, and reinstall restore-parity proof.
 - Verification summary:
-  - 2026-05-03: `M13-T05` targeted journey/status/profile tests pass and `./scripts/quality-fast.sh frontend` passes.
-  - 2026-05-03: `./scripts/quality-slow.sh frontend` is blocked because the local `maestro` command is missing.
-  - 2026-05-03: `./scripts/quality-slow.sh backend` got through Docker/Supabase startup and DB reset, then blocked because `jq` is missing for auth fixture provisioning.
-  - 2026-05-03: after `jq` installation, `./scripts/quality-slow.sh backend` passed, including auth/authz, sync API contract, and sync events ingest contract suites.
+  - 2026-05-03: `./scripts/quality-slow.sh backend` passed, including auth/authz, sync API contract, and sync events ingest contract suites.
+  - 2026-05-03: `M13-T05` targeted journey/status/profile tests and `./scripts/quality-fast.sh frontend` passed.
+  - 2026-05-03: final `./scripts/quality-slow.sh frontend` passed on iOS Simulator with local Supabase. Artifact roots: `apps/mobile/artifacts/maestro/ad-hoc/20260503-230400-41475` (`smoke-launch`), `apps/mobile/artifacts/maestro/ad-hoc/20260503-230503-42463` (`data-runtime-smoke`), and `apps/mobile/artifacts/maestro/ad-hoc/20260503-230737-43528` (`auth-profile-happy-path`).
+  - Host dependencies for rerunning the frontend slow gate locally: full Xcode/iOS Simulator, mobile.dev Maestro CLI, OpenJDK, CocoaPods, Docker via Colima with sufficient disk for Supabase images, and Colima Docker socket compatibility via `/var/run/docker.sock` plus `DOCKER_HOST=unix:///var/run/docker.sock`.
 - What remains:
-  - Install Maestro and rerun the frontend slow gate for `M13-T05`.
+  - none for M13.
 
 ## Status update checklist (mandatory during task closeout)
 

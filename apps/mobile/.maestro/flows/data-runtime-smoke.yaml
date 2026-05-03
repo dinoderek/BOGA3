@@ -1,17 +1,6 @@
 appId: com.dinoderek.mobile
 ---
-- tapOn:
-    text: "Open"
-    optional: true
-- tapOn:
-    text: "mobile"
-    optional: true
-- tapOn:
-    text: "Open"
-    optional: true
-- tapOn:
-    text: "Sessions"
-    optional: true
+- openLink: "mobile://maestro-harness?reset=data&teleport=session-list"
 - tapOn:
     text: "Open"
     optional: true
@@ -34,7 +23,11 @@ appId: com.dinoderek.mobile
     text: "Continue"
     optional: true
 - tapOn: "Log new exercise"
-- tapOn: "Select exercise Barbell Back Squat"
+- tapOn: "Exercise filter input"
+- inputText: "squat"
+- hideKeyboard
+- tapOn:
+    point: "50%,26%"
 - tapOn: "Weight for exercise 1 set 1"
 - inputText: "135"
 - tapOn: "Reps for exercise 1 set 1"
