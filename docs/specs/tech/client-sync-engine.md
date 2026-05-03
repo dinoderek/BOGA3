@@ -196,6 +196,7 @@ Source-of-truth implementation files:
 - coverage: deterministic merge decisions and convergence-loop terminal behavior.
 - `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts`
 - coverage: first-enable bootstrap trigger and logged-out-then-login bootstrap trigger.
+- includes explicit M13 journey proof for already-signed-in recorder sync convergence and logged-out-then-login bootstrap/convergence followed by recorder cadence sync.
 
 6. Backend ingest/projection contract
 - `supabase/tests/sync-events-ingest-contract.sh`

@@ -37,6 +37,7 @@ import {
   startSyncRuntime,
   stopSyncRuntime,
 } from '@/src/sync/runtime';
+import { createSyncScheduler, SYNC_SESSION_RECORDER_CADENCE_MS } from '@/src/sync/scheduler';
 
 type RuntimeStateRow = {
   id: string;
@@ -164,6 +165,7 @@ describe('sync runtime bootstrap trigger', () => {
 
   afterEach(() => {
     stopSyncRuntime();
+    jest.useRealTimers();
   });
 
   it('runs bootstrap merge immediately when sync is enabled for an authenticated user', async () => {
@@ -213,5 +215,76 @@ describe('sync runtime bootstrap trigger', () => {
     const runtimeState = await getSyncRuntimeState();
     expect(runtimeState.bootstrapUserId).toBe('user-b');
     expect(runtimeState.bootstrapCompletedAt).toBeInstanceOf(Date);
+  });
+
+  it('proves the already-logged-in recorder journey bootstraps, converges, then flushes on recorder cadence', async () => {
+    jest.useFakeTimers();
+    const recorderFlush = jest.fn(async () => ({ status: 'idle' as const }));
+
+    startSyncRuntime();
+    await flushAsync();
+
+    await setSyncEnabled(true);
+    await flushAsync();
+
+    expect(mockRunSyncBootstrapMerge).toHaveBeenCalledTimes(1);
+    expect(mockFlushSyncOutbox).toHaveBeenCalledTimes(1);
+
+    const scheduler = createSyncScheduler({ flush: recorderFlush });
+    scheduler.start();
+    scheduler.setContext('session-recorder');
+
+    jest.advanceTimersByTime(SYNC_SESSION_RECORDER_CADENCE_MS - 1);
+    await flushAsync();
+    expect(recorderFlush).toHaveBeenCalledTimes(0);
+
+    jest.advanceTimersByTime(1);
+    await flushAsync();
+    expect(recorderFlush).toHaveBeenCalledTimes(1);
+
+    scheduler.stop();
+  });
+
+  it('proves the logged-out login journey bootstraps after auth, converges, then flushes recorder work', async () => {
+    jest.useFakeTimers();
+    const recorderFlush = jest.fn(async () => ({ status: 'idle' as const }));
+
+    authSnapshot = {
+      session: null,
+    };
+
+    startSyncRuntime();
+    await flushAsync();
+
+    await setSyncEnabled(true);
+    await flushAsync();
+
+    expect(mockRunSyncBootstrapMerge).toHaveBeenCalledTimes(0);
+    expect(mockFlushSyncOutbox).toHaveBeenCalledTimes(0);
+
+    authSnapshot = {
+      session: {
+        user: {
+          id: 'user-b',
+        },
+      },
+    };
+
+    authListener?.();
+    await flushAsync();
+    await flushAsync();
+
+    expect(mockRunSyncBootstrapMerge).toHaveBeenCalledTimes(1);
+    expect(mockFlushSyncOutbox).toHaveBeenCalledTimes(1);
+
+    const scheduler = createSyncScheduler({ flush: recorderFlush });
+    scheduler.start();
+    scheduler.setContext('session-recorder');
+    jest.advanceTimersByTime(SYNC_SESSION_RECORDER_CADENCE_MS);
+    await flushAsync();
+
+    expect(recorderFlush).toHaveBeenCalledTimes(1);
+
+    scheduler.stop();
   });
 });

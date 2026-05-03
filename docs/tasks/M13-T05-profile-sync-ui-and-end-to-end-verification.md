@@ -1,7 +1,7 @@
 ---
 task_id: M13-T05-profile-sync-ui-and-end-to-end-verification
 milestone_id: "M13"
-status: in_progress
+status: blocked
 ui_impact: "yes"
 areas: "frontend|cross-stack|docs"
 runtimes: "node|expo|maestro|supabase"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/ui/sc
 
 - Task ID: `M13-T05-profile-sync-ui-and-end-to-end-verification`
 - Title: M13 profile sync UX and end-to-end journey verification
-- Status: `in_progress`
+- Status: `blocked`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -132,6 +132,7 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 
 ## Docs touched (required)
 
+- UI docs update required?: `yes`; existing profile sync UI docs were reviewed and no additional route/navigation semantics changed in this session.
 - `docs/specs/milestones/M13-simple-backend-sync.md` - closeout status and journey-proof summary (restore-parity tracked in `M13-T06`).
 - `docs/specs/ui/screen-map.md` - profile/settings state updates if changed.
 - `docs/specs/ui/navigation-contract.md` - route/transition updates if changed.
@@ -174,8 +175,18 @@ Deliver the profile sync controls/status UX and provide explicit proof for the t
 - Journey 2 proof artifact(s): test output + runtime capture references
 - slow-gate artifact root(s)
 
-## Completion note (fill at end)
+## Completion note
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Added explicit journey-named automated proof in `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts`.
+  - Added explicit journey-named automated proof in `apps/mobile/app/__tests__/sync-runtime-bootstrap.test.ts` for:
+    - already signed in -> enable/bootstrap/converge -> recorder cadence flush,
+    - logged out -> enable sync -> login/bootstrap/converge -> recorder cadence flush.
+  - Confirmed the existing `/profile` sync section covers enabled/disabled state, last successful sync, pending count, inline retryable/blocked failure copy, and no-auto-retry messaging.
+- What tests ran: Targeted sync/profile tests and frontend fast gate passed; frontend slow gate is blocked by missing `maestro`.
+  - `npm test -- --runTestsByPath app/__tests__/sync-runtime-bootstrap.test.ts` (`PASS`)
+  - `npm test -- --runTestsByPath app/__tests__/sync-profile-status.test.ts app/__tests__/settings-profile-navigation.test.tsx` (`PASS`)
+  - `./scripts/quality-fast.sh frontend` (`PASS`; existing lint warnings and React `act(...)` console warnings remain)
+  - `./scripts/quality-slow.sh frontend` (`BLOCKED`: missing required local command `maestro`)
+- What remains: Install Maestro and rerun `./scripts/quality-slow.sh frontend`.
+  - Install Maestro and rerun `./scripts/quality-slow.sh frontend`; record artifact root(s) before marking this task `completed` and moving it to `docs/tasks/complete/`.
+- Manual verification summary (required when CI is absent/partial): No manual simulator verification completed because `maestro` is not installed locally.

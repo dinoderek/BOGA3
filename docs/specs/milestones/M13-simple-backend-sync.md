@@ -274,7 +274,7 @@ Protocol requirements:
 13. Automated restore-parity verification proves that pre-sync state and post-reinstall bootstrap/merge state are identical across all entities in `Data scope`.
 
 Restore-parity ownership note:
-- the reinstall restore-parity acceptance proof is tracked in `docs/tasks/M13-T06-reinstall-restore-state-parity.md` and is not bundled into `M13-T05`.
+- the reinstall restore-parity acceptance proof is tracked in `docs/tasks/complete/M13-T06-reinstall-restore-state-parity.md` and is not bundled into `M13-T05`.
 
 ## Planned technical approach
 
@@ -318,8 +318,8 @@ Restore-parity ownership note:
 2. `docs/tasks/complete/M13-T02-client-outbox-and-recorder-cadence-sync.md` - implement local outbox model and event emission at write boundaries with `60s` general and `10s` recorder cadence handling. (`completed`)
 3. `docs/tasks/complete/M13-T03-backend-ingest-idempotency-and-projection.md` - implement backend ingest/ack semantics and projection path for restore. (`completed`)
 4. `docs/tasks/complete/M13-T04-bootstrap-merge-and-convergence.md` - implement first-sync bootstrap/merge/outbox convergence flow and related coverage. (`completed`)
-5. `docs/tasks/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`in_progress`)
-6. `docs/tasks/M13-T06-reinstall-restore-state-parity.md` - add deterministic reinstall restore-parity verification (`Jest` + local `Supabase`) across all M13 data-scope entities. (`in_progress`)
+5. `docs/tasks/M13-T05-profile-sync-ui-and-end-to-end-verification.md` - finalize profile sync UX and journey-proof coverage for the two required user journeys. (`blocked`) Automated Jest/frontend fast proof is passing; frontend slow Maestro gate is blocked until `maestro` is installed.
+6. `docs/tasks/complete/M13-T06-reinstall-restore-state-parity.md` - add deterministic reinstall restore-parity verification (`Jest` + local `Supabase`) across all M13 data-scope entities. (`completed`)
 
 Rule:
 
@@ -343,7 +343,12 @@ Rule:
 
 - What changed:
 - Verification summary:
+  - 2026-05-03: `M13-T05` targeted journey/status/profile tests pass and `./scripts/quality-fast.sh frontend` passes.
+  - 2026-05-03: `./scripts/quality-slow.sh frontend` is blocked because the local `maestro` command is missing.
+  - 2026-05-03: `./scripts/quality-slow.sh backend` got through Docker/Supabase startup and DB reset, then blocked because `jq` is missing for auth fixture provisioning.
+  - 2026-05-03: after `jq` installation, `./scripts/quality-slow.sh backend` passed, including auth/authz, sync API contract, and sync events ingest contract suites.
 - What remains:
+  - Install Maestro and rerun the frontend slow gate for `M13-T05`.
 
 ## Status update checklist (mandatory during task closeout)
 

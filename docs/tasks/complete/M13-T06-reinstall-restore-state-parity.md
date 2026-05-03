@@ -1,7 +1,7 @@
 ---
 task_id: M13-T06-reinstall-restore-state-parity
 milestone_id: "M13"
-status: in_progress
+status: completed
 ui_impact: "no"
 areas: "frontend|backend|cross-stack"
 runtimes: "node|supabase"
@@ -16,7 +16,7 @@ docs_touched: "docs/specs/milestones/M13-simple-backend-sync.md,docs/specs/06-te
 
 - Task ID: `M13-T06-reinstall-restore-state-parity`
 - Title: M13 reinstall restore-state parity verification
-- Status: `in_progress`
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -123,9 +123,9 @@ Implement deterministic automated proof that a brand-new app installation restor
   - `./scripts/quality-slow.sh backend`
 - manual verification summary (if any)
 
-## Completion note (fill at end)
+## Completion note
 
-- What changed:
+- What changed: Restore-parity implementation exists from the prior session; this session refreshed local setup and rechecked the backend blocker.
   - Added targeted parity suite `apps/mobile/app/__tests__/sync-reinstall-restore-parity.test.ts`.
   - Added runner wrapper `apps/mobile/scripts/test-sync-reinstall-restore-parity.sh` to enforce local Supabase baseline + inject runtime auth env for the targeted lane.
   - Implemented deterministic M13 full-scope fixture + scoped snapshot normalization + reinstall reset simulation + post-login bootstrap/merge parity assertion.
@@ -133,9 +133,13 @@ Implement deterministic automated proof that a brand-new app installation restor
     - `docs/specs/06-testing-strategy.md`
     - `docs/specs/tech/client-sync-engine.md`
     - `docs/specs/milestones/M13-simple-backend-sync.md`
-- What tests ran:
+- What tests ran: Targeted parity/frontend gates passed previously; backend slow gate now passes after Docker and `jq` setup.
   - `apps/mobile/scripts/test-sync-reinstall-restore-parity.sh` (`PASS`)
   - `./scripts/quality-fast.sh frontend` (`PASS`, lint warnings only)
   - `./scripts/quality-slow.sh backend` (`FAIL` at `supabase/tests/session-sync-api-contract.sh`: expected `exercise_sets.set_type` column that is absent in current schema cache)
-- What remains:
-  - Resolve or explicitly waive the backend slow-gate `session-sync-api-contract` failure so this task can be marked `completed` and moved to `docs/tasks/complete/`.
+  - `./scripts/worktree-doctor.sh` (`PASS` after `./scripts/worktree-setup.sh` initialized local generated config)
+  - `./scripts/quality-slow.sh backend` (`BLOCKED` on 2026-05-03 before contract tests: Docker daemon unavailable at `unix:///var/run/docker.sock`)
+  - `./scripts/quality-slow.sh backend` (`BLOCKED` on 2026-05-03 after Docker/Supabase startup and DB reset: auth fixture provisioning requires missing `jq`)
+  - `./scripts/quality-slow.sh backend` (`PASS`; auth/authz, sync API contract, and sync events ingest contract suites passed)
+- What remains: Nothing for this task; move to `docs/tasks/complete/` and update M13 references.
+- Manual verification summary (required when CI is absent/partial): Backend runtime verification completed locally through `./scripts/quality-slow.sh backend`; the previous `exercise_sets.set_type` schema-cache failure is resolved by the current migrations.
