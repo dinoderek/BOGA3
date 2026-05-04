@@ -4,29 +4,43 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "channel": "development"
-    },
-    "development-simulator": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "channel": "development",
+    "dev": {
+      "autoIncrement": true,
+      "environment": "development",
       "ios": {
-        "simulator": true
+        "distribution": "store"
+      },
+      "env": {
+        "APP_ENV": "dev",
+        "APP_NAME": "Boga3 Dev",
+        "IOS_BUNDLE_ID": "com.phano.boga3.dev"
       }
     },
-    "preview": {
-      "distribution": "internal",
-      "channel": "preview"
-    },
-    "production": {
+    "prod": {
       "autoIncrement": true,
-      "channel": "production"
+      "environment": "production",
+      "ios": {
+        "distribution": "store"
+      },
+      "env": {
+        "APP_ENV": "prod",
+        "APP_NAME": "Boga3",
+        "IOS_BUNDLE_ID": "com.phano.boga3"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "dev": {
+      "ios": {
+        "ascAppId": "6766332857",
+        "bundleIdentifier": "com.phano.boga3.dev"
+      }
+    },
+    "prod": {
+      "ios": {
+        "ascAppId": "6766332909",
+        "bundleIdentifier": "com.phano.boga3"
+      }
+    }
   }
 }
