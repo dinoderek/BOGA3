@@ -84,8 +84,8 @@ Introduce the first group-sharing domain slice: a user can create a private grou
 
 ## Task breakdown
 
-1. `docs/tasks/M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions.md` - Audit existing exercise/session schema and privacy assumptions (`planned`).
-2. `docs/tasks/M18-T02-Design_group_domain_data_model.md` - Design group/domain data model (`planned`).
+1. `docs/tasks/complete/M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions.md` - Audit existing exercise/session schema and privacy assumptions (`completed`).
+2. `docs/tasks/complete/M18-T02-Design_group_domain_data_model.md` - Design group/domain data model (`completed`).
 3. `docs/tasks/M18-T03-Add_Supabase_migrations_for_groups_and_group_memberships.md` - Add Supabase migrations for groups and group memberships (`planned`).
 4. `docs/tasks/M18-T04-Add_group_exercise_catalogue_tables.md` - Add group exercise catalogue tables (`planned`).
 5. `docs/tasks/M18-T05-Add_private_to_group_exercise_mapping_table.md` - Add private-to-group exercise mapping table (`planned`).

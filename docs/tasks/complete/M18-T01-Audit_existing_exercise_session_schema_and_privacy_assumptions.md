@@ -1,7 +1,7 @@
 ---
-task_id: M18-T02-Design_group_domain_data_model
+task_id: M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
 milestone_id: "M18"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs|backend"
 runtimes: "docs|sql"
@@ -10,13 +10,13 @@ gates_slow: "./boga test backend"
 docs_touched: "docs/specs/05-data-model.md"
 ---
 
-# M18-T02-Design_group_domain_data_model
+# M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
 
 ## Task metadata
 
-- Task ID: M18-T02-Design_group_domain_data_model
-- Title: Design group/domain data model
-- Status: `planned`
+- Task ID: M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
+- Title: Audit existing exercise/session schema and privacy assumptions
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -42,11 +42,11 @@ docs_touched: "docs/specs/05-data-model.md"
   - Task is planned only; run schema/runtime/UI inventory commands during implementation kickoff as applicable.
 - Known stale references or assumptions: none recorded at card creation.
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/M18-T02-Design_group_domain_data_model.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions.md`
 
 ## Objective
 
-Define the canonical group, membership, catalogue, mapping, request, and projection entities before implementation.
+Review current private exercise/session tables, sync mirrors, and product privacy rules before proposing group-visible data.
 
 ## Scope
 
@@ -54,7 +54,7 @@ Define the canonical group, membership, catalogue, mapping, request, and project
 
 - Deliver the slice named in the task title.
 - Preserve the milestone privacy rule that private exercise definitions stay private unless intentionally mapped/projected.
-- Propose concrete RLS policy structures and helper functions that explicitly avoid infinite recursion during membership and role checks.
+- Audit potential RLS recursion vectors for group membership, catalogues, and shared projections on the backend.
 - Update source-of-truth docs listed below when behavior becomes canonical.
 
 ### Out of scope
@@ -73,12 +73,12 @@ Define the canonical group, membership, catalogue, mapping, request, and project
 2. Positive-path behavior is covered by targeted tests or documented verification.
 3. Negative privacy/authorization/projection behavior is covered when the slice touches backend data, RLS, mappings, or share projections.
 4. Project-level docs are updated when this slice changes source-of-truth behavior.
-5. The designed data model includes RLS policy templates and security definer functions (or equivalent strategies) that are verified to be recursion-free.
+5. The audit explicitly identifies potential RLS recursion scenarios (e.g. self-referencing checks on group_memberships) and provides architectural guidelines to prevent them.
 
 ## Docs touched
 
 - Planned docs/spec files to update and why:
-  - docs/specs/05-data-model.md - add accepted group-domain model; docs/specs/03-technical-architecture.md - record group-sharing architecture decision if adopted; docs/specs/10-api-authn-authz-guidelines.md - add group role authorization rules.
+  - docs/specs/05-data-model.md - confirm current private data boundaries; docs/specs/10-api-authn-authz-guidelines.md - confirm current ownership/RLS baseline; docs/specs/tech/sync-v2-server-contract.md - confirm sync-domain assumptions.
 
 ## Testing and verification approach
 
@@ -104,13 +104,16 @@ Define the canonical group, membership, catalogue, mapping, request, and project
 
 ## Evidence
 
-- Fill during implementation.
+- Audited existing private exercise/session schema and privacy assumptions against group domain needs.
+- Documented private exercise definition boundary, online API operational scope, and sync v2 isolation.
+- Identified potential Postgres RLS policy recursion vectors (`42P17`) on group membership lookups and specified prevention requirements.
+- Updated project specs `docs/specs/05-data-model.md`, `docs/specs/10-api-authn-authz-guidelines.md`, and `docs/specs/tech/sync-v2-server-contract.md`.
 
 ## Completion note
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Audited existing exercise/session domain, established private data boundaries vs group projections, documented RLS recursion prevention strategy (`SECURITY DEFINER` helper functions with `search_path`), and updated specs.
+- What tests ran: `./boga test docs-check`
+- What remains: M18-T03 through M18-T07 implementation tasks (SQL migrations and RLS policies).
 
 ## Status update checklist
 
