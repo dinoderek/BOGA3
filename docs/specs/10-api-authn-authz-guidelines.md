@@ -38,6 +38,9 @@ This is the shortest operational summary. Use the "Further reading" section when
 14. Privileged application RPCs that bypass RLS, including `SECURITY DEFINER`
     developer helpers, must independently reject non-null OAuth `client_id`
     claims before executing any read or write body.
+15. Group domain authorization (M18) relies on group-membership and admin-role checks enforced at the DB level (`RLS` / DB constraints). Private source entities (`exercise_definitions`, `sessions`) remain strictly user-private (`owner_user_id = auth.uid()`).
+16. **RLS Recursion Prevention**: Group membership and role lookups in backend `RLS` policies MUST use `SECURITY DEFINER` helper functions (`app_public.is_group_member(...)`, `app_public.is_group_admin(...)`) with `SET search_path = app_public, pg_temp` to prevent Postgres infinite recursion (`42P17`). Direct subqueries on `group_memberships` inside `group_memberships` policies are strictly prohibited.
+17. Group `SECURITY DEFINER` membership helper functions must independently reject non-null OAuth `client_id` claims (rule 14) to maintain the M21 agent access boundary.
 
 ## Practical guidance for API developers (backend)
 
@@ -46,6 +49,12 @@ This is the shortest operational summary. Use the "Further reading" section when
 - Validate custom API inputs at the boundary (Edge Function/server handler) and rely on DB constraints for invariants.
 - Do not expose `auth` schema via API surfaces.
 - Treat `owner_user_id` as immutable after insert unless a task explicitly defines a safe migration/admin path.
+- **Group Domain RLS & Recursion Prevention**:
+  - Always encapsulate group membership and role checks in `SECURITY DEFINER` helper functions (e.g. `app_public.is_group_member(group_id, user_id)`).
+  - `SECURITY DEFINER` function execution bypasses table RLS during helper execution, preventing cyclic policy evaluation and `42P17` infinite recursion errors.
+  - Set `search_path = app_public, pg_temp` on all helper functions to guard against schema injection attacks.
+  - Private-to-group exercise mappings must be user-owned (`user_id = auth.uid()`) and must not grant other group members read access to private `exercise_definitions`.
+  - Shared session projections must project static snapshots referencing group exercise IDs; raw private exercise metadata must not be exposed through group views.
 
 ## Practical guidance for API consumers (mobile/app)
 

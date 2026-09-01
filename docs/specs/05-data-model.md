@@ -138,6 +138,14 @@ to deduplicate per device, so idempotency falls out of per-row LWW.
   - sync impact decision: `out of sync scope` because `user_profiles` is
     explicitly outside the nine-table Sync v2 mirror.
 
+### Group exercise catalogue, mapping, and sharing domain (M18)
+
+- Private exercise definitions (`app_public.exercise_definitions`) remain strictly user-private entities. They are never exposed to or directly queried by other members of a group.
+- Group domain entities (`groups`, `group_memberships`, `group_exercise_catalogue`, `group_exercise_requests`) and user mappings (`user_group_exercise_mappings`) are online backend domain structures.
+- Private-to-group exercise mappings are owned by the user (`user_id = auth.uid()`). A user mapping link does not grant other group members read access to the user's private `exercise_definitions` table.
+- Shared session projections represent static snapshot projections created at the time of sharing. They use group exercise identifiers/names and do not expose private exercise metadata. Post-share edits to private source sessions do not mutate shared group projections.
+- Sync impact decision: `out of sync scope` for the Sync v2 9-table user-private LWW engine. Group operations, catalogues, mappings, and shared session projections are online backend API operations, isolated from the 9-table LWW sync protocol.
+
 ## Ownership and identity invariants
 
 1. User-owned backend rows are auth-scoped and backend-enforced (`RLS`/constraints).

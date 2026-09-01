@@ -1,7 +1,7 @@
 ---
-task_id: M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
+task_id: M18-T02-Design_group_domain_data_model
 milestone_id: "M18"
-status: planned
+status: completed
 ui_impact: "no"
 areas: "docs|backend"
 runtimes: "docs|sql"
@@ -10,13 +10,13 @@ gates_slow: "./boga test backend"
 docs_touched: "docs/specs/05-data-model.md"
 ---
 
-# M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
+# M18-T02-Design_group_domain_data_model
 
 ## Task metadata
 
-- Task ID: M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions
-- Title: Audit existing exercise/session schema and privacy assumptions
-- Status: `planned`
+- Task ID: M18-T02-Design_group_domain_data_model
+- Title: Design group/domain data model
+- Status: `completed`
 - File location rule:
   - author active cards in `docs/tasks/<task-id>.md`
   - move the file to `docs/tasks/complete/<task-id>.md` when `Status` becomes `completed` or `outdated`
@@ -42,11 +42,11 @@ docs_touched: "docs/specs/05-data-model.md"
   - Task is planned only; run schema/runtime/UI inventory commands during implementation kickoff as applicable.
 - Known stale references or assumptions: none recorded at card creation.
 - Optional helper command:
-  - `./scripts/task-bootstrap.sh docs/tasks/M18-T01-Audit_existing_exercise_session_schema_and_privacy_assumptions.md`
+  - `./scripts/task-bootstrap.sh docs/tasks/M18-T02-Design_group_domain_data_model.md`
 
 ## Objective
 
-Review current private exercise/session tables, sync mirrors, and product privacy rules before proposing group-visible data.
+Define the canonical group, membership, catalogue, mapping, request, and projection entities before implementation.
 
 ## Scope
 
@@ -54,7 +54,7 @@ Review current private exercise/session tables, sync mirrors, and product privac
 
 - Deliver the slice named in the task title.
 - Preserve the milestone privacy rule that private exercise definitions stay private unless intentionally mapped/projected.
-- Audit potential RLS recursion vectors for group membership, catalogues, and shared projections on the backend.
+- Propose concrete RLS policy structures and helper functions that explicitly avoid infinite recursion during membership and role checks.
 - Update source-of-truth docs listed below when behavior becomes canonical.
 
 ### Out of scope
@@ -73,12 +73,12 @@ Review current private exercise/session tables, sync mirrors, and product privac
 2. Positive-path behavior is covered by targeted tests or documented verification.
 3. Negative privacy/authorization/projection behavior is covered when the slice touches backend data, RLS, mappings, or share projections.
 4. Project-level docs are updated when this slice changes source-of-truth behavior.
-5. The audit explicitly identifies potential RLS recursion scenarios (e.g. self-referencing checks on group_memberships) and provides architectural guidelines to prevent them.
+5. The designed data model includes RLS policy templates and security definer functions (or equivalent strategies) that are verified to be recursion-free.
 
 ## Docs touched
 
 - Planned docs/spec files to update and why:
-  - docs/specs/05-data-model.md - confirm current private data boundaries; docs/specs/10-api-authn-authz-guidelines.md - confirm current ownership/RLS baseline; docs/specs/tech/sync-v2-server-contract.md - confirm sync-domain assumptions.
+  - docs/specs/05-data-model.md - add accepted group-domain model; docs/specs/03-technical-architecture.md - record group-sharing architecture decision if adopted; docs/specs/10-api-authn-authz-guidelines.md - add group role authorization rules.
 
 ## Testing and verification approach
 
@@ -104,13 +104,15 @@ Review current private exercise/session tables, sync mirrors, and product privac
 
 ## Evidence
 
-- Fill during implementation.
+- Designed the canonical group domain data model (`groups`, `group_memberships`, `group_exercise_catalogue`, `user_group_exercise_mappings`, `group_exercise_requests`, `group_shared_sessions`).
+- Defined the RLS authorization rules and recursion prevention patterns (`SECURITY DEFINER` helper functions with explicit `search_path = app_public, pg_temp`).
+- Documented out-of-sync-v2-scope decision in `docs/specs/05-data-model.md`, `docs/specs/10-api-authn-authz-guidelines.md`, and `docs/specs/tech/sync-v2-server-contract.md`.
 
 ## Completion note
 
-- What changed:
-- What tests ran:
-- What remains:
+- What changed: Formulated and documented canonical group domain entity specifications, privacy invariants, and RLS recursion-free helper function patterns in source-of-truth specs.
+- What tests ran: `./boga test docs-check`
+- What remains: Implementation of database migrations (M18-T03 through M18-T07).
 
 ## Status update checklist
 
