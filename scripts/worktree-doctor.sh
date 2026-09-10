@@ -127,6 +127,13 @@ for local_file in \
   fi
 done
 
+supabase_cli_version="$(boga_supabase_cli_version "$REPO_ROOT")"
+if boga_version_at_least "$supabase_cli_version" "$BOGA_SUPABASE_CLI_MIN_VERSION"; then
+  ok "Supabase CLI $supabase_cli_version (>= $BOGA_SUPABASE_CLI_MIN_VERSION: edge runtime boots without deno.land)"
+else
+  fail "Supabase CLI $supabase_cli_version is below $BOGA_SUPABASE_CLI_MIN_VERSION: 'supabase start' 502s when deno.land is unreachable; remove or raise SUPABASE_CLI_VERSION in $(boga_config_root)/supabase/cli.env"
+fi
+
 MAESTRO_ENV="$REPO_ROOT/apps/mobile/.maestro/maestro.env.local"
 if [[ -f "$MAESTRO_ENV" ]]; then
   if grep -q "^EXPO_DEV_SERVER_PORT=.*$(boga_port_for_slot expo "$slot")" "$MAESTRO_ENV"; then

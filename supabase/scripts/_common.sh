@@ -53,6 +53,10 @@ else
 fi
 export WORKTREE_SLOT
 
+# Resolve before sourcing the override file below: it may also assign
+# SUPABASE_CLI_VERSION, and an explicit caller env value must still win.
+resolved_supabase_cli_version="$(boga_supabase_cli_version "${REPO_ROOT}")"
+
 if [[ -f "${SUPABASE_DIR}/.env.local" ]]; then
   # Script-only overrides (CLI version, optional local toggles).
   # shellcheck disable=SC1091
@@ -62,7 +66,7 @@ elif declare -F boga_config_root >/dev/null 2>&1 && [[ -f "$(boga_config_root)/s
   source "$(boga_config_root)/supabase/cli.env"
 fi
 
-SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.76.15}"
+SUPABASE_CLI_VERSION="${resolved_supabase_cli_version}"
 FUNCTIONS_PID_FILE="${SUPABASE_DIR}/.temp/health-functions-serve.pid"
 FUNCTIONS_LOG_FILE="${SUPABASE_DIR}/.temp/health-functions-serve.log"
 FUNCTION_ENV_FILE="${SUPABASE_DIR}/functions/.env.local"
@@ -78,7 +82,18 @@ ensure_tmp_dir() {
 # scripts, auth provisioning — against a second, isolated Supabase without a
 # parallel copy of this machinery. Unset (the default), everything targets the
 # gate stack exactly as before.
+require_supported_supabase_cli() {
+  boga_version_at_least "${SUPABASE_CLI_VERSION}" "${BOGA_SUPABASE_CLI_MIN_VERSION}" && return 0
+  cat >&2 <<EOF
+[supabase] Supabase CLI ${SUPABASE_CLI_VERSION} is below the supported minimum ${BOGA_SUPABASE_CLI_MIN_VERSION}.
+[supabase] Older CLIs fetch deno.land on every edge-runtime start, so 'supabase start' fails with "Error status 502" when deno.land is unreachable.
+[supabase] Remove or raise SUPABASE_CLI_VERSION in $(boga_config_root)/supabase/cli.env (repo default: ${BOGA_SUPABASE_CLI_DEFAULT_VERSION}); ./boga doctor checks this.
+EOF
+  return 1
+}
+
 run_supabase() {
+  require_supported_supabase_cli || return 1
   (
     cd "${REPO_ROOT}"
     if [[ -n "${BOGA_SUPABASE_WORKDIR:-}" ]]; then

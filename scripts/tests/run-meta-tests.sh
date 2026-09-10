@@ -17,6 +17,7 @@ TESTS=(
   "test-for.test.sh"
   "pr-check.test.sh"
   "maestro-fixture-users.test.sh"
+  "supabase-cli-version.test.sh"
 )
 
 failed=0

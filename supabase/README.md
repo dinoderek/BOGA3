@@ -13,7 +13,7 @@ This folder is the backend root for M5 (`Supabase` local-first development and t
 
 - Docker-compatible container runtime (Docker Desktop verified in this repo session).
 - On macOS with Colima, see `RUNBOOK.md` for the local Supabase preflight.
-- `npx`/`npm` available (repo scripts use `npx supabase@2.76.15` by default).
+- `npx`/`npm` available (repo scripts run `npx supabase@<pin>`; the pin is `BOGA_SUPABASE_CLI_DEFAULT_VERSION` in `scripts/worktree-lib.sh`).
 - Optional: install Supabase CLI globally (`supabase`) if preferred, but repo scripts do not require it.
 
 ## Local environment configuration strategy
@@ -23,7 +23,8 @@ This folder is the backend root for M5 (`Supabase` local-first development and t
 - Generated per-worktree config is `supabase/config.toml` and is gitignored.
 - Local script overrides: `supabase/.env.local`
   - setup links this to `~/.config/boga/supabase/cli.env`
-  - currently used for script-level config like `SUPABASE_CLI_VERSION`
+  - optional script-level overrides such as `SUPABASE_CLI_VERSION` (versions
+    below `BOGA_SUPABASE_CLI_MIN_VERSION` are rejected; see `RUNBOOK.md`)
 - Local function env vars: `supabase/functions/.env.local`
   - setup links this to `~/.config/boga/edge-functions/env.shared`
   - used by `supabase functions serve --env-file ...`
@@ -284,9 +285,9 @@ denial, and metadata-only audit rows. Run the full protocol-to-data smoke with:
 Hosted enablement:
 
 1. Link the target project and apply every migration:
-   `npx supabase@2.76.15 db push --linked --include-all`.
+   `bash -lc 'source supabase/scripts/_common.sh && run_supabase db push --linked --include-all'`.
 2. From the repository root deploy the function:
-   `npx supabase@2.76.15 functions deploy agent-api --no-verify-jwt`.
+   `bash -lc 'source supabase/scripts/_common.sh && run_supabase functions deploy agent-api --no-verify-jwt'`.
 3. Keep `app_public` in the hosted exposed-schema list. Although agent OAuth
    tokens have no direct access, the normal mobile app still uses this schema.
 4. Enable the Supabase OAuth server, configure `/oauth/consent`, choose the

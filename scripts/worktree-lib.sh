@@ -347,6 +347,50 @@ boga_file_mtime_epoch() {
   stat -f %m "$path" 2>/dev/null || stat -c %Y "$path" 2>/dev/null
 }
 
+# Supabase CLI pin. The repo owns the default; `supabase/.env.local`
+# (-> ~/.config/boga/supabase/cli.env) may override it, and an explicit
+# SUPABASE_CLI_VERSION in the caller's env wins over both.
+#
+# Minimum: 2.108.0 is the first CLI whose edge-runtime bootstrap bundles its
+# deps (supabase/cli#5678). Older CLIs import deno.land on every edge container
+# start, so `supabase start` fails its health check with "Error status 502"
+# whenever deno.land is unreachable.
+BOGA_SUPABASE_CLI_DEFAULT_VERSION="2.109.1"
+BOGA_SUPABASE_CLI_MIN_VERSION="2.108.0"
+
+boga_supabase_cli_version() {
+  local repo_root="$1"
+  local env_file="$repo_root/supabase/.env.local"
+  local pinned=""
+
+  if [[ -n "${SUPABASE_CLI_VERSION:-}" ]]; then
+    printf '%s\n' "$SUPABASE_CLI_VERSION"
+    return 0
+  fi
+
+  [[ -f "$env_file" ]] || env_file="$(boga_config_root)/supabase/cli.env"
+  if [[ -f "$env_file" ]]; then
+    pinned="$(sed -n -E "s/^[[:space:]]*(export[[:space:]]+)?SUPABASE_CLI_VERSION=[\"']?([^\"'[:space:]#]*).*/\\2/p" "$env_file" | tail -n 1)"
+  fi
+  printf '%s\n' "${pinned:-$BOGA_SUPABASE_CLI_DEFAULT_VERSION}"
+}
+
+# boga_version_at_least <version> <minimum>: numeric major.minor.patch compare
+# (a -beta.N suffix is ignored). Non-semver input such as "latest" fails.
+boga_version_at_least() {
+  local -a have want
+  local i
+
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]] || return 1
+  IFS=. read -r -a have <<< "${1%%-*}"
+  IFS=. read -r -a want <<< "${2%%-*}"
+  for i in 0 1 2; do
+    (( 10#${have[i]} > 10#${want[i]:-0} )) && return 0
+    (( 10#${have[i]} < 10#${want[i]:-0} )) && return 1
+  done
+  return 0
+}
+
 boga_mobile_node_modules_is_isolated() {
   local repo_root="$1"
   local node_modules="$repo_root/apps/mobile/node_modules"
