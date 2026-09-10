@@ -138,13 +138,21 @@ to deduplicate per device, so idempotency falls out of per-row LWW.
   - sync impact decision: `out of sync scope` because `user_profiles` is
     explicitly outside the nine-table Sync v2 mirror.
 
-### Group exercise catalogue, mapping, and sharing domain (M18)
+### Group domain (M22 — planned, not yet built)
 
-- Private exercise definitions (`app_public.exercise_definitions`) remain strictly user-private entities. They are never exposed to or directly queried by other members of a group.
-- Group domain entities (`groups`, `group_memberships`, `group_exercise_catalogue`, `group_exercise_requests`) and user mappings (`user_group_exercise_mappings`) are online backend domain structures.
-- Private-to-group exercise mappings are owned by the user (`user_id = auth.uid()`). A user mapping link does not grant other group members read access to the user's private `exercise_definitions` table.
-- Shared session projections represent static snapshot projections created at the time of sharing. They use group exercise identifiers/names and do not expose private exercise metadata. Post-share edits to private source sessions do not mutate shared group projections.
-- Sync impact decision: `out of sync scope` for the Sync v2 9-table user-private LWW engine. Group operations, catalogues, mappings, and shared session projections are online backend API operations, isolated from the 9-table LWW sync protocol.
+- The earlier M18 group text is superseded (M18 is `outdated`).
+- The planned model is defined in `docs/specs/tech/groups-contract.md` §2:
+  `groups`, `group_memberships` (one row per membership period),
+  `group_invites`, and `group_session_shares`. `group_session_shares` is the
+  group record, a server-written share ledger whose content is read through
+  from members' own Sync v2 rows.
+- Planned sync impact decision: `out of sync scope`. These are
+  server-authoritative, multi-reader rows accessed only through group RPCs. The
+  nine Sync v2 tables and their owner-only RLS are unchanged. The planned
+  mobile `group_cache` table is a local-only, disposable cache, also
+  `out of sync scope`.
+- This section is replaced with the as-built inventory when the M22 schema
+  lands.
 
 ## Ownership and identity invariants
 

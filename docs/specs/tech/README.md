@@ -5,6 +5,12 @@ This folder holds subsystem-level implementation references that sit below the t
 Current docs:
 
 - `sync-v2-server-contract.md`: authoritative Sync v2 server contract — Part A (server schema, composite PKs, RLS, deferrable FKs, LWW/undelete, drift checker) and Part B (push/pull RPC wire protocol, batch caps, per-layer cursor drain). Verified against the as-built migrations and RPCs.
+- `groups-contract.md`: the M22 group domain contract (planned; gets as-built notes as tasks land):
+  - group tables and the share-ledger group record;
+  - the rule and trigger that share a session into a group;
+  - the `SECURITY DEFINER` RPC wire contract and error tokens;
+  - stream-card metrics and the SQL/TS parity vectors;
+  - the mobile `src/groups` client, local cache, and routes.
 
 Maintenance rule:
 
