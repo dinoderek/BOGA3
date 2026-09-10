@@ -175,7 +175,39 @@ clarifications below. The tech design maps each requirement to a mechanism.
 
 ## Task breakdown
 
-Authored in the M22 implementation-plan PR (step 2) as `docs/tasks/M22-T*.md`.
+Each card is one PR. Cards point at the technical design sections rather than
+restating them.
+
+1. `docs/tasks/M22-T01-Backend_group_membership_invites_and_authz.md` —
+   groups, membership periods, invites, all membership/invite RPCs, and the
+   new `groups-contract` backend lane (`planned`).
+2. `docs/tasks/M22-T02-Backend_group_record_share_trigger_and_stream_reads.md`
+   — the share ledger and trigger, `group_stream`, `group_session_detail`, the
+   SQL metric helpers, and the SQL/TS parity vectors (`planned`).
+3. `docs/tasks/M22-T03-Mobile_groups_client_cache_and_hooks.md` — the
+   `src/groups` client, the `group_cache` local table, the account wipe, and
+   the resource/action hooks (`planned`).
+4. `docs/tasks/M22-T04-Mobile_groups_tab_stream_group_screen_and_friend_session.md`
+   — the Groups tab, the stream, My groups, the group screen, and the friend's
+   session view (`planned`).
+5. `docs/tasks/M22-T05-Mobile_create_join_invite_and_member_management.md` —
+   create, edit, join (deep link), invite and share, the username gate, and
+   members and roles (`planned`).
+6. `docs/tasks/M22-T06-Two_user_groups_Maestro_lane.md` — the `ios-groups-e2e`
+   lane with fixture users `user_c`/`user_d` (`planned`).
+7. `docs/tasks/M22-T07-Milestone_closeout.md` — the full gate run, the AC
+   matrix, the as-built specs, and the archive (`planned`).
+
+Dependency graph (parallel where arrows allow):
+
+```text
+T01 ──► T02 ─────────────┐
+T03 ──► T04 ──► T05 ─────┼──► T06 ──► T07
+```
+
+- T01 and T03 start in parallel.
+- T02 runs alongside T04/T05.
+- T06 needs T02 and T05.
 
 ## Risks / dependencies
 
