@@ -1235,6 +1235,6 @@ apply (B.4.5).
 
 - Server-side retention/GC of `deleted_at IS NOT NULL` rows (stored as regular
   rows in v2).
-- Group/sharing domain operations (M18 group catalogues, private-to-group mappings, exercise creation requests, and shared session projections operate as online backend queries/RPCs outside the Sync v2 9-table mirror engine).
+- Group domain (M22, planned — `groups-contract.md`). Groups, memberships, invites, and the group session record are server-authoritative and reached only through group RPCs, outside the Sync v2 9-table mirror engine. The one touch point is an `AFTER INSERT OR UPDATE` trigger on `app_public.sessions` that records shares; it is failure-isolated so it can never abort `sync_push` (`groups-contract.md` §2.5). Group tables carry no `owner_user_id` column, so they stay out of the drift checker's entity set (§A.7.3).
 - Web client and MCP read paths against the typed schema (they consume Part A's
   schema directly with no Part B protocol involvement).

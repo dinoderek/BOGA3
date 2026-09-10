@@ -37,6 +37,11 @@
 | 18 | 2026-09-10 | Later edits and deletes by the member update the group record too; certified values stay pinned. |
 | 19 | 2026-09-10 | A session belongs to the groups the member was in when they logged it (an offline session logged before joining is not shared). |
 | 20 | 2026-09-10 | **Stream = one collapsed card per session**: start time, progress metrics (sets, total volume, …), and highlights (PRs, …). Cards sorted by session start time. |
+| 21 | 2026-09-10 | C7.1: usernames stay **non-unique**. |
+| 22 | 2026-09-10 | C7.2: an in-progress session shows **"training now" indefinitely** while active (no staleness cutoff). |
+| 23 | 2026-09-10 | C7.3: removal shows as **"X was removed"** (leaving: "X left the group"). |
+| 24 | 2026-09-10 | C7.4: invite code visible/shareable by **owner and admins only**. |
+| 25 | 2026-09-10 | M22 adopted: `docs/specs/milestones/M22-groups-and-foundations.md` + technical design `docs/specs/tech/groups-contract.md`. M18 marked `outdated`. |
 
 ---
 

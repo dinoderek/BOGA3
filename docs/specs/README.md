@@ -19,11 +19,13 @@ gaps — `04`, `07` — from retired docs; gaps are intentional, do not renumber
 - `docs/specs/10-api-authn-authz-guidelines.md`: Minimal authN/authZ/API development and consumption rules for backend work.
 - `docs/specs/11-maestro-runtime-and-testing-conventions.md`: Authoritative Maestro iOS runtime/testing contract and documentation ownership model.
 - `docs/specs/12-worktree-config-and-isolation.md`: Git worktree support, shared machine-level config, and per-worktree serving isolation design.
-- `docs/specs/milestones/M18-group-exercise-catalogue-private-mapping.md`: Planned group exercise catalogue, private-to-group exercise mapping, and group session-share milestone.
+- `docs/specs/milestones/M18-group-exercise-catalogue-private-mapping.md`: **Outdated** — superseded by M22; retained as history.
 - `docs/specs/milestones/M19-per-side-muscle-volume.md`: Planned per-side load-entry semantics, exercise load-mode metadata, and muscle-volume/stat behavior.
 - `docs/specs/milestones/M20-prune-starter-exercise-catalog.md`: Planned starter exercise catalog pruning, remote tombstone cleanup, server-side deprecated-seed push guard, and sync-safe rollout.
 - `docs/specs/milestones/M21-boga-mcp-virtual-coach.md`: In-progress read-only, explicitly authorized MCP virtual-coach access through dedicated BoGa3 API routes.
+- `docs/specs/milestones/M22-groups-and-foundations.md`: Planned groups, invites, members/roles, and the group stream of co-members' sessions (first server→other-user data flow).
 - `docs/specs/tech/README.md`: Index of subsystem-level technical deep-dive docs.
+- `docs/specs/tech/groups-contract.md`: Planned (M22) group domain contract — share-ledger schema, share rule, group RPCs, stream metrics, mobile group client.
 - `docs/specs/tech/sync-v2-server-contract.md`: Authoritative sync-v2 server contract — schema / LWW / RLS (Part A) and push/pull RPC wire contract (Part B).
 - `docs/specs/templates/milestone-spec-template.md`: Template for milestone deep dives.
 - `docs/specs/templates/task-card-template.md`: Template for per-session AI task execution.

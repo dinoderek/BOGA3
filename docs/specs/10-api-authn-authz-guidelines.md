@@ -38,9 +38,10 @@ This is the shortest operational summary. Use the "Further reading" section when
 14. Privileged application RPCs that bypass RLS, including `SECURITY DEFINER`
     developer helpers, must independently reject non-null OAuth `client_id`
     claims before executing any read or write body.
-15. Group domain authorization (M18) relies on group-membership and admin-role checks enforced at the DB level (`RLS` / DB constraints). Private source entities (`exercise_definitions`, `sessions`) remain strictly user-private (`owner_user_id = auth.uid()`).
-16. **RLS Recursion Prevention**: Group membership and role lookups in backend `RLS` policies MUST use `SECURITY DEFINER` helper functions (`app_public.is_group_member(...)`, `app_public.is_group_admin(...)`) with `SET search_path = app_public, pg_temp` to prevent Postgres infinite recursion (`42P17`). Direct subqueries on `group_memberships` inside `group_memberships` policies are strictly prohibited.
-17. Group `SECURITY DEFINER` membership helper functions must independently reject non-null OAuth `client_id` claims (rule 14) to maintain the M21 agent access boundary.
+15. Group domain authorization (M22, planned — `docs/specs/tech/groups-contract.md` §3) is DB-enforced through `SECURITY DEFINER` RPCs. Group tables have RLS enabled with no permissive client policies and no direct client privileges. Every read and write goes through an `app_public.group_*` RPC that derives the caller from `auth.uid()` and checks active membership and role inside the function. Private source entities (`exercise_definitions`, `sessions`, …) keep their owner-only RLS unchanged. Co-members read a member's shared sessions only through those RPCs.
+16. **RLS recursion prevention.** Group membership and role lookups MUST use `SECURITY DEFINER` helpers with `SET search_path = app_public, pg_temp`. If a later phase adds RLS policies on group tables (for example for Realtime), those policies must call the helpers. Direct subqueries on `group_memberships` inside `group_memberships` policies are prohibited (Postgres `42P17`).
+17. Every group RPC and `SECURITY DEFINER` group helper must independently reject non-null OAuth `client_id` claims (rule 14; error `AGENT_FORBIDDEN`), which preserves the M21 agent access boundary: agent tokens get no group access.
+18. Group non-membership and nonexistence must be indistinguishable to the caller (`NOT_FOUND`). A member whose role disallows an action gets `FORBIDDEN`.
 
 ## Practical guidance for API developers (backend)
 
@@ -49,12 +50,10 @@ This is the shortest operational summary. Use the "Further reading" section when
 - Validate custom API inputs at the boundary (Edge Function/server handler) and rely on DB constraints for invariants.
 - Do not expose `auth` schema via API surfaces.
 - Treat `owner_user_id` as immutable after insert unless a task explicitly defines a safe migration/admin path.
-- **Group Domain RLS & Recursion Prevention**:
-  - Always encapsulate group membership and role checks in `SECURITY DEFINER` helper functions (e.g. `app_public.is_group_member(group_id, user_id)`).
-  - `SECURITY DEFINER` function execution bypasses table RLS during helper execution, preventing cyclic policy evaluation and `42P17` infinite recursion errors.
-  - Set `search_path = app_public, pg_temp` on all helper functions to guard against schema injection attacks.
-  - Private-to-group exercise mappings must be user-owned (`user_id = auth.uid()`) and must not grant other group members read access to private `exercise_definitions`.
-  - Shared session projections must project static snapshots referencing group exercise IDs; raw private exercise metadata must not be exposed through group views.
+- **Group domain (M22, planned)**:
+  - Encapsulate membership and role checks in `SECURITY DEFINER` helpers with `search_path = app_public, pg_temp`, which guards against schema injection. These helpers bypass RLS, so their callers must filter explicitly by the caller's active membership.
+  - Group tables must not carry an `owner_user_id` column. The Sync v2 drift checker treats every such `app_public` table as a synced entity.
+  - Group reads return only performed sets and never GPS columns (`docs/specs/tech/groups-contract.md` §4–§5).
 
 ## Practical guidance for API consumers (mobile/app)
 

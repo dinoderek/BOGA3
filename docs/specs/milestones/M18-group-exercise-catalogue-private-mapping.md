@@ -4,7 +4,17 @@
 
 - Milestone ID: `M18`
 - Title: Milestone: Group Exercise Catalogue and Private Exercise Mapping
-- Status: `planned`
+- Status: `outdated`
+
+> **Superseded by M22** (`docs/specs/milestones/M22-groups-and-foundations.md`,
+> technical design `docs/specs/tech/groups-contract.md`). Groups are now
+> specified from the product vision in
+> `docs/brainstorms/2026-09-10-group-activity-stream.md`. Notable reversals:
+> all of a member's sets are visible to their groups (not only mapped
+> exercises), and shared sessions are live read-through records, not static
+> snapshots. Group exercises and links arrive in a later phase. The M18 task
+> cards (`docs/tasks/M18-T03`…`T15`) are not to be executed. This file is
+> retained only as history.
 
 ## Parent references
 
