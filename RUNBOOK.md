@@ -444,8 +444,7 @@ Open this worktree's local **Supabase Studio** → **Authentication → Users** 
 see, add, or reset accounts by hand. The Studio URL is printed by:
 
 ```bash
-source ~/.config/boga/supabase/cli.env
-npx -y "supabase@${SUPABASE_CLI_VERSION:-2.76.15}" status   # see "Studio URL"
+bash -lc 'source supabase/scripts/_common.sh && run_supabase status'   # see "Studio URL"
 ```
 
 ## Supabase: run locally and reset
@@ -734,8 +733,7 @@ tail -f supabase/.temp/health-functions-serve.log
 - Runtime status/env:
 
 ```bash
-source ~/.config/boga/supabase/cli.env
-npx -y "supabase@${SUPABASE_CLI_VERSION:-2.76.15}" status -o env
+bash -lc 'source supabase/scripts/_common.sh && run_supabase status -o env'
 ```
 
 - Container logs (if needed):
@@ -795,7 +793,8 @@ Notes:
 - `./supabase/scripts/ensure-local-runtime-baseline.sh` reuses an already-running local Supabase instance without resetting it.
 - The baseline helper still applies pending local migrations with `supabase db push --local --include-all --yes`.
 - `./supabase/scripts/local-runtime-up.sh` syncs `apps/mobile/.env.local` with the local Docker Supabase URL and anon key after startup.
-- The scripts invoke `npx -y supabase@${SUPABASE_CLI_VERSION}`, so first use may need network access to fetch the pinned Supabase CLI.
+- The scripts invoke `npx -y supabase@${SUPABASE_CLI_VERSION}`, so first use may need network access to fetch the pinned Supabase CLI. The repo owns the pin (`BOGA_SUPABASE_CLI_DEFAULT_VERSION` in `scripts/worktree-lib.sh`); an explicit `SUPABASE_CLI_VERSION` env value, then `~/.config/boga/supabase/cli.env`, override it.
+- CLIs below `BOGA_SUPABASE_CLI_MIN_VERSION` (2.108.0) are rejected: their edge-runtime bootstrap imports `deno.land` on every start, so `supabase start` ends `Waiting for health checks...` → empty `supabase_edge_runtime_*` logs → `Error status 502` whenever deno.land is unreachable. `./boga doctor` fails on a stale `SUPABASE_CLI_VERSION` line in `~/.config/boga/supabase/cli.env`; delete it so the repo pin applies.
 - The expected `app_logs` client contract is authenticated insert-only. Anonymous insert must fail, authenticated insert must pass, cross-user `user_id` spoofing must fail, and authenticated select/update/delete must fail.
 - A mobile/Supabase JS smoke can validate insert success by checking that the insert returns no error. Reading the row back with an authenticated mobile client should be denied with `403` / `42501`.
 - Inspect inserted log rows through operator SQL/service-role access, not from the mobile client.

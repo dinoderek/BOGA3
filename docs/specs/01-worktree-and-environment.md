@@ -39,6 +39,12 @@ rebuild: `02`).
 Machine prerequisites (once): Docker running, Node, Xcode + simulators, Maestro,
 `jq`. A "command not found" / "infra unavailable" error is a bootstrap gap —
 re-run `./scripts/worktree-setup.sh` and retry; it is not a missing tool.
+The repo pins the Supabase CLI (`BOGA_SUPABASE_CLI_DEFAULT_VERSION` in
+`scripts/worktree-lib.sh`); do not pin an older `SUPABASE_CLI_VERSION` in
+`~/.config/boga/supabase/cli.env`. CLIs below `BOGA_SUPABASE_CLI_MIN_VERSION`
+need `deno.land` at every edge-runtime start and fail `supabase start` with
+`Error status 502` when it is unreachable — `./boga doctor` fails on such a pin
+(details: `RUNBOOK.md`).
 
 ## Tear down a worktree
 
